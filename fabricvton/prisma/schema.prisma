@@ -1,0 +1,146 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════════════════
+// Shopify OAuth session storage
+// (required by @shopify/shopify-app-session-storage-prisma)
+// ═══════════════════════════════════════════════════════════
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+}
+
+// ═══════════════════════════════════════════════════════════
+// Per-shop widget settings, billing, and configuration
+// ═══════════════════════════════════════════════════════════
+model ShopConfig {
+  id                  String   @id @default(cuid())
+  shop                String   @unique
+  isEnabled           Boolean  @default(true)
+  isSuspended         Boolean  @default(false) // Super admin can suspend a shop
+  suspendReason       String?
+
+  // Widget customization
+  buttonText          String   @default("Try It On")
+  buttonColor         String   @default("#000000")
+  buttonTextColor     String   @default("#ffffff")
+  buttonBorderRadius  String   @default("4px")
+  requireEmailCapture Boolean  @default(true)
+
+  // Billing
+  plan                String   @default("free") // free | starter | growth | pro
+  billingId           String?  // Shopify recurring charge ID
+  monthlyCredits      Int      @default(25)
+  creditsUsed         Int      @default(0)
+  billingCycleStart   DateTime @default(now())
+  overageChargesTotal Float    @default(0) // Total overage billed this cycle in USD
+
+  // Integrations
+  klaviyoApiKey       String?
+  klaviyoListId       String?
+
+  // Model settings
+  modelProvider       String   @default("genlook") // genlook | replicate | custom
+  modelVersion        String   @default("v1")
+
+  // Timestamps
+  installedAt         DateTime @default(now())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════════════════════════
+// Captured customer lead emails
+// ═══════════════════════════════════════════════════════════
+model Lead {
+  id           String   @id @default(cuid())
+  shop         String
+  email        String
+  productId    String?
+  productTitle String?
+  source       String   @default("tryon_widget")
+  synced       Boolean  @default(false) // synced to Klaviyo?
+  createdAt    DateTime @default(now())
+
+  @@index([shop])
+  @@index([email])
+  @@index([shop, email])
+}
+
+// ═══════════════════════════════════════════════════════════
+// Each individual virtual try-on event
+// ═══════════════════════════════════════════════════════════
+model TryOnEvent {
+  id              String   @id @default(cuid())
+  shop            String
+  sessionId       String?
+  productId       String?
+  productTitle    String?
+  leadEmail       String?
+  status          String   @default("success") // pending | success | failed
+  modelUsed       String   @default("genlook/v1")
+  processingMs    Int?
+  genlookGenId    String?  // GenLook generationId for polling
+  errorMessage    String?  // Store error details for debugging
+  createdAt       DateTime @default(now())
+
+  @@index([shop])
+  @@index([createdAt])
+  @@index([genlookGenId])
+}
+
+// ═══════════════════════════════════════════════════════════
+// Analytics aggregated per day per shop
+// ═══════════════════════════════════════════════════════════
+model AnalyticsDaily {
+  id              String   @id @default(cuid())
+  shop            String
+  date            DateTime
+  widgetOpens     Int      @default(0)
+  emailsCaptured  Int      @default(0)
+  tryOnsCompleted Int      @default(0)
+  tryOnsFailed    Int      @default(0)
+
+  @@unique([shop, date])
+  @@index([shop])
+}
+
+// ═══════════════════════════════════════════════════════════
+// Super Admin audit log — tracks every admin action
+// ═══════════════════════════════════════════════════════════
+model AdminAuditLog {
+  id          String   @id @default(cuid())
+  adminShop   String   // Which super admin shop performed this
+  action      String   // e.g. "suspend_shop", "change_plan", "change_model"
+  targetShop  String?  // Which shop was affected
+  details     String?  // JSON string with extra context
+  createdAt   DateTime @default(now())
+
+  @@index([adminShop])
+  @@index([targetShop])
+  @@index([createdAt])
+}

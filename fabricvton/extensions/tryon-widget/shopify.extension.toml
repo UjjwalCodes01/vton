@@ -1,0 +1,11 @@
+api_version = "2026-01"
+
+[[extensions]]
+uid = "fab79224-defc-313f-e050-ff995f4104b9"
+type = "theme"
+name = "FabricVTON Try-On Widget"
+handle = "tryon-widget"
+
+[extensions.localization]
+default_locale = "en"
+translations_path = "locales"

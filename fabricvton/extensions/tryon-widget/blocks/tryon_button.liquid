@@ -1,0 +1,372 @@
+{% comment %}
+  FabricVTON – Virtual Try-On App Embed Block
+  This block renders a "Try It On" button on product pages.
+  All customization comes from the Schema settings, configured by the merchant
+  in the Shopify Theme Editor.
+{% endcomment %}
+
+{%- if block.settings.enabled -%}
+
+<div id="fabricvton-widget-container" data-product-id="{{ product.id }}" data-product-title="{{ product.title | escape }}" style="margin: 12px 0;">
+
+  <button
+    id="fabricvton-tryon-btn"
+    type="button"
+    style="
+      background-color: {{ block.settings.button_color }};
+      color: {{ block.settings.button_text_color }};
+      border: none;
+      border-radius: {{ block.settings.button_border_radius }};
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: opacity 0.2s ease;
+    "
+    onmouseover="this.style.opacity='0.85'"
+    onmouseout="this.style.opacity='1'"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+    {{ block.settings.button_text | default: "Try It On" }}
+  </button>
+
+  <!-- Overlay Backdrop -->
+  <div id="fabricvton-backdrop" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); z-index:9998;"></div>
+
+  <!-- Modal -->
+  <div id="fabricvton-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#fff; border-radius:16px; padding:32px; width:90%; max-width:480px; z-index:9999; box-shadow:0 24px 48px rgba(0,0,0,0.2); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+    
+    <!-- Close Button -->
+    <button type="button" onclick="fabricVTONClose()" style="position:absolute; top:16px; right:16px; background:none; border:none; font-size:22px; cursor:pointer; color:#666; line-height:1;">&times;</button>
+
+    <!-- Step 1: Email Capture -->
+    <div id="fabricvton-step-email" {% unless block.settings.require_email %}style="display:none;"{% endunless %}>
+      <h2 style="margin:0 0 8px; font-size:22px; color:#111;">Virtual Try-On ✨</h2>
+      <p style="margin:0 0 24px; color:#666; font-size:14px;">Enter your email to unlock your personalized virtual try-on experience.</p>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <input id="fabricvton-email-input" type="email" placeholder="your@email.com" style="padding:12px 16px;border:1.5px solid #ddd;border-radius:8px;font-size:15px;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='#000'" onblur="this.style.borderColor='#ddd'" />
+        <button type="button" onclick="fabricVTONProceedToUpload()" style="background:#000;color:#fff;border:none;border-radius:8px;padding:13px;font-size:15px;font-weight:600;cursor:pointer;">Continue →</button>
+        <p id="fabricvton-email-error" style="color:#e53e3e;font-size:13px;margin:0;display:none;">Please enter a valid email address.</p>
+      </div>
+    </div>
+
+    <!-- Step 2: Photo Upload -->
+    <div id="fabricvton-step-upload" style="display:none;">
+      <h2 style="margin:0 0 8px; font-size:22px; color:#111;">Upload Your Photo 📸</h2>
+      <p style="margin:0 0 24px; color:#666; font-size:14px;">Upload a full-body or upper-body photo to see how <strong>{{ product.title | escape }}</strong> looks on you.</p>
+      
+      <!-- Drop Zone -->
+      <div id="fabricvton-dropzone" onclick="document.getElementById('fabricvton-file-input').click()" style="border:2px dashed #ccc;border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:all 0.2s;color:#999;" onmouseover="this.style.borderColor='#000';this.style.color='#000'" onmouseout="this.style.borderColor='#ccc';this.style.color='#999'">
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+        <p style="margin:0;font-size:14px;">Click to upload or drag a photo here</p>
+        <p style="margin:4px 0 0; font-size:12px;">JPG, PNG • Max 10MB</p>
+      </div>
+
+      <input id="fabricvton-file-input" type="file" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="fabricVTONFileSelected(this)" />
+      <img id="fabricvton-preview-img" src="" alt="" width="400" height="400" style="display:none;width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-top:12px;" />
+
+      <button type="button" onclick="fabricVTONGenerate()" id="fabricvton-generate-btn" style="margin-top:16px;background:#000;color:#fff;border:none;border-radius:8px;padding:13px;font-size:15px;font-weight:600;cursor:pointer;width:100%;display:none;">Generate Try-On ✨</button>
+    </div>
+
+    <!-- Step 3: Generating State -->
+    <div id="fabricvton-step-loading" style="display:none;text-align:center;padding:24px 0;">
+      <div id="fabricvton-spinner" style="width:48px;height:48px;border:4px solid #f0f0f0;border-top-color:#000;border-radius:50%;animation:fabricvton-spin 1s linear infinite;margin:0 auto 16px;"></div>
+      <p style="font-size:16px;font-weight:600;color:#111;">Generating your look...</p>
+      <p style="font-size:13px;color:#999;margin:4px 0 0;">This takes about 20-30 seconds</p>
+    </div>
+
+    <!-- Step 4: Result -->
+    <div id="fabricvton-step-result" style="display:none;">
+      <h2 style="margin:0 0 16px; font-size:22px; color:#111;">Your Virtual Try-On ✨</h2>
+      <img id="fabricvton-result-img" src="" alt="Virtual Try-On Result" width="400" height="400" style="width:100%;border-radius:12px;object-fit:cover;" />
+      <div style="display:flex;gap:12px;margin-top:16px;">
+        <button type="button" onclick="fabricVTONReset()" style="flex:1;background:#f0f0f0;color:#111;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;">Try Again</button>
+        <button type="button" onclick="fabricVTONClose()" style="flex:1;background:#000;color:#fff;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;">Shop Now →</button>
+      </div>
+      <p style="font-size:11px;color:#bbb;text-align:center;margin-top:12px;">Images are processed in real-time and not stored.</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="fabricvton-step-error" style="display:none;text-align:center;padding:16px 0;">
+      <p style="font-size:40px;margin:0 0 8px;">😕</p>
+      <p style="font-size:16px;font-weight:600;color:#111;" id="fabricvton-error-msg">Something went wrong.</p>
+      <button type="button" onclick="fabricVTONReset()" style="margin-top:16px;background:#000;color:#fff;border:none;border-radius:8px;padding:12px 24px;font-size:14px;font-weight:600;cursor:pointer;">Try Again</button>
+    </div>
+  </div>
+
+</div>
+
+<style>
+  @keyframes fabricvton-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>
+
+<script>
+(function() {
+  var APP_URL = {{ shop.metafields.fabricvton.app_url | default: "" | json }};
+  var BACKEND_URL = "{{ routes.root_url | append: 'apps/fabricvton' }}";
+  var REQUIRE_EMAIL = {{ block.settings.require_email | json }};
+  var SCRIPT_VERSION = "{{ 'now' | date: '%s' }}";
+  var productId = "{{ product.id }}";
+  var productTitle = {{ product.title | json }};
+  var productImageUrl = {{ product.featured_image | image_url: width: 1024 | json }};
+  var shop = "{{ shop.permanent_domain }}";
+  var capturedEmail = "";
+  var selectedFile = null;
+
+  function parseJsonSafely(res) {
+    return res.text().then(function(text) {
+      try {
+        return text ? JSON.parse(text) : {};
+      } catch (error) {
+        return {
+          error: res.ok
+            ? "Unexpected response from server."
+            : "Server returned an invalid response (" + res.status + ")."
+        };
+      }
+    });
+  }
+
+  // Generate anonymous session ID
+  var sessionId = sessionStorage.getItem("fvton_sid");
+  if (!sessionId) {
+    sessionId = Math.random().toString(36).substring(2);
+    sessionStorage.setItem("fvton_sid", sessionId);
+  }
+
+  // Track widget open on button click
+  document.getElementById("fabricvton-tryon-btn").addEventListener("click", function() {
+    // Fire analytics ping
+    fetch(BACKEND_URL + "/api/tryon?event=open&shop=" + encodeURIComponent(shop), { method: "GET", keepalive: true }).catch(function(){});
+
+    document.getElementById("fabricvton-backdrop").style.display = "block";
+    document.getElementById("fabricvton-modal").style.display = "block";
+    document.body.style.overflow = "hidden";
+
+    if (!REQUIRE_EMAIL) {
+      fabricVTONShowStep("upload");
+    } else {
+      fabricVTONShowStep("email");
+    }
+  });
+
+  window.fabricVTONClose = function() {
+    document.getElementById("fabricvton-backdrop").style.display = "none";
+    document.getElementById("fabricvton-modal").style.display = "none";
+    document.body.style.overflow = "";
+  };
+
+  window.fabricVTONShowStep = function(step) {
+    ["email","upload","loading","result","error"].forEach(function(s) {
+      var el = document.getElementById("fabricvton-step-" + s);
+      if (el) el.style.display = "none";
+    });
+    var target = document.getElementById("fabricvton-step-" + step);
+    if (target) target.style.display = "block";
+  };
+
+  window.fabricVTONProceedToUpload = function() {
+    var input = document.getElementById("fabricvton-email-input");
+    var emailVal = input.value.trim();
+    var errorEl = document.getElementById("fabricvton-email-error");
+    if (!emailVal || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+      errorEl.style.display = "block";
+      return;
+    }
+    errorEl.style.display = "none";
+    capturedEmail = emailVal;
+    fabricVTONShowStep("upload");
+  };
+
+  window.fabricVTONFileSelected = function(input) {
+    var file = input.files[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      alert("File is too large. Please upload an image smaller than 10MB.");
+      return;
+    }
+    selectedFile = file;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var preview = document.getElementById("fabricvton-preview-img");
+      preview.src = e.target.result;
+      preview.style.display = "block";
+      document.getElementById("fabricvton-generate-btn").style.display = "block";
+      document.getElementById("fabricvton-dropzone").style.display = "none";
+    };
+    reader.readAsDataURL(file);
+  };
+
+  window.fabricVTONGenerate = function() {
+    if (!selectedFile) return;
+    fabricVTONShowStep("loading");
+
+    var fileReader = new FileReader();
+    fileReader.onload = function(event) {
+      var payload = {
+        shop: shop,
+        productId: productId,
+        productTitle: productTitle,
+        productImageUrl: productImageUrl,
+        sessionId: sessionId,
+        personImageDataUrl: event.target.result,
+        personImageMimeType: selectedFile.type || "image/jpeg",
+        email: capturedEmail || ""
+      };
+
+      fetch(BACKEND_URL + "/api/tryon?cb=" + SCRIPT_VERSION + "&oseid=" + sessionId, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload),
+      })
+      .then(function(res) {
+        return parseJsonSafely(res).then(function(data) {
+          if (!res.ok) {
+            throw new Error(data.error || data.message || "Failed to create try-on generation.");
+          }
+          return data;
+        });
+      })
+      .then(function(data) {
+        if (!data.generationId) {
+          throw new Error("Generation response is missing generationId.");
+        }
+        fabricVTONPollResult(data.generationId, 0);
+      })
+      .catch(function(err) {
+        document.getElementById("fabricvton-error-msg").textContent = err.message || "Network error. Please try again.";
+        fabricVTONShowStep("error");
+      });
+    };
+
+    fileReader.onerror = function() {
+      document.getElementById("fabricvton-error-msg").textContent = "Failed to read the selected image.";
+      fabricVTONShowStep("error");
+    };
+
+    fileReader.readAsDataURL(selectedFile);
+  };
+
+  window.fabricVTONPollResult = function(generationId, attempts) {
+    var MAX_ATTEMPTS = 40;  // 40 x 3s = 2 minutes max
+    var POLL_INTERVAL = 3000;
+
+    if (attempts >= MAX_ATTEMPTS) {
+      document.getElementById("fabricvton-error-msg").textContent = "Generation timed out. Please try again.";
+      fabricVTONShowStep("error");
+      return;
+    }
+
+    setTimeout(function() {
+      fetch(BACKEND_URL + "/api/tryon?generationId=" + encodeURIComponent(generationId), {
+        method: "GET",
+      })
+      .then(function(res) {
+        return parseJsonSafely(res).then(function(data) {
+          if (!res.ok) {
+            throw new Error(data.error || data.message || "Failed to check generation status.");
+          }
+          return data;
+        });
+      })
+      .then(function(data) {
+        if (data.status === "COMPLETED" && data.resultImageUrl) {
+          document.getElementById("fabricvton-result-img").src = data.resultImageUrl;
+          fabricVTONShowStep("result");
+        } else if (data.status === "FAILED") {
+          document.getElementById("fabricvton-error-msg").textContent = data.errorMessage || data.message || "Generation failed. Please try again.";
+          fabricVTONShowStep("error");
+        } else {
+          // Still PENDING or PROCESSING — keep polling
+          fabricVTONPollResult(generationId, attempts + 1);
+        }
+      })
+      .catch(function(err) {
+        document.getElementById("fabricvton-error-msg").textContent = err.message || "Failed while polling generation status.";
+        fabricVTONShowStep("error");
+      });
+    }, POLL_INTERVAL);
+  };
+
+  window.fabricVTONReset = function() {
+    selectedFile = null;
+    document.getElementById("fabricvton-file-input").value = "";
+    document.getElementById("fabricvton-preview-img").style.display = "none";
+    document.getElementById("fabricvton-generate-btn").style.display = "none";
+    document.getElementById("fabricvton-dropzone").style.display = "block";
+    if (REQUIRE_EMAIL) {
+      fabricVTONShowStep("email");
+    } else {
+      fabricVTONShowStep("upload");
+    }
+  };
+
+  // Close on backdrop click
+  document.getElementById("fabricvton-backdrop").addEventListener("click", function() {
+    window.fabricVTONClose();
+  });
+})();
+</script>
+
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "FabricVTON Try-On",
+  "target": "section",
+  "enabled_on": {
+    "templates": ["product"]
+  },
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "enabled",
+      "label": "Enable Virtual Try-On",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Button Text",
+      "default": "Try It On"
+    },
+    {
+      "type": "color",
+      "id": "button_color",
+      "label": "Button Background Color",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "button_text_color",
+      "label": "Button Text Color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "text",
+      "id": "button_border_radius",
+      "label": "Button Border Radius",
+      "default": "4px",
+      "info": "e.g. 4px for sharp, 20px for pill shape"
+    },
+    {
+      "type": "checkbox",
+      "id": "require_email",
+      "label": "Require Email Before Try-On",
+      "default": true,
+      "info": "Captures customer emails as marketing leads"
+    }
+  ]
+}
+{% endschema %}
