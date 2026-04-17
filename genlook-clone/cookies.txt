@@ -1,5 +1,0 @@
-# HTTrack Website Copier Cookie File
-# This file format is compatible with Netscape cookies
-genlook.app	TRUE	/	FALSE	1999999999	NEXT_LOCALE	ar
-genlook.app	TRUE	/	FALSE	1999999999	SameSite	lax
-
