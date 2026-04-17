@@ -233,7 +233,22 @@
       .then(function(res) {
         return parseJsonSafely(res).then(function(data) {
           if (!res.ok) {
-            throw new Error(data.error || data.message || "Failed to create try-on generation.");
+            var status = res.status;
+            var serverMsg = data.error || data.message || "";
+            // Choose a user-friendly message based on the HTTP status
+            if (status === 402) {
+              throw new Error("Try-on credits have run out for this store. Please contact the store owner.");
+            } else if (status === 429) {
+              throw new Error(serverMsg || "Too many requests. Please wait a moment and try again.");
+            } else if (status === 403) {
+              throw new Error("Virtual Try-On is currently disabled for this store.");
+            } else if (status === 422 || status === 415) {
+              throw new Error(serverMsg || "The uploaded photo type is not supported. Please use a clear JPG or PNG.");
+            } else if (status >= 500) {
+              throw new Error("Our server encountered an error. Please try again in a moment.");
+            } else {
+              throw new Error(serverMsg || "Failed to create try-on generation.");
+            }
           }
           return data;
         });

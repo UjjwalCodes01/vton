@@ -8,6 +8,7 @@ import {
   getGenerationStatus,
 } from "./genlook.server";
 
+
 // ─── CORS ───────────────────────────────────────────────
 
 function corsHeaders(origin: string) {
@@ -303,21 +304,24 @@ export async function handleTryOnAction(request: Request) {
       );
     }
 
+    // ── 2b. Soft preflight: check GenLook credits (non-fatal) ──
+    // If this endpoint is down or erroring, we still proceed — the real
+    // generation call will fail with a clear message if credits are truly 0.
     try {
       const genlookCredits = await checkCredits();
-      console.log(`[TryOn API][${requestId}] GenLook credits available:`, genlookCredits.credits);
+      console.log(`[TryOn API][${requestId}] GenLook API credits available:`, genlookCredits.credits);
       if (genlookCredits.credits <= 0) {
         return jsonResponse(
           {
-            error: "This store has run out of GenLook credits. Please top up the provider account and try again.",
-            debug: "GenLook credit balance is 0",
+            error: "Virtual try-on credits have run out. The store owner needs to top up their FabricVTON plan.",
           },
           402,
           origin
         );
       }
     } catch (err) {
-      console.warn(`[TryOn API][${requestId}] Could not preflight GenLook credits:`, err instanceof Error ? err.message : err);
+      // Non-fatal: just log and continue — the generation call will surface real errors
+      console.warn(`[TryOn API][${requestId}] Could not preflight GenLook credits (non-fatal):`, err instanceof Error ? err.message : err);
     }
 
     const startTime = Date.now();
