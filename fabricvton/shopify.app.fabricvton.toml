@@ -1,20 +1,52 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "73cc9210c28108863a55bc041bddb1c0"
-name = "fabricvton"
-application_url = "https://example.com"
+client_id = "2cca9a797b9920722956b7f8e87b6a09"
+name = "FabricVTON"
+application_url = "https://fabricvton-api.onrender.com"
 embedded = true
 
 [build]
+# Required: ensures theme extension is bundled and config is pushed to Shopify on deploy
 automatically_update_urls_on_dev = true
-include_config_on_deploy = true
 
 [webhooks]
-api_version = "2026-07"
+api_version = "2026-04"
+
+  # ── Mandatory GDPR compliance webhooks (required for App Store) ──────────
+  [webhooks.privacy_compliance]
+  customer_data_request_url = "/webhooks/customers/data_request"
+  customer_deletion_url = "/webhooks/customers/redact"
+  shop_deletion_url = "/webhooks/shop/redact"
+
+  # ── Operational webhooks ──────────────────────────────────────────────────
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
+
+  # NOTE: orders/create is NOT subscribed here because it contains protected customer data.
+  # To enable it: go to Partner Dashboard → API access → Request access to Protected Customer Data.
 
 [access_scopes]
-# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_customers,read_files,read_orders,read_products,read_themes,write_files,write_script_tags,write_themes"
+scopes = "read_customers,read_files,write_files,read_products,write_script_tags,read_themes,write_themes"
+optional_scopes = [ ]
+# IMPORTANT: use_legacy_install_flow removed — modern OAuth flow authenticates immediately after install
+# This is required to pass the "Immediately authenticates after install" automated check
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [
+  "https://fabricvton-api.onrender.com/auth/callback",
+  "https://fabricvton-api.onrender.com/auth/shopify/callback",
+  "https://fabricvton-api.onrender.com/api/auth/callback"
+]
+
+[app_proxy]
+url = "https://fabricvton-api.onrender.com/proxy"
+subpath = "fabricvton"
+prefix = "apps"
+
+[pos]
+embedded = true
