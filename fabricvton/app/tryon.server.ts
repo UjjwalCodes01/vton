@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import db from "./db.server";
-import { getPlan } from "./billing.server";
+import { createOverageUsageRecord, getPlan } from "./billing.server";
 import {
   uploadCustomerImage,
   createTryOn,
@@ -563,6 +563,27 @@ async function syncGenerationOutcome(
       },
     }),
   ]);
+
+  if (overageAmount > 0) {
+    try {
+      const usageResult = await createOverageUsageRecord({
+        shop: event.shop,
+        amount: overageAmount,
+        description: `Overage try-on charge (${generationId})`,
+      });
+
+      if (!usageResult.charged) {
+        console.warn(
+          `[Billing] Overage usage record was not created for ${event.shop}: ${usageResult.reason ?? "unknown reason"}`
+        );
+      }
+    } catch (error) {
+      console.error(
+        `[Billing] Failed to create overage usage record for ${event.shop}:`,
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
 
   await upsertDailyAnalytics(event.shop, { tryOnsCompleted: 1 });
 }

@@ -8,17 +8,32 @@ import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import db from "../db.server";
-import { PLANS, getPlan, SUBSCRIPTION_CREATE_MUTATION } from "../billing.server";
+import {
+  PLANS,
+  buildSubscriptionLineItems,
+  cancelAllActiveSubscriptions,
+  getPlan,
+  SUBSCRIPTION_CREATE_MUTATION,
+  syncShopPlanFromShopifyBilling,
+} from "../billing.server";
 import { useEffect } from "react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session, admin } = await authenticate.admin(request);
   const shop = session.shop;
+  const url = new URL(request.url);
+  const isBillingCallback = url.searchParams.has("charge_id");
+
+  let activationMessage: string | null = null;
+  if (isBillingCallback) {
+    const sync = await syncShopPlanFromShopifyBilling(admin, shop);
+    activationMessage = sync.message;
+  }
 
   const config = await db.shopConfig.findUnique({ where: { shop } });
   const currentPlan = getPlan(config?.plan ?? "free");
 
-  return { currentPlan, plans: PLANS };
+  return { currentPlan, plans: PLANS, activationMessage };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -31,10 +46,27 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   if (plan.monthlyPrice === 0) {
     // Downgrade to free
+    await cancelAllActiveSubscriptions(admin);
+
     await db.shopConfig.upsert({
       where: { shop },
-      create: { shop, plan: "free", monthlyCredits: 25 },
-      update: { plan: "free", monthlyCredits: 25, billingId: null },
+      create: {
+        shop,
+        plan: "free",
+        monthlyCredits: 25,
+        billingId: null,
+        creditsUsed: 0,
+        overageChargesTotal: 0,
+        billingCycleStart: new Date(),
+      },
+      update: {
+        plan: "free",
+        monthlyCredits: 25,
+        billingId: null,
+        creditsUsed: 0,
+        overageChargesTotal: 0,
+        billingCycleStart: new Date(),
+      },
     });
     return { success: true, message: "Successfully downgraded to Free plan.", confirmationUrl: null };
   }
@@ -48,16 +80,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       name: `FabricVTON ${plan.label}`,
       returnUrl,
       test: isTest,
-      lineItems: [
-        {
-          plan: {
-            appRecurringPricingDetails: {
-              price: { amount: plan.monthlyPrice, currencyCode: "USD" },
-              interval: "EVERY_30_DAYS",
-            },
-          },
-        },
-      ],
+      lineItems: buildSubscriptionLineItems(plan),
     },
   });
 
@@ -78,13 +101,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Billing() {
-  const { currentPlan, plans } = useLoaderData<typeof loader>();
+  const { currentPlan, plans, activationMessage } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const shopify = useAppBridge();
 
   const isSubmitting = fetcher.state !== "idle";
 
   useEffect(() => {
+    if (activationMessage) {
+      shopify.toast.show(activationMessage);
+    }
+
     if (fetcher.data?.confirmationUrl) {
       // Securely break out of iframe to Shopify billing approval
       window.open(fetcher.data.confirmationUrl, "_top");
@@ -92,11 +119,11 @@ export default function Billing() {
       // Downgrade success toast
       shopify.toast.show(fetcher.data.message);
     }
-  }, [fetcher.data, shopify]);
+  }, [activationMessage, fetcher.data, shopify]);
 
   return (
     <s-page heading="Billing & Plans">
-      
+
       {fetcher.data && !fetcher.data.success && (
         <s-banner tone="critical">
           <p>{fetcher.data.message}</p>
@@ -135,7 +162,7 @@ export default function Billing() {
           {plans.map((plan) => {
             const isCurrent = currentPlan.name === plan.name;
             const isRecommended = plan.name === "growth"; // Arbitrary highlight
-            
+
             return (
                <div key={plan.name} className={`fv-plan-card ${isCurrent ? 'current' : ''} ${isRecommended ? 'recommended' : ''}`}>
                   <div className="fv-plan-name">{plan.label}</div>
@@ -143,7 +170,7 @@ export default function Billing() {
                      {plan.monthlyPrice === 0 ? "Free" : `$${plan.monthlyPrice}`}
                   </div>
                   <div className="fv-text-sm fv-text-subdued fv-mb-md">per month</div>
-                  
+
                   <div style={{ minHeight: "120px", marginBottom: "20px" }}>
                      <div className="fv-plan-feature">
                         <strong>{plan.credits}</strong> try-ons included

@@ -79,10 +79,10 @@ For more information on the Shopify Dev MCP please read [the documentation](http
 
 ### Application Storage
 
-This template uses [Prisma](https://www.prisma.io/) to store session data, by default using an [SQLite](https://www.sqlite.org/index.html) database.
+This template uses [Prisma](https://www.prisma.io/) to store session data, configured for a [PostgreSQL](https://www.postgresql.org/) database.
 The database is defined as a Prisma schema in `prisma/schema.prisma`.
 
-This use of SQLite works in production if your app runs as a single instance.
+PostgreSQL is recommended for production deployments (including Vercel) because app instances can scale horizontally.
 The database that works best for you depends on the data your app needs and how it is queried.
 Here’s a short list of databases providers that provide a free tier to get started:
 
