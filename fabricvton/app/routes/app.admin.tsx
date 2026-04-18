@@ -99,30 +99,32 @@ export default function SuperAdminDashboard() {
           {/* GenLook API Health */}
           <div style={{ flex: "1 1 300px" }}>
               <s-card>
-                <div style={{ padding: "24px" }}>
-                <div className="fv-section-title fv-mb-md">🤖 GenLook API Status</div>
-                {data.genlookCredits >= 0 ? (
-                    <>
-                      <div className="fv-flex fv-items-center fv-mb-md">
-                          <span className="fv-status-dot connected"></span>
-                          <span style={{ fontWeight: 600 }}>API Connected</span>
-                      </div>
-                      <div className="fv-text-sm fv-text-subdued fv-mb-sm">GLOBAL CREDITS REMAINING</div>
-                      <div style={{ fontSize: "36px", fontWeight: "bold" }} className="accent">
-                          {data.genlookCredits === 999999 ? "Unlimited" : data.genlookCredits.toLocaleString()}
-                      </div>
-                    </>
-                ) : (
-                    <>
-                      <div className="fv-flex fv-items-center fv-mb-md">
-                          <span className="fv-status-dot suspended"></span>
-                          <span style={{ fontWeight: 600 }}>API Unreachable</span>
-                      </div>
-                      <s-banner tone="critical">
-                          <p>Unable to reach GenLook API. Check your GENLOOK_API_KEY environment variable.</p>
-                      </s-banner>
-                    </>
-                )}
+                <div style={{ padding: "32px 24px", display: "flex", flexDirection: "column", height: "100%", background: "linear-gradient(145deg, #ffffff, #f9fafb)" }}>
+                  <div className="fv-flex fv-items-center fv-justify-between fv-mb-lg">
+                    <div className="fv-section-title" style={{ margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "20px" }}>🤖</span> GenLook API Status
+                    </div>
+                    {data.genlookCredits >= 0 ? (
+                      <span className="fv-badge success" style={{ padding: "4px 12px" }}>● Connected</span>
+                    ) : (
+                      <span className="fv-badge critical" style={{ padding: "4px 12px" }}>● Unreachable</span>
+                    )}
+                  </div>
+
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                    {data.genlookCredits >= 0 ? (
+                        <>
+                          <div className="fv-text-sm fv-text-subdued fv-mb-xs" style={{ letterSpacing: "0.5px" }}>GLOBAL CREDITS REMAINING</div>
+                          <div style={{ fontSize: "42px", fontWeight: "800", color: "var(--s-color-interactive)" }}>
+                              {data.genlookCredits === 999999 ? "Unlimited" : data.genlookCredits.toLocaleString()}
+                          </div>
+                        </>
+                    ) : (
+                        <s-banner tone="critical">
+                            <p>Unable to reach GenLook API. Check your GENLOOK_API_KEY environment variable.</p>
+                        </s-banner>
+                    )}
+                  </div>
                 </div>
               </s-card>
           </div>
@@ -130,14 +132,18 @@ export default function SuperAdminDashboard() {
           {/* Revenue */}
           <div style={{ flex: "1 1 300px" }}>
               <s-card>
-                <div style={{ padding: "24px" }}>
-                    <div className="fv-section-title fv-mb-md">💰 Financials</div>
-                    <div className="fv-text-sm fv-text-subdued fv-mb-sm">OVERAGE REVENUE (ALL TIME)</div>
-                    <div style={{ fontSize: "36px", fontWeight: "bold", color: "var(--fv-success)" }}>
-                      ${data.totalOverageRevenue.toFixed(2)}
+                <div style={{ padding: "32px 24px", display: "flex", flexDirection: "column", height: "100%", background: "linear-gradient(145deg, #ffffff, #f0fdf4)" }}>
+                    <div className="fv-section-title fv-mb-lg" style={{ margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "20px" }}>💰</span> Financials
                     </div>
-                    <div className="fv-text-sm fv-text-subdued fv-mt-md">
-                      Base subscription revenue is handled via Shopify Partners dashboard.
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyItems: "center" }}>
+                      <div className="fv-text-sm fv-text-subdued fv-mb-xs" style={{ letterSpacing: "0.5px" }}>TOTAL OVERAGE CHARGES</div>
+                      <div style={{ fontSize: "42px", fontWeight: "800", color: "#166534" }}>
+                        ${data.totalOverageRevenue.toFixed(2)}
+                      </div>
+                      <div className="fv-text-sm fv-text-subdued" style={{ marginTop: "16px", padding: "12px", background: "rgba(22, 101, 52, 0.05)", borderRadius: "8px", borderLeft: "3px solid #166534" }}>
+                        <strong>Note:</strong> Total base subscription rev. (Monthly/Annual plans) is handled exclusively within the Shopify Partners Dashboard.
+                      </div>
                     </div>
                 </div>
               </s-card>

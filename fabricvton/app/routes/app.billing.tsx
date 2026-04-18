@@ -170,7 +170,7 @@ export default function Billing() {
               padding: "8px 20px", borderRadius: "8px", border: "2px solid",
               borderColor: billingInterval === "EVERY_30_DAYS" ? "var(--s-color-interactive)" : "var(--s-color-border)",
               background: billingInterval === "EVERY_30_DAYS" ? "var(--s-color-interactive)" : "transparent",
-              color: billingInterval === "EVERY_30_DAYS" ? "#fff" : "inherit",
+              color: billingInterval === "EVERY_30_DAYS" ? "#fff" : "#111",
               cursor: "pointer", fontWeight: "600",
             }}
           >
@@ -182,7 +182,7 @@ export default function Billing() {
               padding: "8px 20px", borderRadius: "8px", border: "2px solid",
               borderColor: billingInterval === "ANNUAL" ? "var(--s-color-interactive)" : "var(--s-color-border)",
               background: billingInterval === "ANNUAL" ? "var(--s-color-interactive)" : "transparent",
-              color: billingInterval === "ANNUAL" ? "#fff" : "inherit",
+              color: billingInterval === "ANNUAL" ? "#fff" : "#111",
               cursor: "pointer", fontWeight: "600",
             }}
           >
@@ -204,12 +204,6 @@ export default function Billing() {
 
             return (
               <div key={plan.name} className={`fv-plan-card ${isCurrent ? "current" : ""} ${isRecommended ? "recommended" : ""}`}>
-                {isRecommended && (
-                  <div style={{ textAlign: "center", fontSize: "11px", fontWeight: "700", color: "var(--s-color-interactive)", marginBottom: "8px", letterSpacing: "0.5px" }}>
-                    ⭐ MOST POPULAR
-                  </div>
-                )}
-
                 <div className="fv-plan-name">{plan.label}</div>
 
                 <div className="fv-plan-price">
