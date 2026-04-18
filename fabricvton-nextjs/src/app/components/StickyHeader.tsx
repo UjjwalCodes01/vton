@@ -1,5 +1,6 @@
 "use client";
 
+import CalDemoButton from "./CalDemoButton";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -35,9 +36,7 @@ export default function StickyHeader() {
 						<a href="#features">Features</a>
 						<a href="#pricing">Pricing</a>
 						<a href="#">Blog</a>
-						<a href="https://demo.fabricvton.app/" target="_blank" rel="noreferrer">
-							Live Demo
-						</a>
+						<CalDemoButton className="cal-inline-trigger" label="Live Demo" />
 					</nav>
 
 					<a

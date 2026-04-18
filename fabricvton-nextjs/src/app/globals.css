@@ -225,6 +225,17 @@ a {
   color: var(--foreground);
 }
 
+.cal-inline-trigger {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  cursor: pointer;
+}
+
 .section {
   position: relative;
   z-index: 1;
