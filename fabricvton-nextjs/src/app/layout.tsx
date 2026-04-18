@@ -18,6 +18,9 @@ export const metadata: Metadata = {
   title: "FabricVTON - AI-Powered Virtual Try-On for Shopify",
   description:
     "A clean landing page for FabricVTON virtual try-on for Shopify stores.",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -27,9 +30,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <head>
-        <link rel="icon" href="/fabricvton-logo-32x32.png" />
-      </head>
       <body className="antialiased">
         {children}
         <Footer />

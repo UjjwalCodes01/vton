@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import CalDemoButton from "./components/CalDemoButton";
 import StickyHeader from "./components/StickyHeader";
 
 export const metadata: Metadata = {
@@ -167,9 +168,7 @@ export default function HomePage() {
 						>
 							Install on Shopify
 						</a>
-						<a className="btn btn-secondary" href="https://demo.fabricvton.app/" target="_blank" rel="noreferrer">
-							Book a Demo
-						</a>
+						<CalDemoButton />
 					</div>
 				</section>
 

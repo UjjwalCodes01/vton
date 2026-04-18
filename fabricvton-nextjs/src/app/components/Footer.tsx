@@ -1,5 +1,6 @@
 import Link from "next/link";
 import React from "react";
+import CalDemoButton from "./CalDemoButton";
 
 export default function Footer() {
   return (
@@ -89,7 +90,7 @@ export default function Footer() {
             <h4>Support</h4>
             <ul>
               <li><Link href="#">Contact Us</Link></li>
-              <li><Link href="#">Book a Demo</Link></li>
+              <li><CalDemoButton className="cal-inline-trigger" /></li>
             </ul>
           </div>
         </div>
