@@ -3,52 +3,77 @@
 
 import db from "./db.server";
 
-export type PlanName = "free" | "starter" | "growth" | "pro";
+export type PlanName = "free" | "starter" | "growth" | "pro" | "scale";
 
 export interface Plan {
   name: PlanName;
   label: string;
-  monthlyPrice: number; // 0 for free
-  credits: number;      // monthly try-on generations included
-  overagePrice: number; // USD per additional try-on
-  annualPrice?: number;
-  monthlyOverageCap?: number;
+  monthlyPrice: number;       // monthly price in USD (0 for free)
+  annualPrice: number;        // annual price in USD (one-time charge per year)
+  credits: number;            // monthly try-on credits included
+  annualCredits: number;      // try-ons included in the full year (for annual billing)
+  overagePrice: number;       // USD per additional try-on above the monthly allowance
+  monthlyOverageCap: number;  // maximum overage charge per billing cycle
+  featured?: boolean;         // highlight in UI
 }
 
+// ─── Pricing plans – source of truth for both billing and the UI ──────────────
+// Matches the approved spreadsheet exactly:
+//   Starter  $9/mo  ($86/yr)   50 cr/mo   (600/yr)   $0.18/overage
+//   Growth   $49/mo ($470/yr)  400 cr/mo  (4800/yr)  $0.13/overage
+//   Pro      $99/mo ($950/yr)  1000 cr/mo (12000/yr) $0.10/overage
+//   Scale    $219/mo($2102/yr) 2500 cr/mo (30000/yr) $0.08/overage
 export const PLANS: Plan[] = [
   {
     name: "free",
     label: "Free",
     monthlyPrice: 0,
-    credits: 25,
-    overagePrice: 0, // no overages on free plan
+    annualPrice: 0,
+    credits: 10,
+    annualCredits: 120,
+    overagePrice: 0,
+    monthlyOverageCap: 0,
   },
   {
     name: "starter",
     label: "Starter",
-    monthlyPrice: 4.99,
-    credits: 100,
-    overagePrice: 0.17,
-    annualPrice: 49,
-    monthlyOverageCap: 49,
+    monthlyPrice: 9,
+    annualPrice: 86,
+    credits: 50,
+    annualCredits: 600,
+    overagePrice: 0.18,
+    monthlyOverageCap: 50,   // cap overage at plan price to protect merchants
   },
   {
     name: "growth",
     label: "Growth",
-    monthlyPrice: 19.99,
-    credits: 500,
-    overagePrice: 0.12,
-    annualPrice: 199,
-    monthlyOverageCap: 199,
+    monthlyPrice: 49,
+    annualPrice: 470,
+    credits: 400,
+    annualCredits: 4800,
+    overagePrice: 0.13,
+    monthlyOverageCap: 100,
+    featured: true,
   },
   {
     name: "pro",
     label: "Pro",
     monthlyPrice: 99,
-    credits: 3000,
+    annualPrice: 950,
+    credits: 1000,
+    annualCredits: 12000,
     overagePrice: 0.10,
-    annualPrice: 999,
-    monthlyOverageCap: 999,
+    monthlyOverageCap: 200,
+  },
+  {
+    name: "scale",
+    label: "Scale",
+    monthlyPrice: 219,
+    annualPrice: 2102,
+    credits: 2500,
+    annualCredits: 30000,
+    overagePrice: 0.08,
+    monthlyOverageCap: 500,
   },
 ];
 
@@ -193,27 +218,31 @@ async function readGraphqlJson(responsePromise: Promise<Response>) {
   return json;
 }
 
-export function buildSubscriptionLineItems(plan: Plan) {
+export function buildSubscriptionLineItems(plan: Plan, interval: "EVERY_30_DAYS" | "ANNUAL" = "EVERY_30_DAYS") {
+  const price = interval === "ANNUAL" ? plan.annualPrice : plan.monthlyPrice;
+
   const lineItems: Array<Record<string, unknown>> = [
     {
       plan: {
         appRecurringPricingDetails: {
-          price: { amount: plan.monthlyPrice, currencyCode: "USD" },
-          interval: "EVERY_30_DAYS",
+          price: { amount: price, currencyCode: "USD" },
+          interval,
         },
       },
     },
   ];
 
-  if (plan.overagePrice > 0) {
+  // Only add usage-based overage line item for monthly plans.
+  // Annual plans include a fixed credit pool — no in-period overages.
+  if (plan.overagePrice > 0 && interval === "EVERY_30_DAYS") {
     lineItems.push({
       plan: {
         appUsagePricingDetails: {
           cappedAmount: {
-            amount: plan.monthlyOverageCap ?? 49,
+            amount: plan.monthlyOverageCap,
             currencyCode: "USD",
           },
-          terms: `$${plan.overagePrice.toFixed(2)} per additional try-on generation`,
+          terms: `$${plan.overagePrice.toFixed(2)} per additional try-on generation above your ${plan.credits} monthly allowance`,
         },
       },
     });

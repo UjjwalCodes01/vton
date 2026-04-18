@@ -87,23 +87,30 @@ const steps = [
 const plans = [
   {
     name: "Starter",
-    price: "$14.99",
-    note: "Per month",
-    details: ["100 monthly try-ons", "Lead capture", "Standard support"],
+    price: "$9",
+    note: "Per month · $86/yr",
+    details: ["50 monthly try-ons", "+$0.18 per extra try-on", "Lead capture", "Analytics", "Standard support"],
     highlight: false,
   },
   {
     name: "Growth",
-    price: "$29",
-    note: "Per month",
-    details: ["250 monthly try-ons", "Analytics dashboard", "Email collection"],
+    price: "$49",
+    note: "Per month · $470/yr",
+    details: ["400 monthly try-ons", "+$0.13 per extra try-on", "Lead capture", "Analytics", "Standard support"],
     highlight: true,
   },
   {
     name: "Pro",
     price: "$99",
-    note: "Per month",
-    details: ["1,000 monthly generations", "Branding controls", "Priority support"],
+    note: "Per month · $950/yr",
+    details: ["1,000 monthly try-ons", "+$0.10 per extra try-on", "Lead capture", "Analytics", "Standard support"],
+    highlight: false,
+  },
+  {
+    name: "Scale",
+    price: "$219",
+    note: "Per month · $2,102/yr",
+    details: ["2,500 monthly try-ons", "+$0.08 per extra try-on", "Lead capture", "Analytics", "✨ Dedicated priority support"],
     highlight: false,
   },
 ];
