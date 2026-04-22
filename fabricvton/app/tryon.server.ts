@@ -35,8 +35,9 @@ function inferGarmentCategory(productTitle: string | null) {
 }
 
 function buildGenlookExternalProductId(shop: string, productId: string) {
-  const nonce = Date.now().toString(36);
-  return `${shop}__${productId}__${nonce}`
+  // Stable ID — no nonce. GenLook /products is idempotent by externalId,
+  // so reusing the same ID means the product is found instantly on every try-on.
+  return `${shop}__${productId}`
     .replace(/[^a-zA-Z0-9_-]/g, "_")
     .slice(0, 120);
 }
