@@ -210,18 +210,45 @@
     if (!selectedFile) return;
     fabricVTONShowStep("loading");
 
-    var fileReader = new FileReader();
-    fileReader.onload = function(event) {
-      var payload = {
-        shop: shop,
-        productId: productId,
-        productTitle: productTitle,
-        productImageUrl: productImageUrl,
-        sessionId: sessionId,
-        personImageDataUrl: event.target.result,
-        personImageMimeType: selectedFile.type || "image/jpeg",
-        email: capturedEmail || ""
-      };
+    // Compress image to prevent Shopify App Proxy Payload limits
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var img = new Image();
+      img.onload = function() {
+        var canvas = document.createElement("canvas");
+        var ctx = canvas.getContext("2d");
+        var MAX_WIDTH = 1024;
+        var MAX_HEIGHT = 1024;
+        var width = img.width;
+        var height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        var compressedDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+
+        var payload = {
+          shop: shop,
+          productId: productId,
+          productTitle: productTitle,
+          productImageUrl: productImageUrl,
+          sessionId: sessionId,
+          personImageDataUrl: compressedDataUrl,
+          personImageMimeType: "image/jpeg",
+          email: capturedEmail || ""
+        };
 
       fetch(BACKEND_URL + "/api/tryon?cb=" + SCRIPT_VERSION + "&oseid=" + sessionId, {
         method: "POST",
@@ -254,23 +281,21 @@
         });
       })
       .then(function(data) {
-        if (!data.generationId) {
-          throw new Error("Generation response is missing generationId.");
-        }
+        if (!data.generationId) throw new Error("Missing generationId.");
         fabricVTONPollResult(data.generationId, 0);
       })
-      .catch(function(err) {
-        document.getElementById("fabricvton-error-msg").textContent = err.message || "Network error. Please try again.";
-        fabricVTONShowStep("error");
-      });
+        .catch(function(err) {
+          document.getElementById("fabricvton-error-msg").textContent = err.message || "Network error.";
+          fabricVTONShowStep("error");
+        });
+      };
+      img.src = e.target.result;
     };
-
-    fileReader.onerror = function() {
-      document.getElementById("fabricvton-error-msg").textContent = "Failed to read the selected image.";
+    reader.onerror = function() {
+      document.getElementById("fabricvton-error-msg").textContent = "Failed to read image.";
       fabricVTONShowStep("error");
     };
-
-    fileReader.readAsDataURL(selectedFile);
+    reader.readAsDataURL(selectedFile);
   };
 
   window.fabricVTONPollResult = function(generationId, attempts) {

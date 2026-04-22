@@ -235,7 +235,8 @@ export async function createTryOn(params: {
       method: "POST",
       headers: jsonHeaders(),
       body: JSON.stringify({
-        productId: createdProduct.productId,
+        // GenLook /try-on expects the externalId as `productId`, not the internal productId
+        productId: createdProduct.externalId,
         customerImageId: params.customerImageId,
         ...(params.webhookUrl ? { webhook_url: params.webhookUrl } : {}),
       }),
