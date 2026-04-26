@@ -110,3 +110,59 @@
 .demo-footer-link { color: #0d9488; font-weight: 600; }
 .demo-footer-cta { display: inline-block; background: linear-gradient(135deg, #0d9488, #0891b2); color: #fff; padding: 10px 20px; border-radius: 999px; font-size: 0.82rem; font-weight: 700; margin-top: 8px; transition: all 0.2s; box-shadow: 0 4px 12px rgba(13,148,136,0.3); }
 .demo-footer-cta:hover { transform: translateY(-2px); }
+
+/* ════════════════════════════════
+   PRODUCT DETAIL PAGE (PDP)
+   ════════════════════════════════ */
+.demo-pdp-container { max-width: 1200px; margin: 0 auto; padding: 40px 32px 80px; }
+.demo-pdp-layout { display: grid; grid-template-columns: 1fr 400px; gap: 64px; align-items: start; }
+@media (max-width: 960px) {
+  .demo-pdp-layout { grid-template-columns: 1fr; gap: 40px; }
+}
+
+/* ── Gallery ── */
+.demo-pdp-gallery { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 100px; }
+.demo-pdp-main-image-wrap { position: relative; width: 100%; aspect-ratio: 3/4; border-radius: 20px; overflow: hidden; background: #f9fafb; border: 1px solid #e5e7eb; }
+.demo-pdp-main-image { width: 100%; height: 100%; object-fit: cover; }
+.demo-pdp-thumbnails { display: flex; gap: 12px; }
+.demo-pdp-thumb-btn { width: 80px; height: 106px; border-radius: 12px; overflow: hidden; border: 2px solid transparent; cursor: pointer; padding: 0; opacity: 0.6; transition: all 0.2s; }
+.demo-pdp-thumb-btn:hover { opacity: 1; }
+.demo-pdp-thumb-btn.active { opacity: 1; border-color: #0d9488; }
+.demo-pdp-thumb-img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ── Details ── */
+.demo-pdp-details { display: flex; flex-direction: column; gap: 24px; }
+.demo-pdp-header { display: flex; flex-direction: column; gap: 8px; }
+.demo-pdp-brand { font-size: 0.8rem; font-weight: 700; color: #0d9488; text-transform: uppercase; letter-spacing: 0.1em; }
+.demo-pdp-title { font-size: 2.2rem; font-weight: 900; color: #0f172a; line-height: 1.1; letter-spacing: -0.02em; }
+.demo-pdp-price-row { display: flex; align-items: baseline; gap: 12px; margin-top: 4px; }
+.demo-pdp-price { font-size: 1.6rem; font-weight: 800; color: #0f172a; }
+.demo-pdp-original-price { font-size: 1.1rem; color: #9ca3af; text-decoration: line-through; }
+.demo-pdp-description { font-size: 1rem; color: #4b5563; line-height: 1.6; }
+
+/* ── Selectors ── */
+.demo-pdp-section { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid #e5e7eb; padding-top: 24px; }
+.demo-pdp-section-title { font-size: 0.85rem; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.05em; display: flex; justify-content: space-between; }
+.demo-pdp-size-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 10px; }
+.demo-pdp-size-btn { padding: 12px 0; background: #fff; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.85rem; font-weight: 600; color: #374151; cursor: pointer; transition: all 0.2s; text-align: center; }
+.demo-pdp-size-btn:hover { border-color: #0f172a; }
+.demo-pdp-size-btn.selected { background: #0f172a; color: #fff; border-color: #0f172a; }
+
+/* ── Actions ── */
+.demo-pdp-actions { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+.demo-pdp-add-btn { background: #0f172a; color: #fff; border: none; border-radius: 12px; padding: 16px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.demo-pdp-add-btn:hover { background: #1e293b; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+.demo-pdp-tryon-btn { background: linear-gradient(135deg, #0d9488, #0891b2); color: #fff; border: none; border-radius: 12px; padding: 16px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(13,148,136,0.3); display: flex; align-items: center; justify-content: center; gap: 8px; }
+.demo-pdp-tryon-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(13,148,136,0.4); }
+
+/* ── Specs ── */
+.demo-pdp-specs { margin-top: 24px; display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; color: #64748b; }
+.demo-pdp-specs span { color: #0f172a; font-weight: 600; margin-right: 6px; }
+
+/* ── Try-On Modal (PDP specific) ── */
+.tryon-model-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 8px; }
+.tryon-model-btn { position: relative; aspect-ratio: 3/4; border-radius: 16px; overflow: hidden; border: 3px solid transparent; cursor: pointer; padding: 0; transition: all 0.2s; background: #f9fafb; }
+.tryon-model-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(0,0,0,0.1); }
+.tryon-model-btn.selected { border-color: #0d9488; }
+.tryon-model-img { width: 100%; height: 100%; object-fit: cover; }
+.tryon-model-name { position: absolute; bottom: 8px; left: 8px; background: rgba(15,23,42,0.8); color: #fff; font-size: 0.65rem; font-weight: 700; padding: 4px 10px; border-radius: 999px; backdrop-filter: blur(4px); }
