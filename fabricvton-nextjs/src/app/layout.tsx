@@ -18,9 +18,6 @@ export const metadata: Metadata = {
   title: "FabricVTON - AI-Powered Virtual Try-On for Shopify",
   description:
     "AI-powered virtual try-on for Shopify fashion stores. Boost conversions, cut returns.",
-  icons: {
-    icon: "/favicon.ico",
-  },
 };
 
 import SmoothScroll from "./components/SmoothScroll";
