@@ -32,11 +32,11 @@ export default function StickyHeader() {
 					</Link>
 
 					<nav className="nav-links">
-						<a href="#">Home</a>
-						<a href="#features">Features</a>
-						<a href="#pricing">Pricing</a>
-						<a href="#">Blog</a>
-						<CalDemoButton className="cal-inline-trigger" label="Live Demo" />
+						<Link href="/#features">Features</Link>
+						<Link href="/#pricing">Pricing</Link>
+						<Link href="/#faq">FAQ</Link>
+						<Link href="/demo" className="nav-demo-link">Live Demo ✨</Link>
+						<CalDemoButton className="cal-inline-trigger" label="Book a Demo" />
 					</nav>
 
 					<a

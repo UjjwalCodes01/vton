@@ -17,11 +17,14 @@ import Footer from "./components/Footer";
 export const metadata: Metadata = {
   title: "FabricVTON - AI-Powered Virtual Try-On for Shopify",
   description:
-    "A clean landing page for FabricVTON virtual try-on for Shopify stores.",
+    "AI-powered virtual try-on for Shopify fashion stores. Boost conversions, cut returns.",
   icons: {
     icon: "/favicon.ico",
   },
 };
+
+import SmoothScroll from "./components/SmoothScroll";
+import { Toaster } from "sonner";
 
 export default function RootLayout({
   children,
@@ -31,8 +34,11 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="antialiased">
-        {children}
-        <Footer />
+        <SmoothScroll>
+          {children}
+          <Footer />
+        </SmoothScroll>
+        <Toaster position="bottom-right" richColors />
       </body>
     </html>
   );
