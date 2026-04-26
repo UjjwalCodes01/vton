@@ -10,6 +10,11 @@ import { MovingBorderCard } from "./components/ui/MovingBorder";
 import { Spotlight } from "./components/ui/Spotlight";
 import { TrendingUp, RotateCcw, Share2, Sparkles } from "lucide-react";
 import { XRayCompare } from "./components/ui/XRayCompare";
+import { BentoGrid } from "./components/ui/BentoGrid";
+import { ROICalculator } from "./components/ui/ROICalculator";
+import { PolaroidMarquee } from "./components/ui/PolaroidMarquee";
+import { TiltCard } from "./components/ui/TiltCard";
+import { TapToDress } from "./components/ui/TapToDress";
 
 /* ── Data ── */
 
@@ -87,6 +92,22 @@ const faqs = [
   {
     question: "What clothing types work best?",
     answer: "Tops, shirts, jackets, and dresses work best. We recommend clear product images on a plain background.",
+  },
+  {
+    question: "Will this slow down my Shopify store?",
+    answer: "No. The widget script is highly optimized and loads asynchronously. It will not affect your store's Core Web Vitals or page load speed.",
+  },
+  {
+    question: "What happens to the customer photos they upload?",
+    answer: "We take privacy very seriously. Customer photos are used strictly for the try-on generation and are automatically permanently deleted from our servers after 7 days. They are never used to train our AI models.",
+  },
+  {
+    question: "Can I customize the Try-On button to match my brand?",
+    answer: "Yes! You can easily customize the button colors, text, and positioning directly from the Shopify Theme Editor so it blends perfectly with your store's design.",
+  },
+  {
+    question: "Do you support platforms other than Shopify?",
+    answer: "Currently, our out-of-the-box widget is built exclusively for Shopify. However, we offer an API for custom integrations on WooCommerce, Magento, or custom web apps.",
   },
 ];
 
@@ -266,6 +287,18 @@ export default function HomePage() {
           </StaggerContainer>
         </section>
 
+        {/* ─── Polaroid Marquee ─── */}
+        <section className="section marquee-section">
+          <FadeUp>
+            <div className="faq-header">
+              <p className="faq-subtitle">Before &amp; After</p>
+              <h2>See the transformation</h2>
+              <p className="hero-copy" style={{ marginBottom: 0 }}>Hover any card to flip and reveal the AI try-on result.</p>
+            </div>
+          </FadeUp>
+          <PolaroidMarquee />
+        </section>
+
         {/* ─── How It Works ─── */}
         <section className="section how-works-section">
           <FadeUp>
@@ -303,7 +336,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ─── Features ─── */}
+        {/* ─── Features Bento Grid ─── */}
         <section id="features" className="section features-section">
           <FadeUp>
             <div className="faq-header">
@@ -317,19 +350,9 @@ export default function HomePage() {
               </div>
             </div>
           </FadeUp>
-          <StaggerContainer className="features-grid" staggerDelay={0.1}>
-            {features.map((f) => (
-              <StaggerItem key={f.title}>
-                <div className="feature-card">
-                  <div className="feature-card-body">
-                    <h3>{f.title}</h3>
-                    <p>{f.text}</p>
-                  </div>
-                  <div className="feature-card-footer">{f.footer}</div>
-                </div>
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
+          <FadeUp delay={0.15}>
+            <BentoGrid />
+          </FadeUp>
         </section>
 
         {/* ─── Why It Works ─── */}
@@ -355,6 +378,13 @@ export default function HomePage() {
           </StaggerContainer>
         </section>
 
+        {/* ─── ROI Calculator ─── */}
+        <section className="section roi-section">
+          <FadeUp>
+            <ROICalculator />
+          </FadeUp>
+        </section>
+
         {/* ─── Pricing ─── */}
         <section id="pricing" className="section pricing-section">
           <FadeUp>
@@ -368,8 +398,32 @@ export default function HomePage() {
             {pricing.map((plan) =>
               plan.featured ? (
                 <StaggerItem key={plan.name}>
-                  <MovingBorderCard className="pricing-card-featured-wrapper">
-                    <article className="pricing-card pricing-featured">
+                  <TiltCard>
+                    <MovingBorderCard className="pricing-card-featured-wrapper">
+                      <article className="pricing-card pricing-featured">
+                        <div className="pricing-header">
+                          <p className="pricing-plan-name">{plan.name}</p>
+                          <p className="pricing-plan-price">
+                            {plan.price}
+                            <span className="pricing-period">{plan.period}</span>
+                          </p>
+                        </div>
+                        <ul className="pricing-plan-list">
+                          {plan.items.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                        <a className="btn btn-primary pricing-card-btn" href={INSTALL_URL}>
+                          Get started
+                        </a>
+                      </article>
+                    </MovingBorderCard>
+                  </TiltCard>
+                </StaggerItem>
+              ) : (
+                <StaggerItem key={plan.name}>
+                  <TiltCard intensity={8}>
+                    <article className="pricing-card">
                       <div className="pricing-header">
                         <p className="pricing-plan-name">{plan.name}</p>
                         <p className="pricing-plan-price">
@@ -382,31 +436,11 @@ export default function HomePage() {
                           <li key={item}>{item}</li>
                         ))}
                       </ul>
-                      <a className="btn btn-primary pricing-card-btn" href={INSTALL_URL}>
+                      <a className="btn btn-secondary pricing-card-btn" href={INSTALL_URL}>
                         Get started
                       </a>
                     </article>
-                  </MovingBorderCard>
-                </StaggerItem>
-              ) : (
-                <StaggerItem key={plan.name}>
-                  <article className="pricing-card">
-                    <div className="pricing-header">
-                      <p className="pricing-plan-name">{plan.name}</p>
-                      <p className="pricing-plan-price">
-                        {plan.price}
-                        <span className="pricing-period">{plan.period}</span>
-                      </p>
-                    </div>
-                    <ul className="pricing-plan-list">
-                      {plan.items.map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                    <a className="btn btn-secondary pricing-card-btn" href={INSTALL_URL}>
-                      Get started
-                    </a>
-                  </article>
+                  </TiltCard>
                 </StaggerItem>
               )
             )}

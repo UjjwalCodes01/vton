@@ -7,21 +7,21 @@ import { motion, useMotionValue, useSpring } from "framer-motion";
 const PAIRS = [
   {
     id: 1,
-    label: "Casual → Styled",
-    before: "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=620&q=85",
-    after:  "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=620&q=85",
+    label: "Look 1",
+    before: "/model_images/original/7.jpg",
+    after:  "/model_images/generated/7_generated.jpg",
   },
   {
     id: 2,
-    label: "Streetwear",
-    before: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=620&q=85",
-    after:  "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=620&q=85",
+    label: "Look 2",
+    before: "/model_images/original/9.jpg",
+    after:  "/model_images/generated/9_generated.jpg",
   },
   {
     id: 3,
-    label: "Formal Look",
-    before: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=620&q=85",
-    after:  "https://images.unsplash.com/photo-1483721310020-03333e577078?w=620&q=85",
+    label: "Look 3",
+    before: "/model_images/original/2.jpeg",
+    after:  "/model_images/generated/2_generated.jpg",
   },
 ];
 
