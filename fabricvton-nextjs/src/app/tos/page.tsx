@@ -12,7 +12,7 @@ export default function TermsOfService() {
           <FadeUp>
             <div className="legal-header">
               <h1>Terms of Service</h1>
-              <p className="effective-date">Effective Date: September 25, 2025</p>
+              <p className="effective-date">Effective Date: April 17th, 2025</p>
             </div>
           </FadeUp>
           

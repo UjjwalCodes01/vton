@@ -184,12 +184,12 @@ const INSTALL_URL =
   "https://admin.shopify.com/?organization_id=212189841&no_redirect=true&redirect=/oauth/redirect_from_developer_dashboard?client_id%3D73cc9210c28108863a55bc041bddb1c0";
 
 /* ── Hero entrance animation variants ── */
-const heroVariants = {
+const heroVariants: any = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.12 } },
 };
 
-const heroChild = {
+const heroChild: any = {
   hidden: { opacity: 0, y: 24 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.21, 0.47, 0.32, 0.98] } },
 };
