@@ -6,7 +6,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ShoppingCart, Star, Sparkles, X, Heart, Share2, Ruler } from "lucide-react";
 import { toast } from "sonner";
-import { PRODUCTS, MODELS } from "../../../lib/demo-data";
+import { PRODUCTS } from "../../../lib/demo-data";
 import "../../demo.css";
 
 export default function ProductDetailPage() {
@@ -18,7 +18,6 @@ export default function ProductDetailPage() {
   const [selectedSize, setSelectedSize] = useState("");
   const [cartCount, setCartCount] = useState(0);
   const [isTryOnOpen, setIsTryOnOpen] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<string | null>(null);
 
   if (!product) {
     return (
@@ -136,7 +135,6 @@ export default function ProductDetailPage() {
               </button>
               <button className="demo-pdp-tryon-btn" onClick={() => {
                 setIsTryOnOpen(true);
-                setSelectedModel(null);
               }}>
                 <Sparkles size={18} />
                 Virtual Try-On
@@ -161,7 +159,7 @@ export default function ProductDetailPage() {
         </div>
       </main>
 
-      {/* ── Virtual Try-On Modal (Model Selector) ── */}
+      {/* ── Virtual Try-On Modal (Simulation) ── */}
       <AnimatePresence>
         {isTryOnOpen && (
           <motion.div
@@ -188,63 +186,41 @@ export default function ProductDetailPage() {
                 <span>Powered by FabricVTON AI</span>
               </div>
               <h2 className="tryon-title" style={{ textAlign: "left", marginBottom: "4px" }}>
-                See it on a model
+                Virtual Try-On
               </h2>
               <p className="tryon-subtitle" style={{ textAlign: "left", marginBottom: "24px" }}>
-                Select a model to instantly see how the {product.name} looks.
+                See how {product.name} looks instantly.
               </p>
 
-              {/* If a model is selected, show the try-on result */}
-              {selectedModel ? (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="tryon-result-step"
-                  style={{ display: "flex", flexDirection: "column", gap: "16px" }}
-                >
-                  <div className="tryon-result-image-wrap" style={{ maxWidth: "100%", aspectRatio: "3/4" }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={product.tryOnResults[selectedModel]}
-                      alt="Try-on result"
-                      className="tryon-result-img"
-                    />
-                    <div className="tryon-result-badge">
-                      <Sparkles size={10} /> AI Generated
-                    </div>
+              {/* Result State */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="tryon-step-container"
+                style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+              >
+                <div className="tryon-result-image-wrap" style={{ maxWidth: "100%", aspectRatio: "3/4" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={product.demoTryOn.resultPhoto}
+                    alt="Try-on result"
+                    className="tryon-result-img"
+                  />
+                  <div className="tryon-result-badge">
+                    <Sparkles size={10} /> AI Generated
                   </div>
+                </div>
+                <div style={{ display: "flex", gap: "12px" }}>
                   <button 
-                    className="btn-demo-secondary" 
-                    onClick={() => setSelectedModel(null)}
-                    style={{ width: "100%" }}
+                    onClick={() => { setIsTryOnOpen(false); addToCart(); }}
+                    style={{ width: "100%", padding: "14px", background: "#0d9488", color: "white", borderRadius: "12px", fontWeight: 600, border: "none", cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: "8px" }}
                   >
-                    View Another Model
+                    <ShoppingCart size={18} />
+                    Add to Cart
                   </button>
-                </motion.div>
-              ) : (
-                /* Otherwise, show the 4 models */
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="tryon-model-grid"
-                >
-                  {MODELS.map((model) => (
-                    <button
-                      key={model.id}
-                      className="tryon-model-btn"
-                      onClick={() => {
-                        toast.success(`Applying clothes to ${model.name}...`);
-                        // Slight delay to simulate AI fast processing for the demo
-                        setTimeout(() => setSelectedModel(model.id), 400);
-                      }}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={model.image} alt={model.name} className="tryon-model-img" />
-                      <span className="tryon-model-name">{model.name}</span>
-                    </button>
-                  ))}
-                </motion.div>
-              )}
+                </div>
+              </motion.div>
+
             </motion.div>
           </motion.div>
         )}
