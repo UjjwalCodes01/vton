@@ -22,13 +22,8 @@ export default function StickyHeader() {
 			<header className="site-header">
 				<div className="site-header-shell">
 					<Link className="brand" href="/">
-						<span className="brand-mark" aria-hidden="true">
-							✶
-						</span>
-						<div>
-							<p className="brand-name">FABRICVTON</p>
-							<p className="brand-sub">VIRTUAL TRY-ON</p>
-						</div>
+						{/* eslint-disable-next-line @next/next/no-img-element */}
+						<img src="/fabricvton-removebg.png" alt="FabricVTON Logo" style={{ height: "40px", width: "auto" }} />
 					</Link>
 
 					<nav className="nav-links">

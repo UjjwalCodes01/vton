@@ -240,12 +240,11 @@ export default function HomePage() {
                 Built for Shopify
               </motion.p>
               <motion.h1 variants={heroChild}>
-                Let customers{" "}
-                <span>try on your products,<br />from anywhere.</span>
+                The ultimate{" "}
+                <span>virtual fitting room<br />for Shopify.</span>
               </motion.h1>
               <motion.p variants={heroChild} className="hero-copy">
-                FabricVTON is an AI virtual fitting room for your Shopify store.
-                Customers see how clothes look on their own body — and buy with confidence.
+                Turn your product images into interactive try-on experiences. Reduce return rates, skyrocket conversions, and let your customers buy with absolute confidence.
               </motion.p>
               <motion.div variants={heroChild} className="hero-actions">
                 <a className="btn btn-primary" href={INSTALL_URL}>
