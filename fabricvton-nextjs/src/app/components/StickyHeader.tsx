@@ -30,6 +30,7 @@ export default function StickyHeader() {
 						<Link href="/#features">Features</Link>
 						<Link href="/#pricing">Pricing</Link>
 						<Link href="/#faq">FAQ</Link>
+						<Link href="/about">About</Link>
 						<Link href="/demo" className="nav-demo-link">Live Demo ✨</Link>
 						<CalDemoButton className="cal-inline-trigger" label="Book a Demo" />
 					</nav>
