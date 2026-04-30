@@ -5,23 +5,24 @@ import { motion, useMotionValue, useSpring } from "framer-motion";
 
 /* ── Before / After image pairs ── */
 const PAIRS = [
-  {
-    id: 1,
-    label: "Look 1",
-    before: "/model_images/original/7.jpg",
-    after:  "/model_images/generated/7_generated.jpg",
-  },
+
   {
     id: 2,
-    label: "Look 2",
+    label: "Look 1",
     before: "/model_images/original/9.jpg",
-    after:  "/model_images/generated/9_generated.jpg",
+    after: "/model_images/generated/9_generated.jpg",
+  },
+  {
+    id: 1,
+    label: "Look 2",
+    before: "/model_images/original/7.jpg",
+    after: "/model_images/generated/7_generated.jpg",
   },
   {
     id: 3,
     label: "Look 3",
     before: "/model_images/original/2.jpeg",
-    after:  "/model_images/generated/2_generated.jpg",
+    after: "/model_images/generated/2_generated.jpg",
   },
 ];
 
