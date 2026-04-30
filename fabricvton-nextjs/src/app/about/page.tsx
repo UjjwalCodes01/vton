@@ -40,7 +40,7 @@ const team = [
     role: "Developer & Manager",
     roleShort: "Dev & Manager",
     bio: "Ujjwal owns the frontend experience and product design at FabricVTON. He crafts every pixel of the widget shoppers interact with and keeps the landing page sharp. Beyond design, he manages cross-team coordination to keep everything moving fast.",
-    photo: "/team/ujjwal.jpg",
+    photo: "/team/Ujjwal.png",
     placeholder: "UT",
     color: "#f59e0b",
   },
