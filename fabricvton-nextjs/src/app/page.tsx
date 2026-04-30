@@ -74,6 +74,13 @@ const pricing = [
     period: "/month",
     items: ["2,500 try-ons / month", "+$0.08 per extra", "Lead capture", "Analytics dashboard", "Priority support"],
   },
+  {
+    name: "Enterprise",
+    price: "Custom",
+    period: "",
+    items: ["High volume try-ons", "Custom API integration", "Dedicated account manager", "Volume discounts", "24/7 SLA support"],
+    isContact: true,
+  },
 ];
 
 const faqs = [
@@ -435,9 +442,16 @@ export default function HomePage() {
                           <li key={item}>{item}</li>
                         ))}
                       </ul>
-                      <a className="btn btn-secondary pricing-card-btn" href={INSTALL_URL}>
-                        Get started
-                      </a>
+
+                      {plan.isContact ? (
+                        <a className="btn btn-secondary pricing-card-btn" href="mailto:support@fabricvton.com">
+                          Contact us
+                        </a>
+                      ) : (
+                        <a className="btn btn-secondary pricing-card-btn" href={INSTALL_URL}>
+                          Get started
+                        </a>
+                      )}
                     </article>
                   </TiltCard>
                 </StaggerItem>
