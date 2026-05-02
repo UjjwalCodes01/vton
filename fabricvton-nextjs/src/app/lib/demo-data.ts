@@ -30,9 +30,9 @@ export const PRODUCTS: Product[] = [
     rating: 4.8,
     reviews: 1241,
     badge: "Bestseller",
-    image: "/model_images/generated/7_generated.jpg",
+    image: "/model_images/original/7.jpg",
     galleryImages: [
-      "/model_images/generated/7_generated.jpg",
+      "/model_images/original/7.jpg",
     ],
     demoTryOn: {
       userPhoto: "/model_images/original/7.jpg",
@@ -53,9 +53,9 @@ export const PRODUCTS: Product[] = [
     rating: 4.9,
     reviews: 891,
     badge: "New",
-    image: "/model_images/generated/9_generated.jpg",
+    image: "/model_images/original/9.jpg",
     galleryImages: [
-      "/model_images/generated/9_generated.jpg",
+      "/model_images/original/9.jpg",
     ],
     demoTryOn: {
       userPhoto: "/model_images/original/9.jpg",
@@ -76,9 +76,9 @@ export const PRODUCTS: Product[] = [
     rating: 4.7,
     reviews: 543,
     badge: "-21% Off",
-    image: "/model_images/generated/2_generated.jpg",
+    image: "/model_images/original/2.jpeg",
     galleryImages: [
-      "/model_images/generated/2_generated.jpg",
+      "/model_images/original/2.jpeg",
     ],
     demoTryOn: {
       userPhoto: "/model_images/original/2.jpeg",
@@ -99,9 +99,9 @@ export const PRODUCTS: Product[] = [
     rating: 4.9,
     reviews: 312,
     badge: "Top Rated",
-    image: "/model_images/generated/8_generated.jpg",
+    image: "/model_images/original/8.jpg",
     galleryImages: [
-      "/model_images/generated/8_generated.jpg",
+      "/model_images/original/8.jpg",
     ],
     demoTryOn: {
       userPhoto: "/model_images/original/8.jpg",
@@ -122,9 +122,9 @@ export const PRODUCTS: Product[] = [
     rating: 4.6,
     reviews: 967,
     badge: null,
-    image: "/model_images/generated/12_generated.jpg",
+    image: "/model_images/original/12.jpg",
     galleryImages: [
-      "/model_images/generated/12_generated.jpg",
+      "/model_images/original/12.jpg",
     ],
     demoTryOn: {
       userPhoto: "/model_images/original/12.jpg",
@@ -145,9 +145,9 @@ export const PRODUCTS: Product[] = [
     rating: 4.8,
     reviews: 421,
     badge: "Trending",
-    image: "/model_images/generated/6_generated.jpg",
+    image: "/model_images/original/6.jpg",
     galleryImages: [
-      "/model_images/generated/6_generated.jpg",
+      "/model_images/original/6.jpg",
     ],
     demoTryOn: {
       userPhoto: "/model_images/original/6.jpg",

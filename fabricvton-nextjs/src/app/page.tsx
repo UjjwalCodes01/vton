@@ -19,10 +19,10 @@ import { TapToDress } from "./components/ui/TapToDress";
 /* ── Data ── */
 
 const stats = [
-  { value: "81", suffix: "%", label: "Lift in Add-to-Cart" },
-  { value: "67", suffix: "%", label: "Conversion Increase" },
-  { value: "25", suffix: "%", label: "Fewer Returns" },
-  { value: "61", suffix: "s", label: "Avg. Engagement" },
+  { value: "~81", suffix: "%", label: "Lift in Add-to-Cart" },
+  { value: "~67", suffix: "%", label: "Conversion Increase" },
+  { value: "~25", suffix: "%", label: "Fewer Returns" },
+  { value: "~61", suffix: "s", label: "Avg. Engagement" },
 ];
 
 const revenueReasons = [
@@ -312,11 +312,6 @@ export default function HomePage() {
               <p className="faq-subtitle">How it works</p>
               <h2>From browsing to buying in seconds</h2>
               <p className="hero-copy" style={{ marginBottom: "24px" }}>Give your customers the virtual fitting room experience they&apos;ve been waiting for. No app downloads, just instant confidence.</p>
-              <div className="hero-actions">
-                <a className="btn btn-primary" href={INSTALL_URL}>Install Free on Shopify</a>
-                <Link href="/demo" className="btn btn-demo-store">✨ See it live</Link>
-                <CalDemoButton />
-              </div>
             </div>
           </FadeUp>
 
@@ -349,11 +344,6 @@ export default function HomePage() {
               <p className="faq-subtitle">Features</p>
               <h2>All-in-one Virtual Fitting Room</h2>
               <p className="hero-copy" style={{ marginBottom: "24px" }}>Everything you need to increase conversions, capture leads, and create content — in one powerful app.</p>
-              <div className="hero-actions">
-                <a className="btn btn-primary" href={INSTALL_URL}>Install Free on Shopify</a>
-                <Link href="/demo" className="btn btn-demo-store">✨ See it live</Link>
-                <CalDemoButton />
-              </div>
             </div>
           </FadeUp>
           <FadeUp delay={0.15}>

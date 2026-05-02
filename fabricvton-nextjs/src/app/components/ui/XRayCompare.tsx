@@ -14,16 +14,16 @@ const PAIRS = [
     afterTransform: "scale(1) translate(0px, 0px)",
   },
   {
-    id: 1,
+    id: 10,
     label: "Look 2",
-    before: "/model_images/original/7.jpg",
-    after: "/model_images/generated/7_generated_cropped.jpg",
+    before: "/model_images/original/10.jpg",
+    after: "/model_images/generated/10_generated.jpg",
   },
   {
-    id: 3,
+    id: 1,
     label: "Look 3",
-    before: "/model_images/original/2.jpeg",
-    after: "/model_images/generated/2_generated_cropped.jpg",
+    before: "/model_images/original/7.jpg",
+    after: "/model_images/generated/7_generated_cropped.jpg",
   },
 ];
 
