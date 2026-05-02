@@ -11,18 +11,19 @@ const PAIRS = [
     label: "Look 1",
     before: "/model_images/original/9.jpg",
     after: "/model_images/generated/9_generated.jpg",
+    afterTransform: "scale(1) translate(0px, 0px)",
   },
   {
     id: 1,
     label: "Look 2",
     before: "/model_images/original/7.jpg",
-    after: "/model_images/generated/7_generated.jpg",
+    after: "/model_images/generated/7_generated_cropped.jpg",
   },
   {
     id: 3,
     label: "Look 3",
     before: "/model_images/original/2.jpeg",
-    after: "/model_images/generated/2_generated.jpg",
+    after: "/model_images/generated/2_generated_cropped.jpg",
   },
 ];
 
@@ -101,6 +102,8 @@ export function XRayCompare() {
           style={{
             clipPath: `circle(${clipR}px at ${pos.x}px ${pos.y}px)`,
             WebkitClipPath: `circle(${clipR}px at ${pos.x}px ${pos.y}px)`,
+            transform: pair.afterTransform || "none",
+            transformOrigin: "top center",
           }}
           draggable={false}
         />
