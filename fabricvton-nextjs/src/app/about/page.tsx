@@ -19,8 +19,8 @@ const team = [
   },
   {
     name: "Rudra Veer Singh Rathore",
-    role: "Developer & Manager",
-    roleShort: "Dev & Manager",
+    role: "Co-Founder & COO",
+    roleShort: "Co-Founder",
     bio: "Full-stack developer and the technical backbone of FabricVTON. Rudra architects robust, scalable systems and ensures every feature is shipped with quality. His Shopify store experience gives him a uniquely practical lens on every engineering decision.",
     photo: "/team/rudra.jpg",
     placeholder: "RR",
@@ -28,8 +28,8 @@ const team = [
   },
   {
     name: "Aaditya Singhal",
-    role: "Developer & Manager",
-    roleShort: "Dev & Manager",
+    role: "Co-Founder & CTO",
+    roleShort: "Co-Founder",
     bio: "Aaditya bridges deep AI/ML knowledge with product intuition. He drives the try-on model pipeline and ensures the generated results feel real — from preserving fabric drape to accurate lighting. He also leads merchant onboarding and support workflows.",
     photo: "/team/aaditya.jpg",
     placeholder: "AS",
@@ -37,8 +37,8 @@ const team = [
   },
   {
     name: "Ujjwal Tyagi",
-    role: "Developer & Manager",
-    roleShort: "Dev & Manager",
+    role: "Co-Founder & CIO",
+    roleShort: "Co-Founder",
     bio: "Ujjwal owns the frontend experience and product design at FabricVTON. He designed and built the entire Shopify plugin along with the full website. He crafts every pixel of the widget shoppers interact with and keeps the landing page sharp. Beyond design, he manages cross-team coordination to keep everything moving fast.",
     photo: "/team/Ujjwal.png",
     placeholder: "UT",

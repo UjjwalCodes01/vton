@@ -1,3 +1,15 @@
+export type ProductTryOnGarment = {
+  id: number;
+  label: string;
+  garmentImage: string;
+  resultImage: string;
+};
+
+export type ProductTryOnExperience = {
+  initialPersonImage: string;
+  garments: ProductTryOnGarment[];
+};
+
 export type Product = {
   id: number;
   name: string;
@@ -13,6 +25,7 @@ export type Product = {
     userPhoto: string;
     resultPhoto: string;
   };
+  tryOnExperience?: ProductTryOnExperience;
   colors: string[];
   sizes: string[];
   description: string;
@@ -37,6 +50,47 @@ export const PRODUCTS: Product[] = [
     demoTryOn: {
       userPhoto: "/model_images/original/7.jpg",
       resultPhoto: "/model_images/generated/7_generated.jpg",
+    },
+    tryOnExperience: {
+      initialPersonImage: "/demo_tryon/product_1/person.png",
+      garments: [
+        {
+          id: 1,
+          label: "Garment 1",
+          garmentImage: "/demo_tryon/product_1/1.png",
+          resultImage: "/demo_tryon/product_1/output_garment_1_1.png",
+        },
+        {
+          id: 2,
+          label: "Garment 2",
+          garmentImage: "/demo_tryon/product_1/2.png",
+          resultImage: "/demo_tryon/product_1/output_garment_2_1.png",
+        },
+        {
+          id: 3,
+          label: "Garment 3",
+          garmentImage: "/demo_tryon/product_1/3.png",
+          resultImage: "/demo_tryon/product_1/output_garment_3_1.png",
+        },
+        {
+          id: 4,
+          label: "Garment 4",
+          garmentImage: "/demo_tryon/product_1/4.png",
+          resultImage: "/demo_tryon/product_1/output_garment_4_1.png",
+        },
+        {
+          id: 5,
+          label: "Garment 5",
+          garmentImage: "/demo_tryon/product_1/5.png",
+          resultImage: "/demo_tryon/product_1/output_garment_5_1.png",
+        },
+        {
+          id: 6,
+          label: "Garment 6",
+          garmentImage: "/demo_tryon/product_1/6.png",
+          resultImage: "/demo_tryon/product_1/output_garment_6_1.png",
+        },
+      ],
     },
     colors: ["#ffffff", "#1c1c1c", "#f5f0e8"],
     sizes: ["XS", "S", "M", "L", "XL"],
@@ -69,52 +123,6 @@ export const PRODUCTS: Product[] = [
   },
   {
     id: 3,
-    name: "Minimalist Crewneck Sweater",
-    brand: "Thread & Co. Essentials",
-    price: 110,
-    originalPrice: 140,
-    rating: 4.7,
-    reviews: 543,
-    badge: "-21% Off",
-    image: "/model_images/original/2.jpeg",
-    galleryImages: [
-      "/model_images/original/2.jpeg",
-    ],
-    demoTryOn: {
-      userPhoto: "/model_images/original/2.jpeg",
-      resultPhoto: "/model_images/generated/2_generated.jpg",
-    },
-    colors: ["#1c1c1c", "#6b7280", "#d1d5db"],
-    sizes: ["XS", "S", "M", "L", "XL", "XXL"],
-    description: "A versatile crewneck sweater that perfectly balances warmth and weight. A wardrobe staple.",
-    material: "100% Merino Wool",
-    fit: "Relaxed",
-  },
-  {
-    id: 4,
-    name: "Modern Urban Jacket",
-    brand: "Thread & Co. Outerwear",
-    price: 189,
-    originalPrice: null,
-    rating: 4.9,
-    reviews: 312,
-    badge: "Top Rated",
-    image: "/model_images/original/8.jpg",
-    galleryImages: [
-      "/model_images/original/8.jpg",
-    ],
-    demoTryOn: {
-      userPhoto: "/model_images/original/8.jpg",
-      resultPhoto: "/model_images/generated/8_generated.jpg",
-    },
-    colors: ["#2c3e50", "#1c1c1c", "#8b7355"],
-    sizes: ["S", "M", "L", "XL"],
-    description: "Sleek and highly functional. This jacket provides excellent wind resistance while maintaining a sharp silhouette.",
-    material: "100% Technical Polyester",
-    fit: "Slim",
-  },
-  {
-    id: 5,
     name: "Casual Linen Button-Up",
     brand: "Thread & Co. Summer",
     price: 85,
@@ -130,6 +138,47 @@ export const PRODUCTS: Product[] = [
       userPhoto: "/model_images/original/12.jpg",
       resultPhoto: "/model_images/generated/12_generated.jpg",
     },
+    tryOnExperience: {
+      initialPersonImage: "/demo_tryon/product_3/person.png",
+      garments: [
+        {
+          id: 1,
+          label: "Garment 1",
+          garmentImage: "/demo_tryon/product_3/1.png",
+          resultImage: "/demo_tryon/product_3/output_garment_1_1.png",
+        },
+        {
+          id: 2,
+          label: "Garment 2",
+          garmentImage: "/demo_tryon/product_3/2.png",
+          resultImage: "/demo_tryon/product_3/output_garment_2_1.png",
+        },
+        {
+          id: 3,
+          label: "Garment 3",
+          garmentImage: "/demo_tryon/product_3/3.png",
+          resultImage: "/demo_tryon/product_3/output_garment_3_1.png",
+        },
+        {
+          id: 4,
+          label: "Garment 4",
+          garmentImage: "/demo_tryon/product_3/4.png",
+          resultImage: "/demo_tryon/product_3/output_garment_4_1.png",
+        },
+        {
+          id: 5,
+          label: "Garment 5",
+          garmentImage: "/demo_tryon/product_3/5.png",
+          resultImage: "/demo_tryon/product_3/output_garment_5_1.png",
+        },
+        {
+          id: 6,
+          label: "Garment 6",
+          garmentImage: "/demo_tryon/product_3/6.png",
+          resultImage: "/demo_tryon/product_3/output_garment_6_1.png",
+        },
+      ],
+    },
     colors: ["#d4c5b0", "#ffffff", "#8b7355"],
     sizes: ["XS", "S", "M", "L", "XL", "XXL"],
     description: "Woven from premium French linen, this relaxed-fit shirt breathes beautifully in warm weather.",
@@ -137,7 +186,7 @@ export const PRODUCTS: Product[] = [
     fit: "Relaxed",
   },
   {
-    id: 6,
+    id: 4,
     name: "Everyday Denim Over-Shirt",
     brand: "Thread & Co. Raw",
     price: 125,
@@ -152,6 +201,47 @@ export const PRODUCTS: Product[] = [
     demoTryOn: {
       userPhoto: "/model_images/original/6.jpg",
       resultPhoto: "/model_images/generated/6_generated.jpg",
+    },
+    tryOnExperience: {
+      initialPersonImage: "/demo_tryon/product_4/person.png",
+      garments: [
+        {
+          id: 1,
+          label: "Garment 1",
+          garmentImage: "/demo_tryon/product_4/1.png",
+          resultImage: "/demo_tryon/product_4/output_garment_1_1.png",
+        },
+        {
+          id: 2,
+          label: "Garment 2",
+          garmentImage: "/demo_tryon/product_4/2.png",
+          resultImage: "/demo_tryon/product_4/output_garment_2_1.png",
+        },
+        {
+          id: 3,
+          label: "Garment 3",
+          garmentImage: "/demo_tryon/product_4/3.png",
+          resultImage: "/demo_tryon/product_4/output_garment_3_1.png",
+        },
+        {
+          id: 4,
+          label: "Garment 4",
+          garmentImage: "/demo_tryon/product_4/4.png",
+          resultImage: "/demo_tryon/product_4/output_garment_4_1.png",
+        },
+        {
+          id: 5,
+          label: "Garment 5",
+          garmentImage: "/demo_tryon/product_4/5.png",
+          resultImage: "/demo_tryon/product_4/output_garment_5_1.png",
+        },
+        {
+          id: 6,
+          label: "Garment 6",
+          garmentImage: "/demo_tryon/product_4/6.png",
+          resultImage: "/demo_tryon/product_4/output_garment_6_1.png",
+        },
+      ],
     },
     colors: ["#5b7fa6", "#1c1c1c"],
     sizes: ["S", "M", "L", "XL"],

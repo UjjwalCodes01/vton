@@ -1,12 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ShoppingCart, Star, Sparkles, X, Heart, Share2, Ruler } from "lucide-react";
+import {
+  ArrowLeft,
+  ShoppingCart,
+  Star,
+  Sparkles,
+  X,
+  Heart,
+  Share2,
+  Ruler,
+  LoaderCircle,
+} from "lucide-react";
 import { toast } from "sonner";
-import { PRODUCTS } from "../../../lib/demo-data";
+import { PRODUCTS, type ProductTryOnGarment } from "../../../lib/demo-data";
 import "../../demo.css";
 
 export default function ProductDetailPage() {
@@ -18,6 +28,87 @@ export default function ProductDetailPage() {
   const [selectedSize, setSelectedSize] = useState("");
   const [cartCount, setCartCount] = useState(0);
   const [isTryOnOpen, setIsTryOnOpen] = useState(false);
+  const [tryOnPreview, setTryOnPreview] = useState(product ? product.image : "");
+  const [selectedGarmentId, setSelectedGarmentId] = useState<number | null>(null);
+  const [generatedGarmentId, setGeneratedGarmentId] = useState<number | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const generationTimeoutRef = useRef<number | null>(null);
+
+  const garments: ProductTryOnGarment[] = product?.tryOnExperience?.garments ?? PRODUCTS.slice(0, 6).map((item) => ({
+    id: item.id,
+    label: item.name,
+    garmentImage: item.image,
+    resultImage: item.demoTryOn.resultPhoto,
+  }));
+
+  const addToCart = () => {
+    if (!product) {
+      return;
+    }
+
+    if (!selectedSize) {
+      toast.error("Please select a size first");
+      return;
+    }
+    setCartCount((c) => c + 1);
+    toast.success(`${product.name} added to cart!`, { description: `Size: ${selectedSize}` });
+  };
+
+  useEffect(() => {
+    return () => {
+      if (generationTimeoutRef.current) {
+        window.clearTimeout(generationTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const openTryOn = () => {
+    if (generationTimeoutRef.current) {
+      window.clearTimeout(generationTimeoutRef.current);
+      generationTimeoutRef.current = null;
+    }
+
+    setTryOnPreview(product?.tryOnExperience?.initialPersonImage ?? activeImage);
+    setSelectedGarmentId(null);
+    setGeneratedGarmentId(null);
+    setIsGenerating(false);
+    setIsTryOnOpen(true);
+  };
+
+  const closeTryOn = () => {
+    if (generationTimeoutRef.current) {
+      window.clearTimeout(generationTimeoutRef.current);
+      generationTimeoutRef.current = null;
+    }
+
+    setIsGenerating(false);
+    setSelectedGarmentId(null);
+    setGeneratedGarmentId(null);
+    setTryOnPreview(product?.tryOnExperience?.initialPersonImage ?? activeImage);
+    setIsTryOnOpen(false);
+  };
+
+  const handleGarmentSelect = (garmentId: number) => {
+    const garment = garments.find((item) => item.id === garmentId);
+    if (!garment || isGenerating) {
+      return;
+    }
+
+    setSelectedGarmentId(garmentId);
+    setGeneratedGarmentId(null);
+    setIsGenerating(true);
+
+    if (generationTimeoutRef.current) {
+      window.clearTimeout(generationTimeoutRef.current);
+    }
+
+    generationTimeoutRef.current = window.setTimeout(() => {
+      setTryOnPreview(garment.resultImage);
+      setGeneratedGarmentId(garmentId);
+      setIsGenerating(false);
+      generationTimeoutRef.current = null;
+    }, 3000);
+  };
 
   if (!product) {
     return (
@@ -27,15 +118,6 @@ export default function ProductDetailPage() {
       </div>
     );
   }
-
-  const addToCart = () => {
-    if (!selectedSize) {
-      toast.error("Please select a size first");
-      return;
-    }
-    setCartCount((c) => c + 1);
-    toast.success(`${product.name} added to cart!`, { description: `Size: ${selectedSize}` });
-  };
 
   return (
     <div className="demo-shell">
@@ -134,7 +216,7 @@ export default function ProductDetailPage() {
                 Add to Cart
               </button>
               <button className="demo-pdp-tryon-btn" onClick={() => {
-                setIsTryOnOpen(true);
+                openTryOn();
               }}>
                 <Sparkles size={18} />
                 Virtual Try-On
@@ -167,7 +249,7 @@ export default function ProductDetailPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={(e) => { if (e.target === e.currentTarget) setIsTryOnOpen(false); }}
+            onClick={(e) => { if (e.target === e.currentTarget) closeTryOn(); }}
           >
             <motion.div
               className="tryon-modal"
@@ -177,7 +259,7 @@ export default function ProductDetailPage() {
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
               style={{ maxWidth: "480px" }}
             >
-              <button className="tryon-close" onClick={() => setIsTryOnOpen(false)} aria-label="Close">
+              <button className="tryon-close" onClick={closeTryOn} aria-label="Close">
                 <X size={18} />
               </button>
 
@@ -189,31 +271,93 @@ export default function ProductDetailPage() {
                 Virtual Try-On
               </h2>
               <p className="tryon-subtitle" style={{ textAlign: "left", marginBottom: "24px" }}>
-                See how {product.name} looks instantly.
+                Choose a garment below to generate the try-on preview.
               </p>
 
-              {/* Result State */}
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="tryon-step-container"
                 style={{ display: "flex", flexDirection: "column", gap: "16px" }}
               >
-                <div className="tryon-result-image-wrap" style={{ maxWidth: "100%", aspectRatio: "3/4" }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={product.demoTryOn.resultPhoto}
-                    alt="Try-on result"
-                    className="tryon-result-img"
-                  />
-                  <div className="tryon-result-badge">
-                    <Sparkles size={10} /> AI Generated
+                <div className="tryon-demo-stage">
+                  <div className="tryon-demo-image-wrap">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={tryOnPreview}
+                      alt={generatedGarmentId ? "Generated try-on result" : product.name}
+                      className={`tryon-demo-image ${isGenerating ? "is-generating" : ""}`}
+                    />
+
+                    {generatedGarmentId ? (
+                      <div className="tryon-result-badge">
+                        <Sparkles size={10} /> AI Generated
+                      </div>
+                    ) : null}
+
+                    <AnimatePresence>
+                      {isGenerating && (
+                        <motion.div
+                          className="tryon-demo-loader"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                        >
+                          <LoaderCircle size={28} className="tryon-demo-loader-icon" />
+                          <p>Generating virtual try-on...</p>
+                          <span>This takes about 3 seconds</span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  <div className="tryon-garment-strip">
+                    {garments.map((garment) => {
+                      const isSelected = selectedGarmentId === garment.id;
+                      const isGenerated = generatedGarmentId === garment.id;
+
+                      return (
+                        <button
+                          key={garment.id}
+                          type="button"
+                          className={`tryon-garment-thumb ${isSelected ? "selected" : ""} ${isGenerated ? "generated" : ""}`}
+                          onClick={() => handleGarmentSelect(garment.id)}
+                          disabled={isGenerating}
+                          aria-label={`Try on ${garment.label}`}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={garment.garmentImage}
+                            alt={garment.label}
+                            className="tryon-garment-thumb-img"
+                          />
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
+
                 <div style={{ display: "flex", gap: "12px" }}>
-                  <button 
-                    onClick={() => { setIsTryOnOpen(false); addToCart(); }}
-                    style={{ width: "100%", padding: "14px", background: "#0d9488", color: "white", borderRadius: "12px", fontWeight: 600, border: "none", cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: "8px" }}
+                  <button
+                    onClick={() => {
+                      closeTryOn();
+                      addToCart();
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "14px",
+                      background: "#0d9488",
+                      color: "white",
+                      borderRadius: "12px",
+                      fontWeight: 600,
+                      border: "none",
+                      cursor: "pointer",
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                    disabled={isGenerating}
                   >
                     <ShoppingCart size={18} />
                     Add to Cart
