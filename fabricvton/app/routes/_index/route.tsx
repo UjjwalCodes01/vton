@@ -133,7 +133,11 @@ const faqs = [
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
 
-  if (url.searchParams.get("shop")) {
+  if (
+    url.searchParams.get("shop") ||
+    url.searchParams.get("host") ||
+    url.searchParams.get("id_token")
+  ) {
     throw redirect(`/app?${url.searchParams.toString()}`);
   }
 
