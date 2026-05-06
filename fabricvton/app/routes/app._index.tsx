@@ -104,7 +104,7 @@ export default function Dashboard() {
             <div className="fv-flex fv-justify-between fv-items-center fv-mb-md">
               <div>
                 <span style={{ fontSize: "14px", fontWeight: 600 }}>
-                  Plan: <span style={{ color: "var(--fv-accent)" }}>{data.plan}</span>
+                  Tier: <span style={{ color: "var(--fv-accent)" }}>{data.plan}</span>
                 </span>
               </div>
               <div style={{ fontSize: "14px" }}>

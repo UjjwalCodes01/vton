@@ -26,7 +26,7 @@ export interface Plan {
 export const PLANS: Plan[] = [
   {
     name: "free",
-    label: "Free",
+    label: "Basic",
     monthlyPrice: 0,
     annualPrice: 0,
     credits: 10,
