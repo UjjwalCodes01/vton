@@ -62,6 +62,20 @@ export default function ProductDetailPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (isTryOnOpen) {
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+    } else {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    };
+  }, [isTryOnOpen]);
+
   const openTryOn = () => {
     if (generationTimeoutRef.current) {
       window.clearTimeout(generationTimeoutRef.current);
@@ -246,6 +260,7 @@ export default function ProductDetailPage() {
         {isTryOnOpen && (
           <motion.div
             className="tryon-backdrop"
+            data-lenis-prevent="true"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -253,26 +268,28 @@ export default function ProductDetailPage() {
           >
             <motion.div
               className="tryon-modal"
+              data-lenis-prevent="true"
               initial={{ scale: 0.93, opacity: 0, y: 30 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.93, opacity: 0, y: 20 }}
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              style={{ maxWidth: "480px" }}
             >
               <button className="tryon-close" onClick={closeTryOn} aria-label="Close">
                 <X size={18} />
               </button>
 
-              <div className="tryon-powered" style={{ marginBottom: "12px" }}>
-                <Sparkles size={11} />
-                <span>Powered by FabricVTON AI</span>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <div className="tryon-powered" style={{ marginBottom: "16px" }}>
+                  <Sparkles size={12} />
+                  <span>Powered by FabricVTON AI</span>
+                </div>
+                <h2 className="tryon-title" style={{ textAlign: "center", marginBottom: "8px" }}>
+                  Virtual Try-On
+                </h2>
+                <p className="tryon-subtitle" style={{ textAlign: "center", marginBottom: "28px" }}>
+                  Choose a garment below to generate the try-on preview.
+                </p>
               </div>
-              <h2 className="tryon-title" style={{ textAlign: "left", marginBottom: "4px" }}>
-                Virtual Try-On
-              </h2>
-              <p className="tryon-subtitle" style={{ textAlign: "left", marginBottom: "24px" }}>
-                Choose a garment below to generate the try-on preview.
-              </p>
 
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
