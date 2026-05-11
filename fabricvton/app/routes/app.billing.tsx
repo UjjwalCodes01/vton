@@ -34,7 +34,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   // Build the Shopify-managed pricing plan change URL.
   // Shopify shows its own plan picker at this URL.
   const apiKey = process.env.SHOPIFY_API_KEY ?? "";
-  const pricingPlanUrl = `shopify://admin/charges/${apiKey}/pricing_plans`;
+  const appUrl = process.env.SHOPIFY_APP_URL ?? "";
+  const returnUrl = encodeURIComponent(`${appUrl}/app/billing`);
+  const pricingPlanUrl = `https://${shop}/admin/charges/${apiKey}/pricing_plans?return_url=${returnUrl}`;
 
   return { currentPlan, plans: PLANS, activationMessage, pricingPlanUrl };
 };
