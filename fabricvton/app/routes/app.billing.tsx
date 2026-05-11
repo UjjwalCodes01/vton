@@ -32,13 +32,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const currentPlan = getPlan(config?.plan ?? "free");
 
   // Build the Shopify-managed pricing plan change URL.
-  // Use admin.shopify.com/store/{storeHandle} format to skip the store
-  // selector and go DIRECTLY to the plan picker page.
+  // Shopify shows its own plan picker at this URL.
   const apiKey = process.env.SHOPIFY_API_KEY ?? "";
   const appUrl = process.env.SHOPIFY_APP_URL ?? "";
-  const storeHandle = shop.replace(".myshopify.com", ""); // e.g. "fabricvton-devstore"
   const returnUrl = encodeURIComponent(`${appUrl}/app/billing`);
-  const pricingPlanUrl = `https://admin.shopify.com/store/${storeHandle}/charges/${apiKey}/pricing_plans?return_url=${returnUrl}`;
+  const pricingPlanUrl = `https://${shop}/admin/charges/${apiKey}/pricing_plans?return_url=${returnUrl}`;
 
   return { currentPlan, plans: PLANS, activationMessage, pricingPlanUrl };
 };
