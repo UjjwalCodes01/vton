@@ -80,6 +80,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const isTest = process.env.NODE_ENV !== "production";
   const returnUrl = `${process.env.SHOPIFY_APP_URL}/app/billing?shop=${shop}`;
 
+  // ── Cancel any existing active subscription before creating a new one ──
+  // This is required by Shopify requirement 1.2.3: merchants must be able to
+  // upgrade/downgrade without reinstalling. If an active subscription exists,
+  // creating a new one will fail unless the old one is cancelled first.
+  try {
+    await cancelAllActiveSubscriptions(admin);
+  } catch (_e) {
+    // Non-fatal — if there's nothing to cancel, we continue
+  }
+
   const response = await admin.graphql(SUBSCRIPTION_CREATE_MUTATION, {
     variables: {
       name: `FabricVTON ${plan.label}${interval === "ANNUAL" ? " (Annual)" : ""}`,
@@ -269,7 +279,7 @@ export default function Billing() {
             <input type="hidden" name="plan" value="free" />
             <input type="hidden" name="interval" value="EVERY_30_DAYS" />
             <s-button
-              variant="plain"
+              variant="tertiary"
               type="submit"
               loading={isSubmitting && fetcher.formData?.get("plan") === "free"}
             >
