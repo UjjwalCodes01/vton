@@ -52,9 +52,12 @@ model ShopConfig {
   requireEmailCapture Boolean  @default(true)
 
   // Billing
-  plan                String   @default("free") // free | starter | growth | pro
+  // Internal plan key. "free" is the entry tier — surfaced to merchants as "Basic",
+  // since Shopify does not allow "Free" as a plan name on App Store listings.
+  plan                String   @default("free") // free | starter | growth | pro | scale
   billingId           String?  // Shopify recurring charge ID
-  monthlyCredits      Int      @default(25)
+  // Must match PLANS[free].credits in app/billing.server.ts
+  monthlyCredits      Int      @default(10)
   creditsUsed         Int      @default(0)
   billingCycleStart   DateTime @default(now())
   overageChargesTotal Float    @default(0) // Total overage billed this cycle in USD

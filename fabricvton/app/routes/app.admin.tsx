@@ -5,6 +5,7 @@ import { requireSuperAdmin } from "../admin.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import db from "../db.server";
 import { checkProviderHealth } from "../youcam.server";
+import { getPlan } from "../billing.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -40,6 +41,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     select: { shop: true, plan: true, creditsUsed: true, monthlyCredits: true },
   });
 
+  // Show merchant-facing plan labels ("Basic"), never the internal "free" key.
+  const topShopsLabelled = topShops.map((s) => ({
+    ...s,
+    planLabel: getPlan(s.plan).label,
+  }));
+
   return {
     totalShops,
     activeShops,
@@ -49,7 +56,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     totalFailed,
     providerHealth,
     totalOverageRevenue: revenueResult._sum.overageChargesTotal ?? 0,
-    topShops,
+    topShops: topShopsLabelled,
   };
 };
 
@@ -176,7 +183,7 @@ export default function SuperAdminDashboard() {
                      return (
                      <tr key={s.shop}>
                         <td><strong>{s.shop}</strong></td>
-                        <td><span className={`fv-badge ${s.plan === 'free' ? 'neutral' : 'purple'}`}>{s.plan.toUpperCase()}</span></td>
+                        <td><span className={`fv-badge ${s.plan === 'free' ? 'neutral' : 'purple'}`}>{s.planLabel.toUpperCase()}</span></td>
                         <td>{s.creditsUsed}</td>
                         <td>{s.monthlyCredits}</td>
                         <td>

@@ -25,13 +25,18 @@ api_version = "2026-04"
   customer_deletion_url = "/webhooks/customers/redact"
   shop_deletion_url = "/webhooks/shop/redact"
 
-  [[webhooks.subscriptions]]
-  topics = [ "orders/create" ]
-  uri = "/webhooks/orders/create"
+  # NOTE: orders/create is intentionally NOT subscribed. Its payload is protected
+  # customer data, which this app has not requested access to.
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_customers,read_files,read_orders,read_products,read_themes,write_files,write_script_tags,write_themes"
+#
+# This app requires no Admin API access scopes. The storefront widget reads product
+# data from Liquid, and the only Admin API calls are billing queries
+# (currentAppInstallation / appSubscriptionCancel / appUsageRecordCreate), none of
+# which are scope-gated. Do not add scopes here unless code actually uses them —
+# unused scopes fail App Store review.
+scopes = ""
 optional_scopes = [ ]
 use_legacy_install_flow = false
 

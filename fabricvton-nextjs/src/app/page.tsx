@@ -89,8 +89,8 @@ const faqs = [
     answer: "Customers upload a photo on your product page. Our AI generates a realistic image of them wearing the garment in seconds — no downloads, no apps.",
   },
   {
-    question: "Is there a free trial?",
-    answer: "Yes. Every store gets 100 free try-ons to start. No credit card required.",
+    question: "Can I try it before paying?",
+    answer: "Yes. Every store starts on the Basic plan with 10 try-ons a month at no cost, and no credit card is required. You can upgrade from inside the app whenever you need more.",
   },
   {
     question: "How long does setup take?",

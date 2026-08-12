@@ -38,8 +38,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const plan = getPlan(config.plan);
   const creditsRemaining = config.monthlyCredits - config.creditsUsed;
 
+  // No widget activity ever recorded means the merchant most likely hasn't added
+  // the app block to their theme yet — that's the #1 reason a new install looks
+  // "broken", so surface setup instructions until we see a real signal.
+  const totalWidgetOpens = await db.analyticsDaily.aggregate({
+    where: { shop },
+    _sum: { widgetOpens: true },
+  });
+  const needsSetup = (totalWidgetOpens._sum.widgetOpens ?? 0) === 0 && totalTryOns === 0;
+
   return {
     shop,
+    needsSetup,
+    themeEditorUrl: `https://${shop}/admin/themes/current/editor?template=product`,
     isEnabled: config.isEnabled,
     plan: plan.label,
     planName: config.plan,
@@ -68,8 +79,51 @@ export default function Dashboard() {
     : 0;
   const isLow = creditsPercent >= 80;
 
+  // Break out of the embedded iframe so the Theme Editor opens at top level.
+  const openThemeEditor = () => {
+    window.open(data.themeEditorUrl, "_top");
+  };
+
   return (
     <s-page heading="Dashboard">
+      {data.needsSetup && (
+        <s-section heading="Finish setting up FabricVTON">
+          <s-card>
+            <div style={{ padding: "20px" }}>
+              <p className="fv-text-subdued fv-mb-md">
+                The Try-On button won&apos;t appear on your storefront until you add
+                the FabricVTON block to your product page. It takes about a minute.
+              </p>
+
+              <ol
+                className="fv-text-sm"
+                style={{ margin: "0 0 20px", paddingLeft: "20px", lineHeight: 2.2 }}
+              >
+                <li>Open the Theme Editor on your product template.</li>
+                <li>
+                  In the <strong>Product information</strong> section, choose{" "}
+                  <strong>Add block</strong> → <strong>Apps</strong>.
+                </li>
+                <li>
+                  Pick <strong>FabricVTON Try-On</strong>, position it near your
+                  Add to cart button, and <strong>Save</strong>.
+                </li>
+              </ol>
+
+              <s-button variant="primary" onClick={openThemeEditor}>
+                Open Theme Editor
+              </s-button>
+              <span
+                className="fv-text-sm fv-text-subdued"
+                style={{ marginLeft: "12px" }}
+              >
+                This card disappears once your first shopper opens the widget.
+              </span>
+            </div>
+          </s-card>
+        </s-section>
+      )}
+
       {!data.isEnabled && (
         <s-banner tone="warning">
           <p>

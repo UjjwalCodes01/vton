@@ -35,7 +35,11 @@ api_version = "2026-04"
   # To enable it: go to Partner Dashboard → API access → Request access to Protected Customer Data.
 
 [access_scopes]
-scopes = "read_customers,read_files,write_files,read_products,write_script_tags,read_themes,write_themes"
+# No Admin API access scopes are required. The storefront widget reads product data
+# from Liquid, and the only Admin API calls are billing queries, which are not
+# scope-gated. Unused scopes fail App Store review — do not add any back unless
+# code actually calls an endpoint that needs them.
+scopes = ""
 optional_scopes = [ ]
 # IMPORTANT: use_legacy_install_flow removed — modern OAuth flow authenticates immediately after install
 # This is required to pass the "Immediately authenticates after install" automated check

@@ -309,7 +309,7 @@ export default function Billing() {
             onClick={handleChangePlan}
           >
             <s-button variant="tertiary">
-              Downgrade to Free (10 try-ons/mo)
+              Downgrade to Basic (10 try-ons/mo)
             </s-button>
           </div>
         )}

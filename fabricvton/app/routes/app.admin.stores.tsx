@@ -10,6 +10,7 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import type { Prisma } from "@prisma/client";
 import db from "../db.server";
+import { PLANS, getPlan } from "../billing.server";
 import { useEffect } from "react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -38,7 +39,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     take: 100,
   });
 
-  return { stores, search, filterPlan, filterSuspended: filterSuspended === "true" };
+  // billing.server is server-only, so pass the plan list through the loader
+  // instead of importing PLANS into the component.
+  const planOptions = PLANS.map((p) => ({ value: p.name, label: p.label }));
+
+  return {
+    stores,
+    search,
+    filterPlan,
+    filterSuspended: filterSuspended === "true",
+    planOptions,
+  };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -88,17 +99,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     case "change_plan": {
       const newPlan = String(formData.get("newPlan"));
-      const planCredits: Record<string, number> = {
-        free: 25,
-        starter: 100,
-        growth: 500,
-        pro: 3000,
-      };
+      // Allowances come from PLANS so this can never drift from the billing page.
+      const plan = getPlan(newPlan);
       await db.shopConfig.update({
         where: { shop: targetShop },
         data: {
-          plan: newPlan,
-          monthlyCredits: planCredits[newPlan] ?? 25,
+          plan: plan.name,
+          monthlyCredits: plan.credits,
         },
       });
       await db.adminAuditLog.create({
@@ -150,7 +157,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function AdminStores() {
-  const { stores, search, filterPlan, filterSuspended } = useLoaderData<typeof loader>();
+  const { stores, search, filterPlan, filterSuspended, planOptions } =
+    useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const submit = useSubmit();
   const shopify = useAppBridge();
@@ -182,10 +190,9 @@ export default function AdminStores() {
                  defaultValue={filterPlan}
                >
                  <option value="">All Plans</option>
-                 <option value="free">Free</option>
-                 <option value="starter">Starter</option>
-                 <option value="growth">Growth</option>
-                 <option value="pro">Pro</option>
+                 {planOptions.map((p) => (
+                   <option key={p.value} value={p.value}>{p.label}</option>
+                 ))}
                </select>
                <label className="fv-flex fv-items-center fv-gap-sm" style={{ cursor: "pointer", marginLeft: "12px", height: "40px" }}>
                  <input type="checkbox" name="suspended" value="true" defaultChecked={filterSuspended} />
@@ -218,7 +225,7 @@ export default function AdminStores() {
                         <td><strong>{store.shop}</strong></td>
                         <td>
                            <span className={`fv-badge ${store.plan === 'free' ? 'neutral' : 'purple'}`}>
-                              {store.plan.toUpperCase()}
+                              {(planOptions.find((p) => p.value === store.plan)?.label ?? store.plan).toUpperCase()}
                            </span>
                         </td>
                         <td>
@@ -271,10 +278,9 @@ export default function AdminStores() {
                                  className="fv-select"
                                  style={{ padding: "4px 8px" }}
                               >
-                                 <option value="free">Free</option>
-                                 <option value="starter">Starter</option>
-                                 <option value="growth">Growth</option>
-                                 <option value="pro">Pro</option>
+                                 {planOptions.map((p) => (
+                                   <option key={p.value} value={p.value}>{p.label}</option>
+                                 ))}
                               </select>
                               <button type="submit" className="fv-action-btn purple">Set Plan</button>
                               </fetcher.Form>
