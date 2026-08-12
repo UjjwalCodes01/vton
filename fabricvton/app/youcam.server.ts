@@ -367,10 +367,55 @@ export async function createTryOn(params: {
 
 function normalizeStatus(status: unknown): YouCamStatus {
   const s = typeof status === "string" ? status.toLowerCase() : "";
-  if (s === "success") return "COMPLETED";
-  if (s === "error" || s === "failed") return "FAILED";
-  if (s === "running" || s === "processing") return "PROCESSING";
+  // The docs only document "success", but accept the usual synonyms — treating a
+  // finished task as PENDING would make the widget poll until it times out.
+  if (s === "success" || s === "completed" || s === "done" || s === "finished") {
+    return "COMPLETED";
+  }
+  if (s === "error" || s === "failed" || s === "failure") return "FAILED";
+  if (s === "running" || s === "processing" || s === "in_progress") {
+    return "PROCESSING";
+  }
   return "PENDING";
+}
+
+/**
+ * Pulls the result image URL out of the status payload.
+ *
+ * Documented shape is `results: { url }`, but sibling Perfect Corp endpoints nest
+ * it as `results: [{ data: [{ url }] }]`. Walk the plausible shapes rather than
+ * silently returning undefined, which would read as "not finished yet".
+ */
+function extractResultUrl(value: unknown, depth = 0): string | undefined {
+  if (!value || depth > 4) return undefined;
+
+  if (typeof value === "string") {
+    return value.startsWith("http") ? value : undefined;
+  }
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const found = extractResultUrl(entry, depth + 1);
+      if (found) return found;
+    }
+    return undefined;
+  }
+
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    for (const key of ["url", "download_url", "downloadUrl", "resultImageUrl"]) {
+      const candidate = record[key];
+      if (typeof candidate === "string" && candidate.startsWith("http")) {
+        return candidate;
+      }
+    }
+    for (const key of ["data", "results", "result", "files"]) {
+      const found = extractResultUrl(record[key], depth + 1);
+      if (found) return found;
+    }
+  }
+
+  return undefined;
 }
 
 export async function getGenerationStatus(
@@ -389,18 +434,24 @@ export async function getGenerationStatus(
       polling_interval?: number;
       error?: string | null;
       error_code?: string | null;
-      results?: { url?: string } | Array<{ url?: string }>;
+      // Shape varies across Perfect Corp endpoints — resolved by extractResultUrl.
+      results?: unknown;
     };
   };
 
   const data = payload.data ?? {};
   const status = normalizeStatus(data.task_status);
+  const resultImageUrl = extractResultUrl(data.results);
 
-  // results is an object in the documented sample; tolerate an array too.
-  const results = data.results;
-  const resultImageUrl = Array.isArray(results)
-    ? results[0]?.url
-    : results?.url;
+  // A COMPLETED task with no URL, or a status we don't recognise, both surface to
+  // the shopper as an unexplained timeout — log the raw body so they're diagnosable.
+  if ((status === "COMPLETED" && !resultImageUrl) || status === "PENDING") {
+    console.log(
+      `[YouCam][${taskId}] status=${String(data.task_status)} mapped=${status} url=${resultImageUrl ? "yes" : "no"} raw=${JSON.stringify(payload).slice(0, 500)}`
+    );
+  } else {
+    console.log(`[YouCam][${taskId}] status=${String(data.task_status)} mapped=${status}`);
+  }
 
   // On failure the reason arrives in `data.error` as a bare code
   // (e.g. "error_apply_region_mismatch"); `error_code` is not always present.

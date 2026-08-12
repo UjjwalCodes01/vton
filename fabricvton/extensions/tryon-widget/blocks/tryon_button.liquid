@@ -304,7 +304,9 @@
   };
 
   window.fabricVTONPollResult = function(generationId, attempts) {
-    var MAX_ATTEMPTS = 40;  // 40 x 3s = 2 minutes max
+    // YouCam quotes 20-30s but runs longer under load. Giving up early still
+    // consumes the credit, so allow 3 minutes before showing a timeout.
+    var MAX_ATTEMPTS = 60;  // 60 x 3s = 3 minutes max
     var POLL_INTERVAL = 3000;
 
     if (attempts >= MAX_ATTEMPTS) {
