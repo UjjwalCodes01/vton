@@ -402,9 +402,17 @@ export async function getGenerationStatus(
     ? results[0]?.url
     : results?.url;
 
-  const errorCode = data.error_code ?? undefined;
-  const errorMessage =
-    data.error ?? (errorCode ? describeYouCamError(errorCode) : undefined);
+  // On failure the reason arrives in `data.error` as a bare code
+  // (e.g. "error_apply_region_mismatch"); `error_code` is not always present.
+  // Anything without whitespace is treated as a code so it maps to real copy
+  // instead of leaking the raw identifier to the shopper.
+  const rawError = typeof data.error === "string" && data.error ? data.error : null;
+  const errorCode =
+    data.error_code ??
+    (rawError && /^[A-Za-z][A-Za-z0-9_.-]*$/.test(rawError) ? rawError : undefined);
+  const errorMessage = errorCode
+    ? describeYouCamError(errorCode)
+    : (rawError ?? undefined);
 
   return {
     taskId,
