@@ -4,7 +4,7 @@ import { authenticate } from "../shopify.server";
 import { requireSuperAdmin } from "../admin.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import db from "../db.server";
-import { checkCredits } from "../genlook.server";
+import { checkProviderHealth } from "../youcam.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -20,14 +20,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       db.tryOnEvent.count({ where: { status: "failed" } }),
     ]);
 
-  // GenLook API credits remaining
-  let genlookCredits = -1;
-  try {
-    const c = await checkCredits();
-    genlookCredits = c.credits;
-  } catch {
-    // API might be unreachable
-  }
+  // YouCam provider connectivity (no credit-balance endpoint exists)
+  const providerHealth = await checkProviderHealth();
 
   // Revenue estimate (sum of overage charges across all shops)
   const revenueResult = await db.shopConfig.aggregate({
@@ -53,7 +47,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     totalLeads,
     totalTryOns,
     totalFailed,
-    genlookCredits,
+    providerHealth,
     totalOverageRevenue: revenueResult._sum.overageChargesTotal ?? 0,
     topShops,
   };
@@ -96,15 +90,15 @@ export default function SuperAdminDashboard() {
 
       <s-section>
         <div className="fv-flex fv-gap-md fv-flex-wrap" style={{ alignItems: "stretch" }}>
-          {/* GenLook API Health */}
+          {/* YouCam API Health */}
           <div style={{ flex: "1 1 300px" }}>
               <s-card>
                 <div style={{ padding: "32px 24px", display: "flex", flexDirection: "column", height: "100%", background: "linear-gradient(145deg, #ffffff, #f9fafb)" }}>
                   <div className="fv-flex fv-items-center fv-justify-between fv-mb-lg">
                     <div className="fv-section-title" style={{ margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span style={{ fontSize: "20px" }}>🤖</span> GenLook API Status
+                      <span style={{ fontSize: "20px" }}>🤖</span> YouCam API Status
                     </div>
-                    {data.genlookCredits >= 0 ? (
+                    {data.providerHealth.ok ? (
                       <span className="fv-badge success" style={{ padding: "4px 12px" }}>● Connected</span>
                     ) : (
                       <span className="fv-badge critical" style={{ padding: "4px 12px" }}>● Unreachable</span>
@@ -112,16 +106,20 @@ export default function SuperAdminDashboard() {
                   </div>
 
                   <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                    {data.genlookCredits >= 0 ? (
+                    {data.providerHealth.ok ? (
                         <>
-                          <div className="fv-text-sm fv-text-subdued fv-mb-xs" style={{ letterSpacing: "0.5px" }}>GLOBAL CREDITS REMAINING</div>
-                          <div style={{ fontSize: "42px", fontWeight: "800", color: "var(--s-color-interactive)" }}>
-                              {data.genlookCredits === 999999 ? "Unlimited" : data.genlookCredits.toLocaleString()}
+                          <div className="fv-text-sm fv-text-subdued fv-mb-xs" style={{ letterSpacing: "0.5px" }}>ACTIVE ENGINE</div>
+                          <div style={{ fontSize: "32px", fontWeight: "800", color: "var(--s-color-interactive)" }}>
+                              {data.providerHealth.feature}
+                          </div>
+                          <div className="fv-text-sm fv-text-subdued" style={{ marginTop: "12px" }}>
+                            Auth: {data.providerHealth.authMode === "s2s" ? "S2S credential exchange" : "direct bearer key"}.
+                            Credit balance is not exposed by the AI Clothes API — check the YouCam console.
                           </div>
                         </>
                     ) : (
                         <s-banner tone="critical">
-                            <p>Unable to reach GenLook API. Check your GENLOOK_API_KEY environment variable.</p>
+                            <p>Unable to authenticate with YouCam: {data.providerHealth.detail}</p>
                         </s-banner>
                     )}
                   </div>

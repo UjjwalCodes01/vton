@@ -59,7 +59,12 @@
     <!-- Step 2: Photo Upload -->
     <div id="fabricvton-step-upload" style="display:none;">
       <h2 style="margin:0 0 8px; font-size:22px; color:#111;">Upload Your Photo 📸</h2>
-      <p style="margin:0 0 24px; color:#666; font-size:14px;">Upload a full-body or upper-body photo to see how <strong>{{ product.title | escape }}</strong> looks on you.</p>
+      <p style="margin:0 0 8px; color:#666; font-size:14px;">Upload a photo to see how <strong>{{ product.title | escape }}</strong> looks on you.</p>
+      <ul style="margin:0 0 20px; padding-left:18px; color:#888; font-size:12.5px; line-height:1.7;">
+        <li>Just you in the shot — face fully visible</li>
+        <li>Stand upright, facing the camera</li>
+        <li>Fill most of the frame, shoulders down</li>
+      </ul>
       
       <!-- Drop Zone -->
       <div id="fabricvton-dropzone" onclick="document.getElementById('fabricvton-file-input').click()" style="border:2px dashed #ccc;border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:all 0.2s;color:#999;" onmouseover="this.style.borderColor='#000';this.style.color='#000'" onmouseout="this.style.borderColor='#ccc';this.style.color='#999'">

@@ -9,7 +9,7 @@ import { requireSuperAdmin } from "../admin.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import db from "../db.server";
-import { getAccountInfo, checkCredits } from "../genlook.server";
+import { checkProviderHealth } from "../youcam.server";
 import { useEffect } from "react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -22,16 +22,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     select: { modelProvider: true, modelVersion: true },
   });
 
-  // GenLook account health
-  let genlookAccount: Record<string, unknown> | null = null;
-  let genlookCredits = -1;
-  try {
-    genlookAccount = await getAccountInfo();
-    const c = await checkCredits();
-    genlookCredits = c.credits;
-  } catch {
-    // API unreachable
-  }
+  // YouCam connectivity
+  const providerHealth = await checkProviderHealth();
 
   // Count shops by model provider
   const providerDistribution = await db.shopConfig.groupBy({
@@ -40,10 +32,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   });
 
   return {
-    currentProvider: defaultConfig?.modelProvider ?? "genlook",
-    currentVersion: defaultConfig?.modelVersion ?? "v1",
-    genlookAccount,
-    genlookCredits,
+    currentProvider: defaultConfig?.modelProvider ?? "youcam",
+    currentVersion: defaultConfig?.modelVersion ?? "cloth-v4",
+    providerHealth,
     providerDistribution,
   };
 };
@@ -103,36 +94,29 @@ export default function ModelControl() {
     <s-page heading="🤖 Model Control">
       <div className="fv-flex fv-gap-md fv-flex-wrap fv-items-start">
          <div style={{ flex: "1 1 400px" }}>
-            {/* GenLook API Status */}
-            <s-section heading="GenLook API Health">
+            {/* YouCam API Status */}
+            <s-section heading="YouCam API Health">
                <s-card>
                   <div style={{ padding: "24px" }}>
-                  {data.genlookCredits >= 0 ? (
+                  {data.providerHealth.ok ? (
                      <>
                         <div className="fv-flex fv-items-center fv-mb-md">
                            <span className="fv-status-dot connected"></span>
                            <span style={{ fontWeight: 600 }}>API Connected</span>
                         </div>
-                        <div className="fv-text-sm fv-text-subdued fv-mb-sm">Credits Remaining</div>
-                        <div style={{ fontSize: "32px", fontWeight: "bold", marginBottom: "20px" }} className="accent">
-                           {data.genlookCredits.toLocaleString()}
+                        <div className="fv-text-sm fv-text-subdued fv-mb-sm">Active Engine</div>
+                        <div style={{ fontSize: "28px", fontWeight: "bold", marginBottom: "20px" }} className="accent">
+                           {data.providerHealth.feature}
                         </div>
-                        {data.genlookAccount && (
-                           <div>
-                              <div className="fv-text-sm fv-text-subdued fv-mb-sm">Account Payload</div>
-                              <pre style={{
-                                 margin: 0, 
-                                 fontSize: "12px", 
-                                 background: "var(--s-color-bg-surface-secondary)", 
-                                 padding: "16px", 
-                                 borderRadius: "8px", 
-                                 overflow: "auto",
-                                 border: "1px solid var(--s-color-border)"
-                              }}>
-                                 {JSON.stringify(data.genlookAccount, null, 2)}
-                              </pre>
-                           </div>
-                        )}
+                        <dl style={{ margin: 0, fontSize: "13px", lineHeight: 1.9 }}>
+                           <div><strong>Endpoint:</strong> {data.providerHealth.baseUrl}</div>
+                           <div><strong>Auth mode:</strong> {data.providerHealth.authMode === "s2s" ? "S2S credential exchange" : "direct bearer key"}</div>
+                           <div className="fv-text-subdued">{data.providerHealth.detail}</div>
+                        </dl>
+                        <p className="fv-text-sm fv-text-subdued fv-mt-md">
+                           The AI Clothes API does not expose a credit balance — track remaining
+                           units in the YouCam console.
+                        </p>
                      </>
                   ) : (
                      <>
@@ -141,7 +125,7 @@ export default function ModelControl() {
                            <span style={{ fontWeight: 600 }}>API Unreachable</span>
                         </div>
                         <s-banner tone="critical">
-                           <p>Cannot connect to GenLook API. Verify your GENLOOK_API_KEY in .env.</p>
+                           <p>Cannot authenticate with YouCam: {data.providerHealth.detail}</p>
                         </s-banner>
                      </>
                   )}
@@ -169,8 +153,7 @@ export default function ModelControl() {
                            <label htmlFor="model-provider" className="fv-text-sm fv-mb-sm" style={{ display: "block" }}>Provider Engine</label>
                            <select name="modelProvider" className="fv-select fv-w-full" defaultValue={data.currentProvider}>
                               <option hidden value={data.currentProvider}>{data.currentProvider}</option>
-                              <option value="genlook">GenLook (Primary)</option>
-                              <option value="replicate">Replicate (IDM-VTON)</option>
+                              <option value="youcam">YouCam / Perfect Corp (Primary)</option>
                               <option value="custom">Custom Node (GCP)</option>
                            </select>
                         </div>

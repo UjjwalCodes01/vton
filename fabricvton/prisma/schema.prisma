@@ -64,8 +64,8 @@ model ShopConfig {
   klaviyoListId       String?
 
   // Model settings
-  modelProvider       String   @default("genlook") // genlook | replicate | custom
-  modelVersion        String   @default("v1")
+  modelProvider       String   @default("youcam") // youcam | custom
+  modelVersion        String   @default("cloth-v4")
 
   // Timestamps
   installedAt         DateTime @default(now())
@@ -102,15 +102,16 @@ model TryOnEvent {
   productTitle    String?
   leadEmail       String?
   status          String   @default("success") // pending | success | failed
-  modelUsed       String   @default("genlook/v1")
+  modelUsed       String   @default("youcam/cloth-v4")
   processingMs    Int?
-  genlookGenId    String?  // GenLook generationId for polling
+  providerTaskId  String?  // YouCam task_id for polling
+  errorCode       String?  // Provider error code, e.g. error_pose
   errorMessage    String?  // Store error details for debugging
   createdAt       DateTime @default(now())
 
   @@index([shop])
   @@index([createdAt])
-  @@index([genlookGenId])
+  @@index([providerTaskId])
 }
 
 // ═══════════════════════════════════════════════════════════

@@ -4,9 +4,12 @@ import { createOverageUsageRecord, getPlan } from "./billing.server";
 import {
   uploadCustomerImage,
   createTryOn,
-  checkCredits,
   getGenerationStatus,
-} from "./genlook.server";
+  mapGarmentCategory,
+  describeYouCamError,
+  SHOPPER_FIXABLE_ERROR_CODES,
+  YouCamError,
+} from "./youcam.server";
 
 
 // ─── CORS ───────────────────────────────────────────────
@@ -27,21 +30,6 @@ function jsonResponse(data: unknown, status: number, origin: string) {
   });
 }
 
-function inferGarmentCategory(productTitle: string | null) {
-  const title = (productTitle ?? "").toLowerCase();
-  if (/(dress|gown|jumpsuit|onesie|romper|coat)/.test(title)) return "dresses";
-  if (/(jean|pant|trouser|skirt|short|bottom)/.test(title)) return "bottoms";
-  return "tops";
-}
-
-function buildGenlookExternalProductId(shop: string, productId: string) {
-  // Stable ID — no nonce. GenLook /products is idempotent by externalId,
-  // so reusing the same ID means the product is found instantly on every try-on.
-  return `${shop}__${productId}`
-    .replace(/[^a-zA-Z0-9_-]/g, "_")
-    .slice(0, 120);
-}
-
 function normalizeProductImageUrl(url: string) {
   if (!url) return "";
   if (url.startsWith("//")) {
@@ -50,63 +38,63 @@ function normalizeProductImageUrl(url: string) {
   return url;
 }
 
+// YouCam accepts jpg and png only. The widget canvas-encodes everything to JPEG
+// before upload, so this only narrows the direct multipart path.
 const ALLOWED_IMAGE_MIME_TYPES = new Set([
   "image/jpeg",
   "image/jpg",
   "image/png",
-  "image/webp",
 ]);
 
 function classifyTryOnError(error: unknown, stage: "upload" | "create" | "general") {
   const raw = error instanceof Error ? error.message : String(error ?? "Unknown error");
-  const msg = raw.toLowerCase();
 
-  if (msg.includes("image is empty") || msg.includes("invalid_argument")) {
-    return {
-      status: 422,
-      message:
-        "The uploaded photo is not compatible. Please use a clear JPG/PNG/WebP image where the person is fully visible and not too small or blurry.",
-      debug: raw,
-    };
-  }
+  if (error instanceof YouCamError) {
+    // Photo problems the shopper can actually fix — 422 so the widget shows the
+    // provider's specific guidance rather than a generic server error.
+    if (SHOPPER_FIXABLE_ERROR_CODES.has(error.code)) {
+      return {
+        status: 422,
+        message: describeYouCamError(error.code),
+        code: error.code,
+        debug: raw,
+      };
+    }
 
-  if (msg.includes("quota_exceeded") || msg.includes("insufficient credits") || msg.includes("payment required") || msg.includes("402")) {
-    return {
-      status: 402,
-      message:
-        "This store has run out of GenLook credits. Please top up the provider account and try again.",
-      debug: raw,
-    };
-  }
+    if (error.code === "InvalidAccessToken" || error.httpStatus === 401) {
+      return {
+        status: 502,
+        message: "Virtual try-on is temporarily unavailable. Please try again shortly.",
+        code: error.code,
+        debug: raw,
+      };
+    }
 
-  if (msg.includes("unsupported") || msg.includes("mime") || msg.includes("format")) {
-    return {
-      status: 415,
-      message: "Unsupported image format. Please upload JPG, PNG, or WebP.",
-      debug: raw,
-    };
-  }
+    if (error.httpStatus === 402 || error.httpStatus === 429) {
+      return {
+        status: 402,
+        message:
+          "Virtual try-on credits have run out. The store owner needs to top up their FabricVTON plan.",
+        code: error.code,
+        debug: raw,
+      };
+    }
 
-  if (msg.includes("file is required") || msg.includes("personimage")) {
-    return {
-      status: 400,
-      message: "No valid photo was received. Please re-upload your image and try again.",
-      debug: raw,
-    };
-  }
-
-  if (msg.includes("ensureproduct failed") || msg.includes("product")) {
     return {
       status: 502,
-      message:
-        "The product image could not be processed right now. Please try again in a few seconds.",
+      message: describeYouCamError(error.code),
+      code: error.code,
       debug: raw,
     };
   }
 
   return {
     status: stage === "general" ? 500 : 502,
-    message: stage === "upload" ? "Image upload failed. Please try another photo." : "Try-on generation failed. Please try again.",
+    message:
+      stage === "upload"
+        ? "Image upload failed. Please try another photo."
+        : "Try-on generation failed. Please try again.",
+    code: undefined,
     debug: raw,
   };
 }
@@ -126,12 +114,19 @@ export async function handleTryOnLoader(request: Request) {
   if (generationId) {
     try {
       const gen = await getGenerationStatus(generationId);
-      await syncGenerationOutcome(generationId, gen.status, gen.errorMessage ?? null);
+      await syncGenerationOutcome(
+        generationId,
+        gen.status,
+        gen.errorMessage ?? null,
+        gen.errorCode ?? null
+      );
       return jsonResponse(
         {
           status: gen.status,
           resultImageUrl: gen.resultImageUrl ?? null,
-          errorMessage: gen.errorMessage ?? null,
+          errorMessage: gen.errorCode
+            ? describeYouCamError(gen.errorCode)
+            : (gen.errorMessage ?? null),
         },
         200,
         origin
@@ -305,26 +300,8 @@ export async function handleTryOnAction(request: Request) {
       );
     }
 
-    // ── 2b. Soft preflight: check GenLook credits (non-fatal) ──
-    // If this endpoint is down or erroring, we still proceed — the real
-    // generation call will fail with a clear message if credits are truly 0.
-    try {
-      const genlookCredits = await checkCredits();
-      console.log(`[TryOn API][${requestId}] GenLook API credits available:`, genlookCredits.credits);
-      if (genlookCredits.credits <= 0) {
-        return jsonResponse(
-          {
-            error: "Virtual try-on credits have run out. The store owner needs to top up their FabricVTON plan.",
-          },
-          402,
-          origin
-        );
-      }
-    } catch (err) {
-      // Non-fatal: just log and continue — the generation call will surface real errors
-      console.warn(`[TryOn API][${requestId}] Could not preflight GenLook credits (non-fatal):`, err instanceof Error ? err.message : err);
-    }
-
+    // Provider-side credit exhaustion surfaces as a 402/429 on the task call and
+    // is mapped by classifyTryOnError — no preflight round-trip needed here.
     const startTime = Date.now();
 
     // ── 3. Capture lead email if provided ──
@@ -346,17 +323,13 @@ export async function handleTryOnAction(request: Request) {
       await upsertDailyAnalytics(shop, { emailsCaptured: 1 });
     }
 
-    // ── 4. Upload customer photo to GenLook ──
-    let customerImageId: string;
+    // ── 4. Upload customer photo to YouCam ──
+    let customerFileId: string;
     try {
       const uploadResult = await uploadCustomerImage(personImage);
-      if (!uploadResult.imageId) {
-        throw new Error("GenLook upload did not return imageId");
-      }
-      customerImageId = uploadResult.imageId;
-      console.log(`[TryOn API][${requestId}] Uploaded customer image to GenLook`, {
-        hasImageId: Boolean(uploadResult.imageId),
-        imageId: uploadResult.imageId,
+      customerFileId = uploadResult.fileId;
+      console.log(`[TryOn API][${requestId}] Uploaded customer image to YouCam`, {
+        fileId: customerFileId,
       });
     } catch (err) {
       await logFailedEvent(shop, sessionId, productId, productTitle, email, startTime, err);
@@ -367,18 +340,17 @@ export async function handleTryOnAction(request: Request) {
 
     // ── 5. Start Try-On generation (ASYNC — returns generationId immediately) ──
     let generationId: string;
+    const garmentCategory = mapGarmentCategory(productTitle);
     try {
-      const externalProductId = buildGenlookExternalProductId(shop, productId);
       const tryOnResult = await createTryOn({
-        externalProductId,
-        productTitle: productTitle ?? "Product",
+        customerFileId,
         garmentImageUrl: productImageUrl,
-        customerImageId,
+        garmentCategory,
       });
       generationId = tryOnResult.id;
-      console.log(`[TryOn API][${requestId}] Started GenLook generation`, {
+      console.log(`[TryOn API][${requestId}] Started YouCam task`, {
         generationId,
-        status: tryOnResult.status,
+        garmentCategory,
       });
     } catch (err) {
       await logFailedEvent(shop, sessionId, productId, productTitle, email, startTime, err);
@@ -396,9 +368,9 @@ export async function handleTryOnAction(request: Request) {
         productTitle,
         leadEmail: email || null,
         status: "pending",
-        modelUsed: `genlook/${config.modelVersion}`,
+        modelUsed: `youcam/${config.modelVersion}`,
         processingMs: Date.now() - startTime,
-        genlookGenId: generationId,
+        providerTaskId: generationId,
       },
     });
 
@@ -448,7 +420,7 @@ async function logFailedEvent(
   email: string,
   startTime: number,
   err: unknown,
-  genlookGenId?: string
+  providerTaskId?: string
 ) {
   const errorMessage =
     err instanceof Error ? err.message : "Unknown error";
@@ -462,8 +434,9 @@ async function logFailedEvent(
       leadEmail: email || null,
       status: "failed",
       processingMs: Date.now() - startTime,
+      errorCode: err instanceof YouCamError ? err.code : null,
       errorMessage,
-      genlookGenId: genlookGenId ?? null,
+      providerTaskId: providerTaskId ?? null,
     },
   });
 
@@ -504,14 +477,15 @@ async function upsertDailyAnalytics(
 async function syncGenerationOutcome(
   generationId: string,
   status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED",
-  errorMessage: string | null
+  errorMessage: string | null,
+  errorCode: string | null = null
 ) {
   if (status === "PENDING" || status === "PROCESSING") {
     return;
   }
 
   const event = await db.tryOnEvent.findFirst({
-    where: { genlookGenId: generationId },
+    where: { providerTaskId: generationId },
   });
 
   if (!event) {
@@ -523,7 +497,8 @@ async function syncGenerationOutcome(
       where: { id: event.id, status: "pending" },
       data: {
         status: "failed",
-        errorMessage: errorMessage ?? "Generation failed on GenLook side.",
+        errorCode,
+        errorMessage: errorMessage ?? "Generation failed on the YouCam side.",
       },
     });
 
@@ -538,6 +513,7 @@ async function syncGenerationOutcome(
     where: { id: event.id, status: "pending" },
     data: {
       status: "success",
+      errorCode: null,
       errorMessage: null,
     },
   });

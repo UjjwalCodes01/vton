@@ -6,8 +6,12 @@ application_url = "https://fabricvton-api.onrender.com"
 embedded = true
 
 [build]
-# Required: ensures theme extension is bundled and config is pushed to Shopify on deploy
+# Required: ensures theme extension is bundled and config is pushed to Shopify on deploy.
+# include_config_on_deploy is what actually pushes [webhooks] / [auth] / [app_proxy]
+# to Shopify — without it, `shopify app deploy` leaves the registered compliance
+# webhook URLs stale, which fails the "Verifies webhooks with HMAC signatures" check.
 automatically_update_urls_on_dev = true
+include_config_on_deploy = true
 
 [webhooks]
 api_version = "2026-04"
