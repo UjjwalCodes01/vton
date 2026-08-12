@@ -7,11 +7,19 @@ import {
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 import prisma from "./db.server";
 
+// Access scopes are declared in shopify.app.toml (managed install), which is the
+// source of truth for what Shopify actually grants. This env var only mirrors it.
+// Guard against SCOPES="" — a bare split would yield [""], i.e. one empty-named
+// scope, which reads as a permanent scope mismatch and can loop re-authorization.
+const configuredScopes = process.env.SCOPES?.split(",")
+  .map((scope) => scope.trim())
+  .filter(Boolean);
+
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
   apiSecretKey: process.env.SHOPIFY_API_SECRET || "",
   apiVersion: ApiVersion.April26,
-  scopes: process.env.SCOPES?.split(","),
+  scopes: configuredScopes?.length ? configuredScopes : undefined,
   appUrl: process.env.SHOPIFY_APP_URL || "",
   authPathPrefix: "/auth",
   sessionStorage: new PrismaSessionStorage(prisma),
