@@ -11,8 +11,7 @@ import db from "../db.server";
 import {
   PLANS,
   getPlan,
-  createSubscription,
-  downgradeToEntryPlan,
+  buildManagedPricingUrl,
   syncShopPlanFromShopifyBilling,
 } from "../billing.server";
 import { useEffect, useState } from "react";
@@ -37,41 +36,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return { currentPlan, plans: PLANS, activationMessage };
 };
 
-// ─── Action: start a plan change through the Shopify Billing API ──────────────
-// appSubscriptionCreate returns a confirmationUrl on Shopify's own charge screen,
-// where the merchant accepts or declines. Redirecting with target "_top" is what
-// breaks out of the embedded iframe — window.open is blocked by its sandbox.
+// ─── Action: hand the merchant off to Shopify's plan picker ──────────────────
+// This app uses Managed Pricing, so Shopify owns accept / decline / change /
+// cancel. Our only job is to redirect at the TOP level — window.open is blocked
+// by the embedded iframe sandbox, which is why the buttons previously did
+// nothing at all.
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { session, admin, redirect } = await authenticate.admin(request);
-  const shop = session.shop;
+  const { session, redirect } = await authenticate.admin(request);
 
-  const formData = await request.formData();
-  const planName = String(formData.get("planName") || "");
-  const interval =
-    String(formData.get("interval")) === "ANNUAL" ? "ANNUAL" : "EVERY_30_DAYS";
-
-  const appUrl = process.env.SHOPIFY_APP_URL ?? "";
-  const returnUrl = `${appUrl}/app/billing`;
-
-  try {
-    if (planName === "free") {
-      await downgradeToEntryPlan(admin, shop);
-      return redirect("/app/billing", { target: "_top" });
-    }
-
-    const { confirmationUrl } = await createSubscription(admin, {
-      planName,
-      interval,
-      returnUrl,
-    });
-
-    return redirect(confirmationUrl, { target: "_top" });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Could not start the plan change.";
-    console.error(`[Billing] Plan change failed for ${shop}:`, message);
-    return { error: message };
-  }
+  return redirect(buildManagedPricingUrl(session.shop), { target: "_top" });
 };
 
 // ─── Billing page UI ──────────────────────────────────────────────────────────
@@ -90,18 +63,9 @@ export default function Billing() {
     if (activationMessage) shopify.toast.show(activationMessage);
   }, [activationMessage, shopify]);
 
-  useEffect(() => {
-    if (fetcher.data?.error) {
-      shopify.toast.show(fetcher.data.error, { isError: true });
-    }
-  }, [fetcher.data, shopify]);
-
   // Posting to the action returns a redirect to Shopify's charge approval page.
-  const changePlan = (planName: string) => {
-    fetcher.submit(
-      { planName, interval: billingInterval },
-      { method: "post" }
-    );
+  const changePlan = () => {
+    fetcher.submit({}, { method: "post" });
   };
 
   return (
@@ -324,7 +288,7 @@ export default function Billing() {
                     <s-button
                       variant={isRecommended ? "primary" : undefined}
                       loading={isChanging}
-                      onClick={() => changePlan(plan.name)}
+                      onClick={changePlan}
                     >
                       {isUpgrade ? "Upgrade" : "Downgrade"}
                     </s-button>
@@ -341,7 +305,7 @@ export default function Billing() {
             <s-button
               variant="tertiary"
               loading={isChanging}
-              onClick={() => changePlan("free")}
+              onClick={changePlan}
             >
               Downgrade to Basic (10 try-ons/mo)
             </s-button>

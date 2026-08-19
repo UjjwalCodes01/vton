@@ -448,122 +448,27 @@ export async function createOverageUsageRecord(params: {
   };
 }
 
-// ─── Subscription creation (Shopify Billing API) ──────────────────────────────
-
-const SHOP_PLAN_QUERY = `#graphql
-  query shopBillingPlan {
-    shop {
-      plan {
-        partnerDevelopment
-      }
-    }
-  }
-`;
+// ─── Managed Pricing ──────────────────────────────────────────────────────────
+//
+// This app uses Shopify Managed Pricing: plans are defined in the Partner
+// Dashboard and Shopify owns the whole accept / decline / change / cancel flow.
+// Managed Pricing apps are NOT permitted to call appSubscriptionCreate — Shopify
+// rejects it with "Managed Pricing Apps cannot use the Billing API" — so every
+// plan change has to hand the merchant off to Shopify's own plan picker.
 
 /**
- * Development and Plus partner-sandbox stores must be charged in test mode so
- * nobody — including a Shopify reviewer — is billed real money while evaluating.
+ * Builds the Shopify-hosted plan selection page for this app.
  *
- * Falls back to SHOPIFY_BILLING_TEST when the query fails, so a lookup problem
- * can never silently turn a reviewer's sandbox into a live charge.
+ * The merchant must be sent here at the TOP level, not inside the embedded
+ * iframe — use the `redirect` helper from authenticate.admin with target "_top".
  */
-export async function isTestBillingStore(
-  admin: AdminGraphqlClient
-): Promise<boolean> {
-  try {
-    const json = await readGraphqlJson(admin.graphql(SHOP_PLAN_QUERY));
-    const plan = (json.data?.shop as { plan?: { partnerDevelopment?: boolean } } | undefined)?.plan;
-    if (typeof plan?.partnerDevelopment === "boolean") {
-      return plan.partnerDevelopment;
-    }
-  } catch (error) {
-    console.warn(
-      "[Billing] Could not determine store type, falling back to SHOPIFY_BILLING_TEST:",
-      error instanceof Error ? error.message : error
-    );
-  }
+export function buildManagedPricingUrl(shop: string): string {
+  const storeHandle = shop.replace(/\.myshopify\.com$/, "");
 
-  return process.env.SHOPIFY_BILLING_TEST === "true";
-}
+  // Shopify identifies the app by its handle on this route. It is not derivable
+  // from the API key, so it is configured explicitly.
+  const appHandle =
+    process.env.SHOPIFY_APP_HANDLE || process.env.SHOPIFY_API_KEY || "";
 
-export interface SubscriptionRequest {
-  planName: string;
-  interval: "EVERY_30_DAYS" | "ANNUAL";
-  returnUrl: string;
-}
-
-/**
- * Starts a plan change through the Shopify Billing API.
- *
- * Returns the confirmationUrl the merchant must be redirected to in order to
- * accept or decline the charge. Existing subscriptions are cancelled first so a
- * merchant can never end up paying for two plans at once.
- */
-export async function createSubscription(
-  admin: AdminGraphqlClient,
-  params: SubscriptionRequest
-): Promise<{ confirmationUrl: string }> {
-  const plan = getPlan(params.planName);
-
-  if (plan.monthlyPrice <= 0) {
-    throw new Error("The entry plan has no charge — use cancelAllActiveSubscriptions instead.");
-  }
-
-  await cancelAllActiveSubscriptions(admin);
-
-  const test = await isTestBillingStore(admin);
-
-  const json = await readGraphqlJson(
-    admin.graphql(SUBSCRIPTION_CREATE_MUTATION, {
-      variables: {
-        name: `FabricVTON ${plan.label}`,
-        lineItems: buildSubscriptionLineItems(plan, params.interval),
-        returnUrl: params.returnUrl,
-        test,
-        // Trial length must match what the App Store listing advertises, or the
-        // charge contradicts the published pricing. Default to none.
-        trialDays: Number(process.env.SHOPIFY_BILLING_TRIAL_DAYS ?? 0) || 0,
-      },
-    })
-  );
-
-  const result = json.data?.appSubscriptionCreate as
-    | {
-        userErrors?: Array<{ message?: string }>;
-        confirmationUrl?: string;
-      }
-    | undefined;
-
-  if (result?.userErrors?.length) {
-    throw new Error(
-      result.userErrors[0]?.message || "Shopify rejected the subscription request"
-    );
-  }
-
-  if (!result?.confirmationUrl) {
-    throw new Error("Shopify did not return a confirmation URL for this charge");
-  }
-
-  return { confirmationUrl: result.confirmationUrl };
-}
-
-/**
- * Cancels any paid subscription and drops the shop back to the entry tier.
- */
-export async function downgradeToEntryPlan(
-  admin: AdminGraphqlClient,
-  shop: string
-): Promise<void> {
-  await cancelAllActiveSubscriptions(admin);
-
-  const plan = getPlan("free");
-  await db.shopConfig.upsert({
-    where: { shop },
-    create: { shop, plan: plan.name, monthlyCredits: plan.credits },
-    update: {
-      plan: plan.name,
-      billingId: null,
-      monthlyCredits: plan.credits,
-    },
-  });
+  return `https://admin.shopify.com/store/${storeHandle}/charges/${appHandle}/pricing_plans`;
 }
