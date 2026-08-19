@@ -52,7 +52,10 @@ export default function Billing() {
   const { currentPlan, plans, activationMessage } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const shopify = useAppBridge();
-  const isChanging = fetcher.state !== "idle";
+  // Which plan's button was clicked, so only that one shows a spinner.
+  // The action ignores planName — Shopify's picker lists every plan — but it
+  // still tells us which button is pending.
+  const pendingPlan = fetcher.formData?.get("planName");
   const [billingInterval, setBillingInterval] = useState<
     "EVERY_30_DAYS" | "ANNUAL"
   >("EVERY_30_DAYS");
@@ -64,8 +67,8 @@ export default function Billing() {
   }, [activationMessage, shopify]);
 
   // Posting to the action returns a redirect to Shopify's charge approval page.
-  const changePlan = () => {
-    fetcher.submit({}, { method: "post" });
+  const changePlan = (planName: string) => {
+    fetcher.submit({ planName }, { method: "post" });
   };
 
   return (
@@ -287,8 +290,8 @@ export default function Billing() {
                   <div className="fv-w-full">
                     <s-button
                       variant={isRecommended ? "primary" : undefined}
-                      loading={isChanging}
-                      onClick={changePlan}
+                      loading={pendingPlan === plan.name}
+                      onClick={() => changePlan(plan.name)}
                     >
                       {isUpgrade ? "Upgrade" : "Downgrade"}
                     </s-button>
@@ -304,8 +307,8 @@ export default function Billing() {
           <div style={{ marginTop: "24px", textAlign: "center" }}>
             <s-button
               variant="tertiary"
-              loading={isChanging}
-              onClick={changePlan}
+              loading={pendingPlan === "free"}
+              onClick={() => changePlan("free")}
             >
               Downgrade to Basic (10 try-ons/mo)
             </s-button>
