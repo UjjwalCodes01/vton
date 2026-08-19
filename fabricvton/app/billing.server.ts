@@ -12,8 +12,12 @@ export interface Plan {
   annualPrice: number;        // annual price in USD (one-time charge per year)
   credits: number;            // monthly try-on credits included
   annualCredits: number;      // try-ons included in the full year (for annual billing)
-  overagePrice: number;       // USD per additional try-on above the monthly allowance
-  monthlyOverageCap: number;  // maximum overage charge per billing cycle
+  // Overage billing is intentionally disabled. Shopify App Pricing owns the plans
+  // and none of them carry a usage component, so any per-try-on charge advertised
+  // here would never actually be levied. The monthly allowance is a hard cap.
+  // Kept at 0 so the pricing UI and line-item builder both stay silent about it.
+  overagePrice: number;
+  monthlyOverageCap: number;
   featured?: boolean;         // highlight in UI
 }
 
@@ -41,8 +45,8 @@ export const PLANS: Plan[] = [
     annualPrice: 86,
     credits: 50,
     annualCredits: 600,
-    overagePrice: 0.18,
-    monthlyOverageCap: 50,   // cap overage at plan price to protect merchants
+    overagePrice: 0,
+    monthlyOverageCap: 0,
   },
   {
     name: "growth",
@@ -51,8 +55,8 @@ export const PLANS: Plan[] = [
     annualPrice: 470,
     credits: 400,
     annualCredits: 4800,
-    overagePrice: 0.13,
-    monthlyOverageCap: 100,
+    overagePrice: 0,
+    monthlyOverageCap: 0,
     featured: true,
   },
   {
@@ -62,8 +66,8 @@ export const PLANS: Plan[] = [
     annualPrice: 950,
     credits: 1000,
     annualCredits: 12000,
-    overagePrice: 0.10,
-    monthlyOverageCap: 200,
+    overagePrice: 0,
+    monthlyOverageCap: 0,
   },
   {
     name: "scale",
@@ -72,8 +76,8 @@ export const PLANS: Plan[] = [
     annualPrice: 2102,
     credits: 2500,
     annualCredits: 30000,
-    overagePrice: 0.08,
-    monthlyOverageCap: 500,
+    overagePrice: 0,
+    monthlyOverageCap: 0,
   },
 ];
 
@@ -87,7 +91,6 @@ type AdminGraphqlClient = {
   ) => Promise<Response>;
 };
 
-const SHOPIFY_ADMIN_API_VERSION = process.env.SHOPIFY_ADMIN_API_VERSION ?? "2025-10";
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["ACTIVE", "ACCEPTED"]);
 
 // Shopify AppSubscriptionCreate mutation (for paid plans)
@@ -157,23 +160,6 @@ export const SUBSCRIPTION_CANCEL_MUTATION = `#graphql
 `;
 
 // Shopify AppUsageRecordCreate mutation (for overages)
-export const USAGE_RECORD_CREATE_MUTATION = `#graphql
-  mutation appUsageRecordCreate($subscriptionLineItemId: ID!, $price: MoneyInput!, $description: String!) {
-    appUsageRecordCreate(
-      subscriptionLineItemId: $subscriptionLineItemId,
-      price: $price,
-      description: $description,
-    ) {
-      userErrors {
-        field
-        message
-      }
-      appUsageRecord {
-        id
-      }
-    }
-  }
-`;
 
 type ActiveSubscription = {
   id: string;
@@ -231,22 +217,6 @@ export function buildSubscriptionLineItems(plan: Plan, interval: "EVERY_30_DAYS"
       },
     },
   ];
-
-  // Only add usage-based overage line item for monthly plans.
-  // Annual plans include a fixed credit pool — no in-period overages.
-  if (plan.overagePrice > 0 && interval === "EVERY_30_DAYS") {
-    lineItems.push({
-      plan: {
-        appUsagePricingDetails: {
-          cappedAmount: {
-            amount: plan.monthlyOverageCap,
-            currencyCode: "USD",
-          },
-          terms: `$${plan.overagePrice.toFixed(2)} per additional try-on generation above your ${plan.credits} monthly allowance`,
-        },
-      },
-    });
-  }
 
   return lineItems;
 }
@@ -341,120 +311,15 @@ export async function cancelAllActiveSubscriptions(admin: AdminGraphqlClient) {
   }
 }
 
-async function shopGraphqlRequest<T>(
-  shop: string,
-  accessToken: string,
-  query: string,
-  variables?: Record<string, unknown>
-): Promise<T> {
-  const normalizedShop = shop.replace(/^https?:\/\//, "").replace(/\/$/, "");
-  const response = await fetch(
-    `https://${normalizedShop}/admin/api/${SHOPIFY_ADMIN_API_VERSION}/graphql.json`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": accessToken,
-      },
-      body: JSON.stringify({ query, variables }),
-    }
-  );
-
-  const json = (await response.json()) as {
-    data?: T;
-    errors?: Array<{ message?: string }>;
-  };
-
-  if (!response.ok) {
-    throw new Error(
-      json.errors?.[0]?.message || `Shopify Admin API request failed with status ${response.status}`
-    );
-  }
-
-  if (json.errors?.length) {
-    throw new Error(json.errors[0]?.message || "Shopify GraphQL request failed");
-  }
-
-  return json.data as T;
-}
-
-export async function createOverageUsageRecord(params: {
-  shop: string;
-  amount: number;
-  description: string;
-}) {
-  const { shop, amount, description } = params;
-  if (amount <= 0) {
-    return { charged: false, reason: "No overage amount" };
-  }
-
-  const session = await db.session.findFirst({
-    where: { shop, isOnline: false },
-    orderBy: { id: "asc" },
-  });
-
-  if (!session?.accessToken) {
-    return { charged: false, reason: "Offline access token missing" };
-  }
-
-  const currentData = await shopGraphqlRequest<{
-    currentAppInstallation?: { activeSubscriptions?: ActiveSubscription[] };
-  }>(shop, session.accessToken, CURRENT_APP_SUBSCRIPTIONS_QUERY);
-
-  const activeSubscription = pickActiveSubscription(
-    currentData.currentAppInstallation?.activeSubscriptions ?? []
-  );
-  if (!activeSubscription) {
-    return { charged: false, reason: "No active Shopify subscription" };
-  }
-
-  const usageLineItemId =
-    activeSubscription.lineItems?.find(
-      (item) => item.plan?.pricingDetails?.__typename === "AppUsagePricing"
-    )?.id ?? null;
-
-  if (!usageLineItemId) {
-    return {
-      charged: false,
-      reason: "Active Shopify subscription has no usage billing line item",
-    };
-  }
-
-  const usageData = await shopGraphqlRequest<{
-    appUsageRecordCreate?: {
-      userErrors?: Array<{ message?: string }>;
-      appUsageRecord?: { id?: string };
-    };
-  }>(shop, session.accessToken, USAGE_RECORD_CREATE_MUTATION, {
-    subscriptionLineItemId: usageLineItemId,
-    price: {
-      amount: Number(amount.toFixed(2)),
-      currencyCode: "USD",
-    },
-    description,
-  });
-
-  const usageResult = usageData.appUsageRecordCreate;
-  if (usageResult?.userErrors?.length) {
-    return {
-      charged: false,
-      reason: usageResult.userErrors[0]?.message || "Usage record rejected by Shopify",
-    };
-  }
-
-  return {
-    charged: Boolean(usageResult?.appUsageRecord?.id),
-    usageRecordId: usageResult?.appUsageRecord?.id ?? null,
-  };
-}
-
 // ─── Managed Pricing ──────────────────────────────────────────────────────────
 //
-// This app uses Shopify Managed Pricing: plans are defined in the Partner
-// Dashboard and Shopify owns the whole accept / decline / change / cancel flow.
-// Managed Pricing apps are NOT permitted to call appSubscriptionCreate — Shopify
-// rejects it with "Managed Pricing Apps cannot use the Billing API" — so every
-// plan change has to hand the merchant off to Shopify's own plan picker.
+// This app uses Shopify App Pricing (formerly Managed Pricing): plans live in the
+// Partner Dashboard and Shopify owns the whole accept / decline / change / cancel
+// flow. Managed Pricing apps may NOT call appSubscriptionCreate — Shopify rejects
+// it — so every plan change hands the merchant off to Shopify's own plan picker.
+//
+// None of those plans carry a usage component, so there is no overage billing.
+// The monthly allowance is enforced as a hard cap in tryon.server.ts instead.
 
 /**
  * Builds the Shopify-hosted plan selection page for this app.

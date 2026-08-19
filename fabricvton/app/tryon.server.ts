@@ -1,6 +1,5 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import db from "./db.server";
-import { createOverageUsageRecord, getPlan } from "./billing.server";
 import {
   uploadCustomerImage,
   createTryOn,
@@ -288,12 +287,15 @@ export async function handleTryOnAction(request: Request) {
     }
 
     // ── 2. Check credit balance ──
+    // The monthly allowance is a hard cap on every plan. Shopify App Pricing
+    // carries no usage component, so anything generated past the allowance
+    // could never be billed — it would simply be given away.
     const creditsRemaining = config.monthlyCredits - config.creditsUsed;
-    if (creditsRemaining <= 0 && config.plan === "free") {
+    if (creditsRemaining <= 0) {
       return jsonResponse(
         {
           error:
-            "You've used all your free try-ons this month. Ask the store owner to upgrade.",
+            "This store has used all of its virtual try-ons for this month. Please check back next month.",
         },
         429,
         origin
@@ -522,49 +524,10 @@ async function syncGenerationOutcome(
     return;
   }
 
-  const config = await db.shopConfig.findUnique({
+  await db.shopConfig.update({
     where: { shop: event.shop },
+    data: { creditsUsed: { increment: 1 } },
   });
-
-  const plan = getPlan(config?.plan ?? "free");
-  const nextCreditsUsed = (config?.creditsUsed ?? 0) + 1;
-  const overageAmount =
-    config && nextCreditsUsed > config.monthlyCredits && plan.overagePrice > 0
-      ? plan.overagePrice
-      : 0;
-
-  await db.$transaction([
-    db.shopConfig.update({
-      where: { shop: event.shop },
-      data: {
-        creditsUsed: { increment: 1 },
-        ...(overageAmount > 0
-          ? { overageChargesTotal: { increment: overageAmount } }
-          : {}),
-      },
-    }),
-  ]);
-
-  if (overageAmount > 0) {
-    try {
-      const usageResult = await createOverageUsageRecord({
-        shop: event.shop,
-        amount: overageAmount,
-        description: `Overage try-on charge (${generationId})`,
-      });
-
-      if (!usageResult.charged) {
-        console.warn(
-          `[Billing] Overage usage record was not created for ${event.shop}: ${usageResult.reason ?? "unknown reason"}`
-        );
-      }
-    } catch (error) {
-      console.error(
-        `[Billing] Failed to create overage usage record for ${event.shop}:`,
-        error instanceof Error ? error.message : error
-      );
-    }
-  }
 
   await upsertDailyAnalytics(event.shop, { tryOnsCompleted: 1 });
 }

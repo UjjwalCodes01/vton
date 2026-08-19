@@ -111,20 +111,6 @@ export default function Billing() {
               </div>
             </div>
 
-            {currentPlan.overagePrice > 0 && (
-              <div
-                className="fv-mt-md fv-text-sm fv-text-subdued"
-                style={{
-                  borderTop: "1px solid var(--s-color-border)",
-                  paddingTop: "12px",
-                }}
-              >
-                💡 Additional try-ons beyond your limit are billed at{" "}
-                <strong>${currentPlan.overagePrice.toFixed(2)}</strong> each
-                (capped at ${currentPlan.monthlyOverageCap}/mo).
-              </div>
-            )}
-
             <div style={{ marginTop: "20px" }}>
               <span className="fv-text-sm fv-text-subdued">
                 Upgrade, downgrade, or cancel anytime.
@@ -254,24 +240,12 @@ export default function Billing() {
                     <strong>{displayCredits.toLocaleString()}</strong>{" "}
                     {creditLabel}
                   </div>
-                  {billingInterval === "EVERY_30_DAYS" &&
-                  plan.overagePrice > 0 ? (
-                    <div className="fv-plan-feature">
-                      <strong>+${plan.overagePrice.toFixed(2)}</strong> per
-                      extra try-on
-                      <br />
-                      <span style={{ fontSize: "11px", opacity: 0.7 }}>
-                        (capped at ${plan.monthlyOverageCap}/mo)
-                      </span>
-                    </div>
-                  ) : billingInterval === "ANNUAL" ? (
-                    <div
-                      className="fv-plan-feature"
-                      style={{ color: "#888", fontSize: "12px" }}
-                    >
-                      No overage charges on annual plan
-                    </div>
-                  ) : null}
+                  <div
+                    className="fv-plan-feature"
+                    style={{ color: "#888", fontSize: "12px" }}
+                  >
+                    No surprise charges — the allowance is your limit
+                  </div>
                   <div className="fv-plan-feature">
                     Lead capture &amp; merchant analytics
                   </div>

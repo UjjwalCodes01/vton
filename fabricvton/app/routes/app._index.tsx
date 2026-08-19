@@ -142,11 +142,12 @@ export default function Dashboard() {
         </s-banner>
       )}
 
-      {data.creditsRemaining <= 0 && data.planName === "free" && (
+      {data.creditsRemaining <= 0 && (
         <s-banner tone="critical">
           <p>
-            🚫 Monthly credits exhausted.{" "}
-            <a href="/app/billing">Upgrade now</a> to continue generating try-ons.
+            🚫 Monthly try-ons exhausted. The widget is paused until your next
+            billing cycle — <a href="/app/billing">upgrade your plan</a> to
+            resume now.
           </p>
         </s-banner>
       )}
