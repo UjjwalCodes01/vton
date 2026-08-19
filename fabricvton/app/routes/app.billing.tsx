@@ -1,8 +1,9 @@
 import type {
+  ActionFunctionArgs,
   HeadersFunction,
   LoaderFunctionArgs,
 } from "react-router";
-import { useLoaderData } from "react-router";
+import { useFetcher, useLoaderData } from "react-router";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { useAppBridge } from "@shopify/app-bridge-react";
@@ -10,6 +11,8 @@ import db from "../db.server";
 import {
   PLANS,
   getPlan,
+  createSubscription,
+  downgradeToEntryPlan,
   syncShopPlanFromShopifyBilling,
 } from "../billing.server";
 import { useEffect, useState } from "react";
@@ -31,21 +34,52 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const config = await db.shopConfig.findUnique({ where: { shop } });
   const currentPlan = getPlan(config?.plan ?? "free");
 
-  // Build the Shopify-managed pricing plan change URL.
-  // Shopify shows its own plan picker at this URL.
-  const apiKey = process.env.SHOPIFY_API_KEY ?? "";
-  const appUrl = process.env.SHOPIFY_APP_URL ?? "";
-  const returnUrl = encodeURIComponent(`${appUrl}/app/billing`);
-  const pricingPlanUrl = `https://${shop}/admin/charges/${apiKey}/pricing_plans?return_url=${returnUrl}`;
+  return { currentPlan, plans: PLANS, activationMessage };
+};
 
-  return { currentPlan, plans: PLANS, activationMessage, pricingPlanUrl };
+// ─── Action: start a plan change through the Shopify Billing API ──────────────
+// appSubscriptionCreate returns a confirmationUrl on Shopify's own charge screen,
+// where the merchant accepts or declines. Redirecting with target "_top" is what
+// breaks out of the embedded iframe — window.open is blocked by its sandbox.
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const { session, admin, redirect } = await authenticate.admin(request);
+  const shop = session.shop;
+
+  const formData = await request.formData();
+  const planName = String(formData.get("planName") || "");
+  const interval =
+    String(formData.get("interval")) === "ANNUAL" ? "ANNUAL" : "EVERY_30_DAYS";
+
+  const appUrl = process.env.SHOPIFY_APP_URL ?? "";
+  const returnUrl = `${appUrl}/app/billing`;
+
+  try {
+    if (planName === "free") {
+      await downgradeToEntryPlan(admin, shop);
+      return redirect("/app/billing", { target: "_top" });
+    }
+
+    const { confirmationUrl } = await createSubscription(admin, {
+      planName,
+      interval,
+      returnUrl,
+    });
+
+    return redirect(confirmationUrl, { target: "_top" });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Could not start the plan change.";
+    console.error(`[Billing] Plan change failed for ${shop}:`, message);
+    return { error: message };
+  }
 };
 
 // ─── Billing page UI ──────────────────────────────────────────────────────────
 export default function Billing() {
-  const { currentPlan, plans, activationMessage, pricingPlanUrl } =
-    useLoaderData<typeof loader>();
+  const { currentPlan, plans, activationMessage } = useLoaderData<typeof loader>();
+  const fetcher = useFetcher<typeof action>();
   const shopify = useAppBridge();
+  const isChanging = fetcher.state !== "idle";
   const [billingInterval, setBillingInterval] = useState<
     "EVERY_30_DAYS" | "ANNUAL"
   >("EVERY_30_DAYS");
@@ -56,10 +90,18 @@ export default function Billing() {
     if (activationMessage) shopify.toast.show(activationMessage);
   }, [activationMessage, shopify]);
 
-  // Redirect to Shopify's native managed pricing page.
-  // window.open with '_top' breaks out of the embedded iframe.
-  const handleChangePlan = () => {
-    window.open(pricingPlanUrl, "_top");
+  useEffect(() => {
+    if (fetcher.data?.error) {
+      shopify.toast.show(fetcher.data.error, { isError: true });
+    }
+  }, [fetcher.data, shopify]);
+
+  // Posting to the action returns a redirect to Shopify's charge approval page.
+  const changePlan = (planName: string) => {
+    fetcher.submit(
+      { planName, interval: billingInterval },
+      { method: "post" }
+    );
   };
 
   return (
@@ -117,15 +159,7 @@ export default function Billing() {
             )}
 
             <div style={{ marginTop: "20px" }}>
-              <span style={{ display: "inline-block" }}>
-                <s-button variant="primary" onClick={handleChangePlan}>
-                  Change Plan
-                </s-button>
-              </span>
-              <span
-                className="fv-text-sm fv-text-subdued"
-                style={{ marginLeft: "12px" }}
-              >
+              <span className="fv-text-sm fv-text-subdued">
                 Upgrade, downgrade, or cancel anytime.
               </span>
             </div>
@@ -286,16 +320,15 @@ export default function Billing() {
                     <s-button disabled>Current Plan</s-button>
                   </div>
                 ) : (
-                  <span
-                    style={{ display: "block", width: "100%" }}
-                    onClick={handleChangePlan}
-                  >
+                  <div className="fv-w-full">
                     <s-button
                       variant={isRecommended ? "primary" : undefined}
+                      loading={isChanging}
+                      onClick={() => changePlan(plan.name)}
                     >
                       {isUpgrade ? "Upgrade" : "Downgrade"}
                     </s-button>
-                  </span>
+                  </div>
                 )}
               </div>
             );
@@ -304,11 +337,12 @@ export default function Billing() {
 
         {/* Downgrade to free */}
         {currentPlan.monthlyPrice > 0 && (
-          <div
-            style={{ marginTop: "24px", textAlign: "center" }}
-            onClick={handleChangePlan}
-          >
-            <s-button variant="tertiary">
+          <div style={{ marginTop: "24px", textAlign: "center" }}>
+            <s-button
+              variant="tertiary"
+              loading={isChanging}
+              onClick={() => changePlan("free")}
+            >
               Downgrade to Basic (10 try-ons/mo)
             </s-button>
           </div>

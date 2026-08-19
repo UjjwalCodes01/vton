@@ -92,8 +92,8 @@ const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["ACTIVE", "ACCEPTED"]);
 
 // Shopify AppSubscriptionCreate mutation (for paid plans)
 export const SUBSCRIPTION_CREATE_MUTATION = `#graphql
-  mutation appSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean) {
-    appSubscriptionCreate(name: $name, lineItems: $lineItems, returnUrl: $returnUrl, trialDays: 7, test: $test) {
+  mutation appSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean, $trialDays: Int) {
+    appSubscriptionCreate(name: $name, lineItems: $lineItems, returnUrl: $returnUrl, trialDays: $trialDays, test: $test) {
       userErrors {
         field
         message
@@ -446,4 +446,124 @@ export async function createOverageUsageRecord(params: {
     charged: Boolean(usageResult?.appUsageRecord?.id),
     usageRecordId: usageResult?.appUsageRecord?.id ?? null,
   };
+}
+
+// ─── Subscription creation (Shopify Billing API) ──────────────────────────────
+
+const SHOP_PLAN_QUERY = `#graphql
+  query shopBillingPlan {
+    shop {
+      plan {
+        partnerDevelopment
+      }
+    }
+  }
+`;
+
+/**
+ * Development and Plus partner-sandbox stores must be charged in test mode so
+ * nobody — including a Shopify reviewer — is billed real money while evaluating.
+ *
+ * Falls back to SHOPIFY_BILLING_TEST when the query fails, so a lookup problem
+ * can never silently turn a reviewer's sandbox into a live charge.
+ */
+export async function isTestBillingStore(
+  admin: AdminGraphqlClient
+): Promise<boolean> {
+  try {
+    const json = await readGraphqlJson(admin.graphql(SHOP_PLAN_QUERY));
+    const plan = (json.data?.shop as { plan?: { partnerDevelopment?: boolean } } | undefined)?.plan;
+    if (typeof plan?.partnerDevelopment === "boolean") {
+      return plan.partnerDevelopment;
+    }
+  } catch (error) {
+    console.warn(
+      "[Billing] Could not determine store type, falling back to SHOPIFY_BILLING_TEST:",
+      error instanceof Error ? error.message : error
+    );
+  }
+
+  return process.env.SHOPIFY_BILLING_TEST === "true";
+}
+
+export interface SubscriptionRequest {
+  planName: string;
+  interval: "EVERY_30_DAYS" | "ANNUAL";
+  returnUrl: string;
+}
+
+/**
+ * Starts a plan change through the Shopify Billing API.
+ *
+ * Returns the confirmationUrl the merchant must be redirected to in order to
+ * accept or decline the charge. Existing subscriptions are cancelled first so a
+ * merchant can never end up paying for two plans at once.
+ */
+export async function createSubscription(
+  admin: AdminGraphqlClient,
+  params: SubscriptionRequest
+): Promise<{ confirmationUrl: string }> {
+  const plan = getPlan(params.planName);
+
+  if (plan.monthlyPrice <= 0) {
+    throw new Error("The entry plan has no charge — use cancelAllActiveSubscriptions instead.");
+  }
+
+  await cancelAllActiveSubscriptions(admin);
+
+  const test = await isTestBillingStore(admin);
+
+  const json = await readGraphqlJson(
+    admin.graphql(SUBSCRIPTION_CREATE_MUTATION, {
+      variables: {
+        name: `FabricVTON ${plan.label}`,
+        lineItems: buildSubscriptionLineItems(plan, params.interval),
+        returnUrl: params.returnUrl,
+        test,
+        // Trial length must match what the App Store listing advertises, or the
+        // charge contradicts the published pricing. Default to none.
+        trialDays: Number(process.env.SHOPIFY_BILLING_TRIAL_DAYS ?? 0) || 0,
+      },
+    })
+  );
+
+  const result = json.data?.appSubscriptionCreate as
+    | {
+        userErrors?: Array<{ message?: string }>;
+        confirmationUrl?: string;
+      }
+    | undefined;
+
+  if (result?.userErrors?.length) {
+    throw new Error(
+      result.userErrors[0]?.message || "Shopify rejected the subscription request"
+    );
+  }
+
+  if (!result?.confirmationUrl) {
+    throw new Error("Shopify did not return a confirmation URL for this charge");
+  }
+
+  return { confirmationUrl: result.confirmationUrl };
+}
+
+/**
+ * Cancels any paid subscription and drops the shop back to the entry tier.
+ */
+export async function downgradeToEntryPlan(
+  admin: AdminGraphqlClient,
+  shop: string
+): Promise<void> {
+  await cancelAllActiveSubscriptions(admin);
+
+  const plan = getPlan("free");
+  await db.shopConfig.upsert({
+    where: { shop },
+    create: { shop, plan: plan.name, monthlyCredits: plan.credits },
+    update: {
+      plan: plan.name,
+      billingId: null,
+      monthlyCredits: plan.credits,
+    },
+  });
 }
