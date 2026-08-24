@@ -22,10 +22,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const shop = session.shop;
   const url = new URL(request.url);
 
-  // Shopify redirects back here with ?charge_id= after the merchant
-  // approves or changes a plan on Shopify's managed pricing page.
+  // Shopify redirects back here after the merchant picks a plan. Paid plans carry
+  // ?charge_id=; a free plan produces no charge and returns only ?plan_handle=,
+  // so gating on charge_id alone silently skips every downgrade.
   let activationMessage: string | null = null;
-  if (url.searchParams.has("charge_id")) {
+  if (url.searchParams.has("charge_id") || url.searchParams.has("plan_handle")) {
     const sync = await syncShopPlanFromShopifyBilling(admin, shop);
     activationMessage = sync.message;
   }

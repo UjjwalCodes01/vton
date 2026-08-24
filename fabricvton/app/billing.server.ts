@@ -231,11 +231,44 @@ export async function syncShopPlanFromShopifyBilling(
       ?.activeSubscriptions ?? [];
 
   const activeSubscription = pickActiveSubscription(subscriptions);
+
+  // No active subscription under Shopify App Pricing means the merchant is on the
+  // free entry tier — they downgraded or cancelled. This MUST be written back:
+  // leaving the old paid plan in place is what makes a downgrade look broken to
+  // the merchant, because the app keeps reporting the previous allowance.
   if (!activeSubscription || !ACTIVE_SUBSCRIPTION_STATUSES.has(activeSubscription.status)) {
+    const entryPlan = getPlan("free");
+    const existing = await db.shopConfig.findUnique({ where: { shop } });
+    const planChanged = !existing || existing.plan !== entryPlan.name;
+
+    await db.shopConfig.upsert({
+      where: { shop },
+      create: {
+        shop,
+        plan: entryPlan.name,
+        billingId: null,
+        monthlyCredits: entryPlan.credits,
+        creditsUsed: 0,
+        billingCycleStart: new Date(),
+        isEnabled: true,
+      },
+      update: {
+        plan: entryPlan.name,
+        billingId: null,
+        monthlyCredits: entryPlan.credits,
+        // Start a fresh cycle on an actual change, mirroring the paid path.
+        ...(planChanged
+          ? { creditsUsed: 0, billingCycleStart: new Date() }
+          : {}),
+      },
+    });
+
     return {
-      synced: false,
-      plan: null,
-      message: "No active paid Shopify subscription found.",
+      synced: planChanged,
+      plan: entryPlan.name,
+      message: planChanged
+        ? `Plan changed to ${entryPlan.label} (${entryPlan.credits} try-ons/mo).`
+        : `You're on the ${entryPlan.label} plan.`,
     };
   }
 
