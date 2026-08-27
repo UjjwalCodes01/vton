@@ -68,7 +68,7 @@
     dialog.setAttribute("aria-label", "Virtual try-on");
 
     dialog.innerHTML = [
-      '<button type="button" class="fabricvton-close" aria-label="Close">&times;</button>',
+      '<button type="button" class="fabricvton-close" data-action="close" aria-label="Close try-on">&times;</button>',
 
       '<div class="fabricvton-step" data-step="email">',
       '  <h2>Virtual Try-On</h2>',
@@ -90,7 +90,7 @@
       '    <li>Fill most of the frame, shoulders down</li>',
       '  </ul>',
       '  <div class="fabricvton-dropzone" data-action="pick">',
-      '    <p>Click to upload or drag a photo here</p>',
+      '    <p>Tap to upload, or drag a photo here</p>',
       '    <p>JPG or PNG &bull; Max 10MB</p>',
       '  </div>',
       '  <input type="file" accept="image/jpeg,image/png" hidden data-role="file" />',
@@ -149,7 +149,10 @@
   }
 
   function onDialogClick(event) {
-    var trigger = event.target.closest("[data-action]");
+    var target = event.target;
+    if (!target || typeof target.closest !== "function") return;
+
+    var trigger = target.closest("[data-action]");
     if (!trigger) return;
 
     var action = trigger.getAttribute("data-action");

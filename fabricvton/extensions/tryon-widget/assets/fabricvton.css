@@ -24,6 +24,15 @@
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: #111;
+  /* A tall result image on a short screen must not push the close button off
+     the viewport — scroll inside the dialog instead. */
+  max-height: 90vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+  .fabricvton-modal { padding: 24px 20px; }
 }
 
 .fabricvton-modal h2 {
