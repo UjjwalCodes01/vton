@@ -12,10 +12,11 @@ export interface Plan {
   annualPrice: number;        // annual price in USD (one-time charge per year)
   credits: number;            // monthly try-on credits included
   annualCredits: number;      // try-ons included in the full year (for annual billing)
-  // Overage billing is intentionally disabled. Shopify App Pricing owns the plans
-  // and none of them carry a usage component, so any per-try-on charge advertised
-  // here would never actually be levied. The monthly allowance is a hard cap.
-  // Kept at 0 so the pricing UI and line-item builder both stay silent about it.
+  // Price per try-on once the monthly allowance is spent, and the ceiling on
+  // those charges per cycle. These are only ever levied when the shop's Shopify
+  // subscription actually carries a usage-charge meter — see
+  // getOverageAvailability. Without one configured in the Partner Dashboard the
+  // allowance behaves as a hard cap and nothing is advertised or billed.
   overagePrice: number;
   monthlyOverageCap: number;
   featured?: boolean;         // highlight in UI
@@ -45,8 +46,8 @@ export const PLANS: Plan[] = [
     annualPrice: 86,
     credits: 50,
     annualCredits: 600,
-    overagePrice: 0,
-    monthlyOverageCap: 0,
+    overagePrice: 0.18,
+    monthlyOverageCap: 50,
   },
   {
     name: "growth",
@@ -55,8 +56,8 @@ export const PLANS: Plan[] = [
     annualPrice: 470,
     credits: 400,
     annualCredits: 4800,
-    overagePrice: 0,
-    monthlyOverageCap: 0,
+    overagePrice: 0.13,
+    monthlyOverageCap: 100,
     featured: true,
   },
   {
@@ -66,8 +67,8 @@ export const PLANS: Plan[] = [
     annualPrice: 950,
     credits: 1000,
     annualCredits: 12000,
-    overagePrice: 0,
-    monthlyOverageCap: 0,
+    overagePrice: 0.10,
+    monthlyOverageCap: 200,
   },
   {
     name: "scale",
@@ -76,8 +77,8 @@ export const PLANS: Plan[] = [
     annualPrice: 2102,
     credits: 2500,
     annualCredits: 30000,
-    overagePrice: 0,
-    monthlyOverageCap: 0,
+    overagePrice: 0.08,
+    monthlyOverageCap: 500,
   },
 ];
 
@@ -92,6 +93,41 @@ type AdminGraphqlClient = {
 };
 
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["ACTIVE", "ACCEPTED"]);
+
+/** Shopify app subscriptions bill on a 30-day recurring interval. */
+export const BILLING_CYCLE_DAYS = 30;
+
+/**
+ * True once the shop's current allowance period has elapsed.
+ *
+ * The allowance resets on this boundary and NOWHERE else. Resetting on plan
+ * change instead would let a merchant refill by churning plans — burn the
+ * allowance, downgrade to Basic, upgrade again, get a fresh balance — for
+ * little more than the prorated difference.
+ */
+export function isBillingCycleDue(billingCycleStart: Date, now: Date = new Date()) {
+  return (
+    now.getTime() - new Date(billingCycleStart).getTime() >=
+    BILLING_CYCLE_DAYS * 24 * 60 * 60 * 1000
+  );
+}
+
+/** Suspensions we applied for billing reasons, so manual admin suspensions are never auto-cleared. */
+export const BILLING_SUSPEND_PREFIX = "billing:";
+
+/**
+ * Whether the pricing UI may advertise per-try-on overage charges.
+ *
+ * Deliberately opt-in and default-off. Advertising a charge that Shopify has no
+ * meter to collect is exactly what failed App Store requirement 1.2.2 before.
+ * Turn this on only once every paid plan in the Partner Dashboard has a usage
+ * charge configured matching overagePrice / monthlyOverageCap below.
+ *
+ * Runtime billing does not depend on this flag — chargeOverage always verifies
+ * the real subscription — so a wrong value here can only affect what is shown.
+ */
+export const OVERAGE_BILLING_ENABLED =
+  process.env.OVERAGE_BILLING_ENABLED === "true";
 
 // Shopify AppSubscriptionCreate mutation (for paid plans)
 export const SUBSCRIPTION_CREATE_MUTATION = `#graphql
@@ -131,6 +167,10 @@ export const CURRENT_APP_SUBSCRIPTIONS_QUERY = `#graphql
               }
               ... on AppUsagePricing {
                 terms
+                balanceUsed {
+                  amount
+                  currencyCode
+                }
                 cappedAmount {
                   amount
                   currencyCode
@@ -170,6 +210,8 @@ type ActiveSubscription = {
     plan?: {
       pricingDetails?: {
         __typename?: string;
+        balanceUsed?: { amount?: string | number };
+        cappedAmount?: { amount?: string | number };
       };
     };
   }>;
@@ -256,8 +298,8 @@ export async function syncShopPlanFromShopifyBilling(
         plan: entryPlan.name,
         billingId: null,
         monthlyCredits: entryPlan.credits,
-        // Start a fresh cycle on an actual change, mirroring the paid path.
-        ...(planChanged
+        // Downgrading does not refill the allowance — see isBillingCycleDue.
+        ...(existing && isBillingCycleDue(existing.billingCycleStart)
           ? { creditsUsed: 0, billingCycleStart: new Date() }
           : {}),
       },
@@ -275,10 +317,11 @@ export async function syncShopPlanFromShopifyBilling(
   const planName = inferPlanFromSubscriptionName(activeSubscription.name);
   const plan = getPlan(planName);
   const existing = await db.shopConfig.findUnique({ where: { shop } });
+
+  // A plan change swaps the allowance but must NOT refill it — only a genuine
+  // cycle rollover (or a first install) does that.
   const shouldResetCycle =
-    !existing ||
-    existing.plan !== planName ||
-    existing.billingId !== activeSubscription.id;
+    !existing || isBillingCycleDue(existing.billingCycleStart);
 
   await db.shopConfig.upsert({
     where: { shop },
@@ -297,12 +340,14 @@ export async function syncShopPlanFromShopifyBilling(
       billingId: activeSubscription.id,
       monthlyCredits: plan.credits,
       isEnabled: true,
+      // An active subscription clears any suspension we applied for billing
+      // reasons, but leaves an admin's manual suspension in place.
+      ...(existing?.isSuspended &&
+      existing.suspendReason?.startsWith(BILLING_SUSPEND_PREFIX)
+        ? { isSuspended: false, suspendReason: null }
+        : {}),
       ...(shouldResetCycle
-        ? {
-            creditsUsed: 0,
-            overageChargesTotal: 0,
-            billingCycleStart: new Date(),
-          }
+        ? { creditsUsed: 0, billingCycleStart: new Date() }
         : {}),
     },
   });
@@ -369,4 +414,195 @@ export function buildManagedPricingUrl(shop: string): string {
     process.env.SHOPIFY_APP_HANDLE || process.env.SHOPIFY_API_KEY || "";
 
   return `https://admin.shopify.com/store/${storeHandle}/charges/${appHandle}/pricing_plans`;
+}
+
+// ─── Usage-based top-ups ──────────────────────────────────────────────────────
+//
+// When a shop spends its monthly allowance early, try-ons can continue and be
+// billed per generation — but ONLY if the merchant's Shopify subscription
+// carries a usage-charge meter, which is configured per plan in the Partner
+// Dashboard and approved by the merchant (they agree to a capped amount).
+//
+// Everything here degrades safely: with no meter configured, availability comes
+// back false, the allowance stays a hard cap, and the UI advertises nothing.
+// That keeps us from ever promising a charge Shopify cannot collect.
+
+const SHOPIFY_ADMIN_API_VERSION =
+  process.env.SHOPIFY_ADMIN_API_VERSION ?? "2026-04";
+
+export const USAGE_RECORD_CREATE_MUTATION = `#graphql
+  mutation appUsageRecordCreate($subscriptionLineItemId: ID!, $price: MoneyInput!, $description: String!) {
+    appUsageRecordCreate(
+      subscriptionLineItemId: $subscriptionLineItemId
+      price: $price
+      description: $description
+    ) {
+      userErrors { field message }
+      appUsageRecord { id }
+    }
+  }
+`;
+
+/**
+ * Calls the Admin API with the shop's stored offline token.
+ *
+ * Needed because usage records are created from the storefront try-on path,
+ * which runs in an app-proxy context and has no authenticated admin client.
+ */
+async function shopGraphqlRequest<T>(
+  shop: string,
+  accessToken: string,
+  query: string,
+  variables?: Record<string, unknown>
+): Promise<T> {
+  const host = shop.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  const response = await fetch(
+    `https://${host}/admin/api/${SHOPIFY_ADMIN_API_VERSION}/graphql.json`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Shopify-Access-Token": accessToken,
+      },
+      body: JSON.stringify({ query, variables }),
+    }
+  );
+
+  const json = (await response.json()) as {
+    data?: T;
+    errors?: Array<{ message?: string }>;
+  };
+
+  if (!response.ok || json.errors?.length) {
+    throw new Error(
+      json.errors?.[0]?.message ||
+        `Shopify Admin API request failed (${response.status})`
+    );
+  }
+
+  return json.data as T;
+}
+
+async function offlineAccessToken(shop: string): Promise<string | null> {
+  const session = await db.session.findFirst({
+    where: { shop, isOnline: false },
+    orderBy: { id: "asc" },
+  });
+  return session?.accessToken ?? null;
+}
+
+function toAmount(value: unknown): number {
+  const parsed = typeof value === "string" ? Number.parseFloat(value) : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export interface OverageAvailability {
+  /** Whether extra try-ons can be billed right now */
+  available: boolean;
+  /** Why not, for logging and merchant-facing copy */
+  reason?: string;
+  usageLineItemId?: string;
+  /** USD still billable this cycle under the merchant-approved cap */
+  remainingCap: number;
+}
+
+const UNAVAILABLE = (reason: string): OverageAvailability => ({
+  available: false,
+  reason,
+  remainingCap: 0,
+});
+
+/**
+ * Whether this shop can be billed for try-ons beyond its allowance, and how
+ * much headroom is left under the cap the merchant approved.
+ */
+export async function getOverageAvailability(
+  shop: string
+): Promise<OverageAvailability> {
+  const accessToken = await offlineAccessToken(shop);
+  if (!accessToken) return UNAVAILABLE("Offline access token missing");
+
+  let subscriptions: ActiveSubscription[] = [];
+  try {
+    const data = await shopGraphqlRequest<{
+      currentAppInstallation?: { activeSubscriptions?: ActiveSubscription[] };
+    }>(shop, accessToken, CURRENT_APP_SUBSCRIPTIONS_QUERY);
+    subscriptions = data.currentAppInstallation?.activeSubscriptions ?? [];
+  } catch (error) {
+    return UNAVAILABLE(
+      error instanceof Error ? error.message : "Could not read subscription"
+    );
+  }
+
+  const subscription = pickActiveSubscription(subscriptions);
+  if (!subscription || !ACTIVE_SUBSCRIPTION_STATUSES.has(subscription.status)) {
+    return UNAVAILABLE("No active Shopify subscription");
+  }
+
+  const usageLineItem = subscription.lineItems?.find(
+    (item) => item.plan?.pricingDetails?.__typename === "AppUsagePricing"
+  );
+  if (!usageLineItem) {
+    return UNAVAILABLE("Subscription has no usage-charge meter configured");
+  }
+
+  const details = usageLineItem.plan?.pricingDetails ?? {};
+  const cap = toAmount(details.cappedAmount?.amount);
+  const used = toAmount(details.balanceUsed?.amount);
+  const remainingCap = Math.max(0, cap - used);
+
+  if (remainingCap <= 0) {
+    return UNAVAILABLE("Merchant-approved spending cap reached for this cycle");
+  }
+
+  return { available: true, usageLineItemId: usageLineItem.id, remainingCap };
+}
+
+/**
+ * Bills a single try-on beyond the allowance. Never throws — a billing failure
+ * must not break a generation the shopper already paid for in wait time.
+ */
+export async function chargeOverage(params: {
+  shop: string;
+  amount: number;
+  description: string;
+}): Promise<{ charged: boolean; reason?: string }> {
+  const { shop, amount, description } = params;
+  if (amount <= 0) return { charged: false, reason: "No overage amount" };
+
+  try {
+    const availability = await getOverageAvailability(shop);
+    if (!availability.available || !availability.usageLineItemId) {
+      return { charged: false, reason: availability.reason };
+    }
+    if (amount > availability.remainingCap) {
+      return { charged: false, reason: "Charge would exceed the approved cap" };
+    }
+
+    const accessToken = await offlineAccessToken(shop);
+    if (!accessToken) return { charged: false, reason: "Offline access token missing" };
+
+    const data = await shopGraphqlRequest<{
+      appUsageRecordCreate?: {
+        userErrors?: Array<{ message?: string }>;
+        appUsageRecord?: { id?: string };
+      };
+    }>(shop, accessToken, USAGE_RECORD_CREATE_MUTATION, {
+      subscriptionLineItemId: availability.usageLineItemId,
+      price: { amount: Number(amount.toFixed(2)), currencyCode: "USD" },
+      description,
+    });
+
+    const result = data.appUsageRecordCreate;
+    if (result?.userErrors?.length) {
+      return { charged: false, reason: result.userErrors[0]?.message };
+    }
+
+    return { charged: true };
+  } catch (error) {
+    return {
+      charged: false,
+      reason: error instanceof Error ? error.message : "Usage record failed",
+    };
+  }
 }

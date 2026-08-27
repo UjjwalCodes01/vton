@@ -30,6 +30,11 @@ api_version = "2026-04"
   topics = [ "app/scopes_update" ]
   uri = "/webhooks/app/scopes_update"
 
+  # Suspend a shop the moment Shopify can no longer collect payment.
+  [[webhooks.subscriptions]]
+  topics = [ "app_subscriptions/update" ]
+  uri = "/webhooks/app/subscriptions_update"
+
   # NOTE: orders/create is NOT subscribed here because it contains protected customer data.
   # To enable it: go to Partner Dashboard → API access → Request access to Protected Customer Data.
 

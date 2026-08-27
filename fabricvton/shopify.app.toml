@@ -19,6 +19,11 @@ api_version = "2026-04"
   topics = [ "app/scopes_update" ]
   uri = "/webhooks/app/scopes_update"
 
+  # Suspend a shop the moment Shopify can no longer collect payment.
+  [[webhooks.subscriptions]]
+  topics = [ "app_subscriptions/update" ]
+  uri = "/webhooks/app/subscriptions_update"
+
   [webhooks.privacy_compliance]
   customer_data_request_url = "/webhooks/customers/data_request"
   customer_deletion_url = "/webhooks/customers/redact"

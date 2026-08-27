@@ -1,5 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import db from "./db.server";
+import { chargeOverage, getOverageAvailability, getPlan, isBillingCycleDue } from "./billing.server";
 import {
   uploadCustomerImage,
   createTryOn,
@@ -287,18 +288,45 @@ export async function handleTryOnAction(request: Request) {
     }
 
     // ── 2. Check credit balance ──
-    // The monthly allowance is a hard cap on every plan. Shopify App Pricing
-    // carries no usage component, so anything generated past the allowance
-    // could never be billed — it would simply be given away.
+    // Roll the allowance here rather than only on the billing page, so a shop
+    // whose merchant never opens the app still gets its monthly reset.
+    if (isBillingCycleDue(config.billingCycleStart)) {
+      config = await db.shopConfig.update({
+        where: { shop },
+        data: { creditsUsed: 0, billingCycleStart: new Date() },
+      });
+      console.log(`[TryOn API][${requestId}] Rolled billing cycle for ${shop}`);
+    }
+
+    // Allowance spent? Try-ons can continue only if Shopify can actually bill
+    // for them — i.e. the merchant's subscription carries a usage-charge meter
+    // and still has headroom under the cap they approved. Without that, the
+    // allowance is a hard cap: generating anyway would mean paying the provider
+    // for work nobody is charged for.
     const creditsRemaining = config.monthlyCredits - config.creditsUsed;
     if (creditsRemaining <= 0) {
-      return jsonResponse(
-        {
-          error:
-            "This store has used all of its virtual try-ons for this month. Please check back next month.",
-        },
-        429,
-        origin
+      const plan = getPlan(config.plan);
+      const overage =
+        plan.overagePrice > 0
+          ? await getOverageAvailability(shop)
+          : { available: false, reason: "Plan has no overage pricing", remainingCap: 0 };
+
+      if (!overage.available || overage.remainingCap < plan.overagePrice) {
+        console.log(
+          `[TryOn API][${requestId}] Allowance exhausted for ${shop}; overage unavailable: ${overage.reason ?? "cap reached"}`
+        );
+        return jsonResponse(
+          {
+            error:
+              "This store has used all of its virtual try-ons for this month. Please check back next month.",
+          },
+          429,
+          origin
+        );
+      }
+
+      console.log(
+        `[TryOn API][${requestId}] ${shop} over allowance — billing this try-on at $${plan.overagePrice.toFixed(2)} ($${overage.remainingCap.toFixed(2)} cap remaining)`
       );
     }
 
@@ -524,10 +552,31 @@ async function syncGenerationOutcome(
     return;
   }
 
-  await db.shopConfig.update({
+  const config = await db.shopConfig.update({
     where: { shop: event.shop },
     data: { creditsUsed: { increment: 1 } },
   });
+
+  // Bill only try-ons that actually completed, and only past the allowance.
+  const plan = getPlan(config.plan);
+  if (config.creditsUsed > config.monthlyCredits && plan.overagePrice > 0) {
+    const result = await chargeOverage({
+      shop: event.shop,
+      amount: plan.overagePrice,
+      description: `Try-on beyond monthly allowance (${generationId})`,
+    });
+
+    if (result.charged) {
+      await db.shopConfig.update({
+        where: { shop: event.shop },
+        data: { overageChargesTotal: { increment: plan.overagePrice } },
+      });
+    } else {
+      console.warn(
+        `[Billing] Overage not charged for ${event.shop}: ${result.reason ?? "unknown"}`
+      );
+    }
+  }
 
   await upsertDailyAnalytics(event.shop, { tryOnsCompleted: 1 });
 }

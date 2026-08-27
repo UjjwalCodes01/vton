@@ -10,6 +10,7 @@ import { useAppBridge } from "@shopify/app-bridge-react";
 import db from "../db.server";
 import {
   PLANS,
+  OVERAGE_BILLING_ENABLED,
   getPlan,
   buildManagedPricingUrl,
   syncShopPlanFromShopifyBilling,
@@ -34,7 +35,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const config = await db.shopConfig.findUnique({ where: { shop } });
   const currentPlan = getPlan(config?.plan ?? "free");
 
-  return { currentPlan, plans: PLANS, activationMessage };
+  return {
+    currentPlan,
+    plans: PLANS,
+    activationMessage,
+    overageEnabled: OVERAGE_BILLING_ENABLED,
+  };
 };
 
 // ─── Action: hand the merchant off to Shopify's plan picker ──────────────────
@@ -50,7 +56,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 // ─── Billing page UI ──────────────────────────────────────────────────────────
 export default function Billing() {
-  const { currentPlan, plans, activationMessage } = useLoaderData<typeof loader>();
+  const { currentPlan, plans, activationMessage, overageEnabled } =
+    useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const shopify = useAppBridge();
   // Which plan's button was clicked, so only that one shows a spinner.
@@ -111,6 +118,22 @@ export default function Billing() {
                 </div>
               </div>
             </div>
+
+            {overageEnabled && currentPlan.overagePrice > 0 && (
+              <div
+                className="fv-mt-md fv-text-sm fv-text-subdued"
+                style={{
+                  borderTop: "1px solid var(--s-color-border)",
+                  paddingTop: "12px",
+                }}
+              >
+                If you use your full allowance before the cycle ends, try-ons
+                keep working at{" "}
+                <strong>${currentPlan.overagePrice.toFixed(2)}</strong> each,
+                billed through Shopify and capped at $
+                {currentPlan.monthlyOverageCap}/mo.
+              </div>
+            )}
 
             <div style={{ marginTop: "20px" }}>
               <span className="fv-text-sm fv-text-subdued">
@@ -241,12 +264,24 @@ export default function Billing() {
                     <strong>{displayCredits.toLocaleString()}</strong>{" "}
                     {creditLabel}
                   </div>
-                  <div
-                    className="fv-plan-feature"
-                    style={{ color: "#888", fontSize: "12px" }}
-                  >
-                    No surprise charges — the allowance is your limit
-                  </div>
+                  {overageEnabled && plan.overagePrice > 0 ? (
+                    <div className="fv-plan-feature">
+                      Run out early? Extra try-ons are{" "}
+                      <strong>${plan.overagePrice.toFixed(2)}</strong> each
+                      <br />
+                      <span style={{ fontSize: "11px", opacity: 0.7 }}>
+                        billed only if you use them, up to $
+                        {plan.monthlyOverageCap}/mo
+                      </span>
+                    </div>
+                  ) : (
+                    <div
+                      className="fv-plan-feature"
+                      style={{ color: "#888", fontSize: "12px" }}
+                    >
+                      No surprise charges — the allowance is your limit
+                    </div>
+                  )}
                   <div className="fv-plan-feature">
                     Lead capture &amp; merchant analytics
                   </div>
