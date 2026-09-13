@@ -1,6 +1,37 @@
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import db from "./db.server";
-import { chargeOverage, getOverageAvailability, getPlan, isBillingCycleDue } from "./billing.server";
+import { getPlan, isBillingCycleDue } from "./billing.server";
+import {
+  countInFlightGenerations,
+  reclaimStaleReservations,
+  releaseReservation,
+  reserveTryOnCredit,
+  settleSuccessfulReservation,
+} from "./credits.server";
+import { logInternalError, newRequestId } from "./requestid.server";
+import {
+  analyticsPingRules,
+  checkRateLimits,
+  clientIpFrom,
+  LIMITS,
+  purgeExpiredRateLimitWindows,
+  shouldRunPeriodically,
+  statusPollRules,
+  tryOnGenerationRules,
+} from "./ratelimit.server";
+import { purgeExpiredData } from "./retention.server";
+import {
+  clampText,
+  dataUrlToBlob,
+  declaredBodyTooLarge,
+  ImageTooLargeError,
+  InvalidImageError,
+  MAX_IMAGE_BYTES,
+  ALLOWED_IMAGE_MIME_TYPES,
+  sanitizeEmail,
+  sanitizeSessionId,
+  UnsupportedImageTypeError,
+  validateGarmentImageUrl,
+} from "./tryon-input.server";
 import {
   uploadCustomerImage,
   createTryOn,
@@ -10,7 +41,6 @@ import {
   SHOPPER_FIXABLE_ERROR_CODES,
   YouCamError,
 } from "./youcam.server";
-
 
 // ─── CORS ───────────────────────────────────────────────
 
@@ -23,50 +53,61 @@ function corsHeaders(origin: string) {
   };
 }
 
-function jsonResponse(data: unknown, status: number, origin: string) {
+function jsonResponse(
+  data: unknown,
+  status: number,
+  origin: string,
+  extraHeaders: Record<string, string> = {}
+) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json", ...corsHeaders(origin) },
+    headers: {
+      "Content-Type": "application/json",
+      ...corsHeaders(origin),
+      ...extraHeaders,
+    },
   });
 }
 
-function normalizeProductImageUrl(url: string) {
-  if (!url) return "";
-  if (url.startsWith("//")) {
-    return `https:${url}`;
-  }
-  return url;
+/**
+ * The only error shape this endpoint returns.
+ *
+ * `requestId` is the whole point: the shopper gets a message they can act on, the
+ * operator gets the upstream detail in the log under the same id, and nothing
+ * about our provider, plan state or infrastructure crosses the boundary. Anything
+ * that used to travel in a `debug` field now only exists server-side — see
+ * app/requestid.server.ts.
+ */
+function errorResponse(
+  message: string,
+  status: number,
+  origin: string,
+  requestId: string,
+  extraHeaders: Record<string, string> = {}
+) {
+  return jsonResponse({ error: message, requestId }, status, origin, extraHeaders);
 }
 
-// YouCam accepts jpg and png only. The widget canvas-encodes everything to JPEG
-// before upload, so this only narrows the direct multipart path.
-const ALLOWED_IMAGE_MIME_TYPES = new Set([
-  "image/jpeg",
-  "image/jpg",
-  "image/png",
-]);
-
+/**
+ * Classifies a provider failure into a shopper-facing message and status.
+ *
+ * Returns no detail string at all — callers log the raw error themselves via
+ * logInternalError, which is what keeps the detail from reaching a response by
+ * accident.
+ */
 function classifyTryOnError(error: unknown, stage: "upload" | "create" | "general") {
-  const raw = error instanceof Error ? error.message : String(error ?? "Unknown error");
-
   if (error instanceof YouCamError) {
     // Photo problems the shopper can actually fix — 422 so the widget shows the
-    // provider's specific guidance rather than a generic server error.
+    // provider's specific guidance rather than a generic server error. These
+    // messages come from our own describeYouCamError table, not from upstream.
     if (SHOPPER_FIXABLE_ERROR_CODES.has(error.code)) {
-      return {
-        status: 422,
-        message: describeYouCamError(error.code),
-        code: error.code,
-        debug: raw,
-      };
+      return { status: 422, message: describeYouCamError(error.code) };
     }
 
     if (error.code === "InvalidAccessToken" || error.httpStatus === 401) {
       return {
         status: 502,
         message: "Virtual try-on is temporarily unavailable. Please try again shortly.",
-        code: error.code,
-        debug: raw,
       };
     }
 
@@ -75,17 +116,10 @@ function classifyTryOnError(error: unknown, stage: "upload" | "create" | "genera
         status: 402,
         message:
           "Virtual try-on credits have run out. The store owner needs to top up their FabricVTON plan.",
-        code: error.code,
-        debug: raw,
       };
     }
 
-    return {
-      status: 502,
-      message: describeYouCamError(error.code),
-      code: error.code,
-      debug: raw,
-    };
+    return { status: 502, message: describeYouCamError(error.code) };
   }
 
   return {
@@ -94,67 +128,121 @@ function classifyTryOnError(error: unknown, stage: "upload" | "create" | "genera
       stage === "upload"
         ? "Image upload failed. Please try another photo."
         : "Try-on generation failed. Please try again.",
-    code: undefined,
-    debug: raw,
   };
 }
 
 // ─── GET /api/tryon — Analytics ping OR status poll ─────
 //   ?event=open&shop=...   → analytics ping
 //   ?generationId=...      → poll status for async try-on
+//
+// `shop` is NOT read from the query string here: it is the shop Shopify's app
+// proxy signature authenticated, passed down by the route. See
+// app/routes/proxy.api.tryon.tsx.
 
-export async function handleTryOnLoader(request: Request) {
+export async function handleTryOnLoader(request: Request, verifiedShop: string) {
   const origin = request.headers.get("Origin") || "*";
+  const requestId = newRequestId();
   const url = new URL(request.url);
-  const shop = url.searchParams.get("shop") || "";
   const event = url.searchParams.get("event");
-  const generationId = url.searchParams.get("generationId");
+  const generationId = clampText(url.searchParams.get("generationId"), 128);
+  const clientIp = clientIpFrom(request);
+
+  if (!verifiedShop) {
+    return errorResponse("Unauthorized request.", 401, origin, requestId);
+  }
 
   // Status poll: ?generationId=xxx
   if (generationId) {
+    // Prefer the widget's own session id, then the forwarded IP. Falling back to
+    // the generation id rather than a shared constant matters: a single bucket
+    // named "anonymous" would be shared by every shopper on the store, and three
+    // concurrent try-ons polling every 3s would throttle each other.
+    const sessionKey =
+      sanitizeSessionId(url.searchParams.get("sessionId")) ??
+      sanitizeSessionId(url.searchParams.get("oseid")) ??
+      clientIp ??
+      generationId;
+
+    const pollLimit = await checkRateLimits(
+      statusPollRules({ shop: verifiedShop, sessionKey })
+    );
+    if (!pollLimit.allowed) {
+      return errorResponse(
+        "Too many status checks. Please wait a moment.",
+        429,
+        origin,
+        requestId,
+        { "Retry-After": String(pollLimit.retryAfterSeconds) }
+      );
+    }
+
+    // A generationId is an opaque provider task id, not a capability: knowing one
+    // must not be enough to read its result or, worse, to settle its billing
+    // against whichever shop owns it. So the event is looked up scoped to the
+    // shop this signed request came from, and a miss is indistinguishable from a
+    // generation that never existed.
+    const tryOnEvent = await db.tryOnEvent.findFirst({
+      where: { shop: verifiedShop, providerTaskId: generationId },
+      select: { id: true, shop: true, status: true, overageAmount: true },
+    });
+
+    if (!tryOnEvent) {
+      return errorResponse("Unknown generation.", 404, origin, requestId);
+    }
+
     try {
       const gen = await getGenerationStatus(generationId);
       await syncGenerationOutcome(
+        tryOnEvent,
         generationId,
         gen.status,
-        gen.errorMessage ?? null,
         gen.errorCode ?? null
       );
+
       return jsonResponse(
         {
           status: gen.status,
           resultImageUrl: gen.resultImageUrl ?? null,
-          errorMessage: gen.errorCode
-            ? describeYouCamError(gen.errorCode)
-            : (gen.errorMessage ?? null),
+          // Only our own error table is ever surfaced — never the provider's raw
+          // message, which can name endpoints and task internals.
+          errorMessage: gen.errorCode ? describeYouCamError(gen.errorCode) : null,
+          requestId,
         },
         200,
         origin
       );
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Status check failed";
-      return jsonResponse({ error: msg }, 500, origin);
+      logInternalError(requestId, "status poll", err);
+      return errorResponse(
+        "Could not check the try-on status. Please try again.",
+        502,
+        origin,
+        requestId
+      );
     }
   }
 
-  // Analytics ping: ?event=open&shop=xxx
-  if (shop && event === "open") {
-    await upsertDailyAnalytics(shop, { widgetOpens: 1 });
+  // Analytics ping: ?event=open
+  if (event === "open") {
+    const pingLimit = await checkRateLimits(
+      analyticsPingRules({ shop: verifiedShop, clientIp })
+    );
+    if (!pingLimit.allowed) {
+      // Silently accepted rather than errored: this is fire-and-forget telemetry
+      // and a 429 here would show up as a console error on a merchant's storefront.
+      return jsonResponse({ ok: true, requestId }, 200, origin);
+    }
+
+    await upsertDailyAnalytics(verifiedShop, { widgetOpens: 1 });
   }
 
-  return jsonResponse({ ok: true }, 200, origin);
+  return jsonResponse({ ok: true, requestId }, 200, origin);
 }
-
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  return handleTryOnLoader(request);
-};
 
 // ─── POST /api/tryon — Start async try-on (returns generationId fast) ─
 
-export async function handleTryOnAction(request: Request) {
-  const reqUrl = new URL(request.url);
-  const requestId = reqUrl.searchParams.get("oseid") || reqUrl.searchParams.get("cb") || `req_${Date.now().toString(36)}`;
-  console.log(`[TryOn API][${requestId}] ================= RECEIVED TRYON REQUEST =================`);
+export async function handleTryOnAction(request: Request, verifiedShop: string) {
+  const requestId = newRequestId();
   const origin = request.headers.get("Origin") || "*";
 
   // CORS preflight
@@ -162,188 +250,270 @@ export async function handleTryOnAction(request: Request) {
     return new Response(null, { status: 204, headers: corsHeaders(origin) });
   }
 
+  // The shop is whatever Shopify's app-proxy signature covers — never a body or
+  // query field. A caller who could name their own shop could spend any
+  // merchant's allowance and bill it to their usage cap.
+  const shop = verifiedShop;
+  if (!shop) {
+    return errorResponse("Unauthorized request.", 401, origin, requestId);
+  }
+
+  // Refuse an oversized body from its declared length, before reading it.
+  if (declaredBodyTooLarge(request)) {
+    return errorResponse(
+      `Request too large. Photos must be under ${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))}MB.`,
+      413,
+      origin,
+      requestId
+    );
+  }
+
+  console.log(`[TryOn API][${requestId}] Generation requested for ${shop}`);
+
+  // Reservation state, so the catch-all can release a hold if anything after
+  // reservation throws.
+  let reservedOverage: number | null = null;
+  let pendingEventId: string | null = null;
+
   try {
     const contentType = request.headers.get("Content-Type") || "";
-    console.log("[TryOn API] Incoming content type:", contentType);
 
-    // ALWAYS extract shop from URL params first (Shopify app proxy context adds this)
-    const url = reqUrl;
-    const shopFromUrl = url.searchParams.get("shop") || "";
-
-    let shop = shopFromUrl;
-
-    let email = "";
+    let email: string | null = null;
     let productId: string | null = null;
     let productTitle: string | null = null;
-    let productImageUrl: string | null = null;
+    let rawProductImageUrl: string | null = null;
     let sessionId: string | null = null;
     let personImage: Blob | null = null;
 
-    if (contentType.includes("application/json")) {
-      const body = (await request.json()) as {
-        shop?: string;
-        email?: string;
-        productId?: string | null;
-        productTitle?: string | null;
-        productImageUrl?: string | null;
-        sessionId?: string | null;
-        personImageDataUrl?: string | null;
-        personImageMimeType?: string | null;
-      };
+    try {
+      if (contentType.includes("application/json")) {
+        const body = (await request.json()) as Record<string, unknown>;
 
-      // Fallback to body shop only if not in URL
-      shop = shopFromUrl || String(body.shop || "");
-      email = String(body.email || "").trim().toLowerCase();
-      productId = body.productId ?? null;
-      productTitle = body.productTitle ?? null;
-      productImageUrl = body.productImageUrl ?? null;
-      sessionId = body.sessionId ?? null;
+        email = sanitizeEmail(body.email);
+        productId = clampText(body.productId, 64);
+        productTitle = clampText(body.productTitle, 255);
+        rawProductImageUrl = clampText(body.productImageUrl, 2048);
+        sessionId = sanitizeSessionId(body.sessionId);
 
-      if (body.personImageDataUrl) {
-        personImage = dataUrlToBlob(
-          body.personImageDataUrl,
-          body.personImageMimeType || undefined
+        if (typeof body.personImageDataUrl === "string") {
+          personImage = dataUrlToBlob(
+            body.personImageDataUrl,
+            clampText(body.personImageMimeType, 64) ?? undefined
+          );
+        }
+      } else {
+        const formData = await request.formData();
+        email = sanitizeEmail(formData.get("email"));
+        productId = clampText(formData.get("productId"), 64);
+        productTitle = clampText(formData.get("productTitle"), 255);
+        rawProductImageUrl = clampText(formData.get("productImageUrl"), 2048);
+        sessionId = sanitizeSessionId(formData.get("sessionId"));
+
+        const customerImage = formData.get("personImage");
+        if (customerImage instanceof Blob) {
+          personImage = customerImage;
+        }
+      }
+    } catch (parseError) {
+      if (parseError instanceof ImageTooLargeError) {
+        return errorResponse(
+          `Image too large. Max ${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))}MB.`,
+          413,
+          origin,
+          requestId
         );
       }
-    } else {
-      console.log("[TryOn API] Parsing multipart form-data payload");
-      const formData = await request.formData();
-      // Fallback to form data shop only if not in URL
-      shop = shopFromUrl || String(formData.get("shop") || "");
-      email = String(formData.get("email") || "").trim().toLowerCase();
-      productId = formData.get("productId") as string | null;
-      productTitle = formData.get("productTitle") as string | null;
-      productImageUrl = formData.get("productImageUrl") as string | null;
-      sessionId = formData.get("sessionId") as string | null;
-      const customerImage = formData.get("personImage");
-
-      if (customerImage instanceof Blob) {
-        personImage = customerImage;
+      if (parseError instanceof UnsupportedImageTypeError) {
+        return errorResponse(
+          "Unsupported image format. Please upload a JPG or PNG.",
+          415,
+          origin,
+          requestId
+        );
       }
+      if (parseError instanceof InvalidImageError) {
+        return errorResponse(
+          "That photo could not be read. Please try another image.",
+          400,
+          origin,
+          requestId
+        );
+      }
+      logInternalError(requestId, "request parse", parseError);
+      return errorResponse("Malformed request.", 400, origin, requestId);
     }
-
-    console.log(`[TryOn API][${requestId}] Parsed request metadata`, {
-      shop,
-      productId,
-      hasEmail: Boolean(email),
-      hasProductImageUrl: Boolean(productImageUrl),
-      hasPersonImage: Boolean(personImage),
-      personImageSize: personImage?.size ?? 0,
-      personImageType: personImage?.type ?? "unknown",
-    });
 
     // ── Validate required fields ──
-    if (!shop) {
-      return jsonResponse({ error: "Missing required field: shop" }, 400, origin);
-    }
     if (!personImage || personImage.size === 0) {
-      return jsonResponse({ error: "Missing required field: personImage" }, 400, origin);
+      return errorResponse("Please choose a photo to try on.", 400, origin, requestId);
     }
-    if (personImage.size > 10 * 1024 * 1024) {
-      return jsonResponse({ error: "Image too large. Max 10MB." }, 400, origin);
+    if (personImage.size > MAX_IMAGE_BYTES) {
+      return errorResponse(
+        `Image too large. Max ${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))}MB.`,
+        413,
+        origin,
+        requestId
+      );
     }
     if (personImage.type && !ALLOWED_IMAGE_MIME_TYPES.has(personImage.type.toLowerCase())) {
-      return jsonResponse({ error: "Unsupported image format. Please upload JPG, PNG, or WebP." }, 415, origin);
+      return errorResponse(
+        "Unsupported image format. Please upload a JPG or PNG.",
+        415,
+        origin,
+        requestId
+      );
     }
-    productImageUrl = normalizeProductImageUrl(productImageUrl ?? "");
-
-    if (!productId || !productImageUrl) {
-      return jsonResponse({ error: "Missing productId or productImageUrl." }, 422, origin);
+    if (!productId) {
+      return errorResponse("Missing product information.", 422, origin, requestId);
     }
 
-    // ── 1. Check shop config ──
+    const garment = validateGarmentImageUrl(rawProductImageUrl, shop);
+    if (!garment.ok) {
+      // The reason names the rejected host, which is useful in a log and useless
+      // (at best) to a shopper — so it stays server-side.
+      console.warn(
+        `[TryOn API][${requestId}] Rejected garment image URL for ${shop}: ${garment.reason}`
+      );
+      return errorResponse(
+        "This product's image can't be used for try-on. Please contact the store.",
+        422,
+        origin,
+        requestId
+      );
+    }
+    const productImageUrl = garment.url;
+
+    // ── Rate limits ──
+    // Applied before any DB write or provider call, so a flood costs one indexed
+    // upsert per request and nothing else.
+    const clientIp = clientIpFrom(request);
+    const rateLimit = await checkRateLimits(
+      tryOnGenerationRules({ shop, sessionId, clientIp })
+    );
+    if (!rateLimit.allowed) {
+      console.warn(
+        `[TryOn API][${requestId}] Rate limited (${rateLimit.label}) for ${shop}`
+      );
+      return errorResponse(
+        "You've made a lot of try-on requests. Please wait a little and try again.",
+        429,
+        origin,
+        requestId,
+        { "Retry-After": String(rateLimit.retryAfterSeconds) }
+      );
+    }
+
+    // ── Shop config ──
     // Auto-create config if missing (fallback for first API request)
     let config = await db.shopConfig.findUnique({ where: { shop } });
     if (!config) {
-      console.log("[TryOn API] ShopConfig not found for", shop, "- creating default config");
       try {
-        config = await db.shopConfig.create({
-          data: { shop }
-        });
-        console.log("[TryOn API] Created default ShopConfig for", shop);
+        config = await db.shopConfig.create({ data: { shop } });
+        console.log(`[TryOn API][${requestId}] Created default ShopConfig for ${shop}`);
       } catch (err) {
-        console.error("[TryOn API] Failed to create ShopConfig:", err);
-        return jsonResponse(
-          { error: "Failed to initialize shop configuration. Please visit the app dashboard first." },
+        logInternalError(requestId, "shop config create", err);
+        return errorResponse(
+          "This store's try-on is not set up yet. Please contact the store.",
           403,
-          origin
+          origin,
+          requestId
         );
       }
     }
 
-
     if (!config.isEnabled) {
-      return jsonResponse(
-        { error: "Virtual Try-On is currently disabled for this store." },
+      return errorResponse(
+        "Virtual Try-On is currently disabled for this store.",
         403,
-        origin
+        origin,
+        requestId
       );
     }
     if (config.isSuspended) {
-      return jsonResponse(
-        { error: "This store's Virtual Try-On access has been suspended." },
+      return errorResponse(
+        "This store's Virtual Try-On access has been suspended.",
         403,
-        origin
+        origin,
+        requestId
       );
     }
 
-    // ── 2. Check credit balance ──
     // Roll the allowance here rather than only on the billing page, so a shop
     // whose merchant never opens the app still gets its monthly reset.
     if (isBillingCycleDue(config.billingCycleStart)) {
       config = await db.shopConfig.update({
         where: { shop },
-        data: { creditsUsed: 0, billingCycleStart: new Date() },
+        data: { creditsUsed: 0, overageReserved: 0, billingCycleStart: new Date() },
       });
       console.log(`[TryOn API][${requestId}] Rolled billing cycle for ${shop}`);
     }
 
-    // Allowance spent? Try-ons can continue only if Shopify can actually bill
-    // for them — i.e. the merchant's subscription carries a usage-charge meter
-    // and still has headroom under the cap they approved. Without that, the
-    // allowance is a hard cap: generating anyway would mean paying the provider
-    // for work nobody is charged for.
-    const creditsRemaining = config.monthlyCredits - config.creditsUsed;
-    if (creditsRemaining <= 0) {
-      const plan = getPlan(config.plan);
-      const overage =
-        plan.overagePrice > 0
-          ? await getOverageAvailability(shop)
-          : { available: false, reason: "Plan has no overage pricing", remainingCap: 0 };
+    // Give back credits held by generations that were abandoned mid-flight,
+    // otherwise a shop slowly loses its allowance to closed browser tabs.
+    await reclaimStaleReservations(shop);
 
-      if (!overage.available || overage.remainingCap < plan.overagePrice) {
-        console.log(
-          `[TryOn API][${requestId}] Allowance exhausted for ${shop}; overage unavailable: ${overage.reason ?? "cap reached"}`
-        );
-        return jsonResponse(
-          {
-            error:
-              "This store has used all of its virtual try-ons for this month. Please check back next month.",
-          },
-          429,
-          origin
-        );
-      }
-
-      console.log(
-        `[TryOn API][${requestId}] ${shop} over allowance — billing this try-on at $${plan.overagePrice.toFixed(2)} ($${overage.remainingCap.toFixed(2)} cap remaining)`
+    // ── Concurrency ceiling ──
+    // Separate from the rate limits: those bound requests over time, this bounds
+    // simultaneous provider work.
+    //
+    // Deliberately an approximate limit, not an atomic one: count-then-check means
+    // a simultaneous burst can overshoot by roughly the number of requests racing
+    // here. That is acceptable because this ceiling is not what protects the
+    // money — the atomic reservation below is, and it cannot be overshot at all.
+    // This exists to keep a single store from monopolising provider throughput,
+    // where being a few over briefly costs nothing.
+    const inFlight = await countInFlightGenerations(shop);
+    if (inFlight >= LIMITS.shopConcurrent) {
+      console.warn(
+        `[TryOn API][${requestId}] ${shop} at concurrency ceiling (${inFlight}/${LIMITS.shopConcurrent})`
+      );
+      return errorResponse(
+        "This store is processing several try-ons right now. Please try again in a moment.",
+        429,
+        origin,
+        requestId,
+        { "Retry-After": "15" }
       );
     }
 
-    // Provider-side credit exhaustion surfaces as a 402/429 on the task call and
-    // is mapped by classifyTryOnError — no preflight round-trip needed here.
+    // ── Reserve the credit BEFORE any provider work ──
+    // This is the atomic step that makes concurrent try-ons safe: the plan
+    // allowance and the merchant-approved usage cap are enforced inside a single
+    // conditional UPDATE, so N simultaneous requests cannot all pass one shared
+    // read of the balance. See app/credits.server.ts.
+    const reservation = await reserveTryOnCredit({
+      shop,
+      plan: config.plan,
+      requestId,
+    });
+
+    if (!reservation.ok) {
+      const plan = getPlan(config.plan);
+      console.log(
+        `[TryOn API][${requestId}] Reservation refused for ${shop} ` +
+          `(plan ${plan.name}): ${reservation.reason}`
+      );
+      return errorResponse(
+        "This store has used all of its virtual try-ons for this month. Please check back next month.",
+        429,
+        origin,
+        requestId
+      );
+    }
+    reservedOverage = reservation.overageAmount;
+
     const startTime = Date.now();
 
-    // ── 3. Capture lead email if provided ──
-    if (email && email.includes("@")) {
-      const leadId = `${shop}:${email}:${productId ?? "general"}`;
+    // ── Capture lead email if provided ──
+    if (email) {
+      const leadId = `${shop}:${email}:${productId}`;
       await db.lead.upsert({
         where: { id: leadId },
         create: {
           id: leadId,
           shop,
           email,
-          productId: productId ?? undefined,
+          productId,
           productTitle: productTitle ?? undefined,
         },
         update: {
@@ -353,22 +523,41 @@ export async function handleTryOnAction(request: Request) {
       await upsertDailyAnalytics(shop, { emailsCaptured: 1 });
     }
 
-    // ── 4. Upload customer photo to YouCam ──
+    // ── Record the pending event that owns the reservation ──
+    // Created before the provider call, not after, so the reservation is always
+    // attached to a row that the stale sweeper and the concurrency count can see.
+    // A crash between here and the provider call leaves a row the sweeper
+    // reclaims; the opposite order would leak the credit silently.
+    const pendingEvent = await db.tryOnEvent.create({
+      data: {
+        shop,
+        sessionId,
+        productId,
+        productTitle,
+        leadEmail: email,
+        status: "pending",
+        modelUsed: `youcam/${config.modelVersion}`,
+        overageAmount: reservation.overageAmount,
+      },
+      select: { id: true },
+    });
+    pendingEventId = pendingEvent.id;
+
+    // ── Upload customer photo to YouCam ──
     let customerFileId: string;
     try {
       const uploadResult = await uploadCustomerImage(personImage);
       customerFileId = uploadResult.fileId;
-      console.log(`[TryOn API][${requestId}] Uploaded customer image to YouCam`, {
-        fileId: customerFileId,
-      });
     } catch (err) {
-      await logFailedEvent(shop, sessionId, productId, productTitle, email, startTime, err);
+      logInternalError(requestId, "upload stage", err);
+      await failPendingEvent(pendingEventId, shop, reservation.overageAmount, err);
+      reservedOverage = null;
+      pendingEventId = null;
       const classified = classifyTryOnError(err, "upload");
-      console.error(`[TryOn API][${requestId}] Upload stage failed:`, classified.debug);
-      return jsonResponse({ error: classified.message, debug: classified.debug }, classified.status, origin);
+      return errorResponse(classified.message, classified.status, origin, requestId);
     }
 
-    // ── 5. Start Try-On generation (ASYNC — returns generationId immediately) ──
+    // ── Start Try-On generation (ASYNC — returns generationId immediately) ──
     let generationId: string;
     const garmentCategory = mapGarmentCategory(productTitle);
     try {
@@ -378,99 +567,104 @@ export async function handleTryOnAction(request: Request) {
         garmentCategory,
       });
       generationId = tryOnResult.id;
-      console.log(`[TryOn API][${requestId}] Started YouCam task`, {
-        generationId,
-        garmentCategory,
-      });
     } catch (err) {
-      await logFailedEvent(shop, sessionId, productId, productTitle, email, startTime, err);
+      logInternalError(requestId, "create stage", err);
+      await failPendingEvent(pendingEventId, shop, reservation.overageAmount, err);
+      reservedOverage = null;
+      pendingEventId = null;
       const classified = classifyTryOnError(err, "create");
-      console.error(`[TryOn API][${requestId}] Create stage failed:`, classified.debug);
-      return jsonResponse({ error: classified.message, debug: classified.debug }, classified.status, origin);
+      return errorResponse(classified.message, classified.status, origin, requestId);
     }
 
-    // ── 6. Log pending event (will be marked success when we confirm via polling) ──
-    await db.tryOnEvent.create({
+    await db.tryOnEvent.update({
+      where: { id: pendingEventId },
       data: {
-        shop,
-        sessionId,
-        productId,
-        productTitle,
-        leadEmail: email || null,
-        status: "pending",
-        modelUsed: `youcam/${config.modelVersion}`,
-        processingMs: Date.now() - startTime,
         providerTaskId: generationId,
+        processingMs: Date.now() - startTime,
       },
     });
 
-    // ── 7. Return generationId for client-side polling ──
-    // The frontend will poll GET /apps/fabricvton/api/tryon?generationId=xxx
-    return jsonResponse({ generationId, status: "PENDING" }, 202, origin);
+    console.log(
+      `[TryOn API][${requestId}] Started YouCam task ${generationId} for ${shop} ` +
+        `(${garmentCategory}, billed as ${reservation.billedAs})`
+    );
+
+    // The reservation now belongs to the pending event; the catch-all below must
+    // not release it, or a settled generation would double-refund.
+    reservedOverage = null;
+    pendingEventId = null;
+
+    // Housekeeping rides along on shopper traffic, at most once per interval
+    // across all instances. The app has no scheduler.
+    void runHousekeeping();
+
+    // ── Return generationId for client-side polling ──
+    // The frontend polls GET /apps/fabricvton/api/tryon?generationId=xxx
+    return jsonResponse({ generationId, status: "PENDING", requestId }, 202, origin);
   } catch (err: unknown) {
-    if (err instanceof Error) {
-      console.error(`[TryOn API][${requestId}] Unhandled route error:`, err.message);
-      console.error(err.stack);
-    } else {
-      console.error(`[TryOn API][${requestId}] Unhandled route error:`, err);
+    logInternalError(requestId, "unhandled route", err);
+
+    // Anything that threw after the reservation was taken must give it back,
+    // otherwise a bug permanently burns the merchant's credit.
+    if (pendingEventId !== null) {
+      await failPendingEvent(pendingEventId, shop, reservedOverage ?? 0, err).catch(
+        (releaseError) => logInternalError(requestId, "reservation release", releaseError)
+      );
+    } else if (reservedOverage !== null) {
+      await releaseReservation(shop, reservedOverage).catch((releaseError) =>
+        logInternalError(requestId, "reservation release", releaseError)
+      );
     }
 
     const classified = classifyTryOnError(err, "general");
-
-    return jsonResponse(
-      { error: classified.message, debug: classified.debug },
-      classified.status,
-      request.headers.get("Origin") || "*"
-    );
+    return errorResponse(classified.message, classified.status, origin, requestId);
   }
 }
-
-function dataUrlToBlob(dataUrl: string, fallbackMimeType = "image/jpeg") {
-  const match = dataUrl.match(/^data:([^;,]+)?;base64,(.*)$/);
-  if (!match) {
-    throw new Error("Invalid image data received from storefront");
-  }
-
-  const mimeType = match[1] || fallbackMimeType;
-  const buffer = Buffer.from(match[2], "base64");
-  return new Blob([buffer], { type: mimeType });
-}
-
-export const action = async ({ request }: ActionFunctionArgs) => {
-  return handleTryOnAction(request);
-};
 
 // ─── Helpers ────────────────────────────────────────────
 
-async function logFailedEvent(
+/**
+ * Marks a pending event failed and releases whatever it was holding.
+ *
+ * The updateMany-on-status is the idempotency guard: only the caller that
+ * actually flips the row out of "pending" releases the credit, so a failure path
+ * racing the status poller cannot refund twice.
+ */
+async function failPendingEvent(
+  eventId: string,
   shop: string,
-  sessionId: string | null,
-  productId: string | null,
-  productTitle: string | null,
-  email: string,
-  startTime: number,
-  err: unknown,
-  providerTaskId?: string
+  overageAmount: number,
+  err: unknown
 ) {
-  const errorMessage =
-    err instanceof Error ? err.message : "Unknown error";
-
-  await db.tryOnEvent.create({
+  const { count } = await db.tryOnEvent.updateMany({
+    where: { id: eventId, status: "pending" },
     data: {
-      shop,
-      sessionId,
-      productId,
-      productTitle,
-      leadEmail: email || null,
       status: "failed",
-      processingMs: Date.now() - startTime,
       errorCode: err instanceof YouCamError ? err.code : null,
-      errorMessage,
-      providerTaskId: providerTaskId ?? null,
+      errorMessage: err instanceof Error ? err.message : "Unknown error",
     },
   });
 
-  await upsertDailyAnalytics(shop, { tryOnsFailed: 1 });
+  if (count > 0) {
+    await releaseReservation(shop, overageAmount);
+    await upsertDailyAnalytics(shop, { tryOnsFailed: 1 });
+  }
+}
+
+async function runHousekeeping() {
+  try {
+    if (await shouldRunPeriodically("ratelimit-purge", 60 * 60 * 1000)) {
+      await purgeExpiredRateLimitWindows();
+    }
+    if (await shouldRunPeriodically("retention-purge", 24 * 60 * 60 * 1000)) {
+      await purgeExpiredData();
+    }
+  } catch (error) {
+    console.error(
+      "[Housekeeping] Pass failed:",
+      error instanceof Error ? error.message : error
+    );
+  }
 }
 
 async function upsertDailyAnalytics(
@@ -504,79 +698,61 @@ async function upsertDailyAnalytics(
   });
 }
 
+/**
+ * Settles the reservation a polled generation was holding.
+ *
+ * The caller has already confirmed the event belongs to the shop that made the
+ * signed request, so billing can never be driven against a shop by someone who
+ * merely guessed a task id.
+ */
 async function syncGenerationOutcome(
+  event: { id: string; shop: string; overageAmount: number },
   generationId: string,
   status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED",
-  errorMessage: string | null,
-  errorCode: string | null = null
+  errorCode: string | null
 ) {
   if (status === "PENDING" || status === "PROCESSING") {
     return;
   }
 
-  const event = await db.tryOnEvent.findFirst({
-    where: { providerTaskId: generationId },
-  });
-
-  if (!event) {
-    return;
-  }
-
   if (status === "FAILED") {
-    const updateResult = await db.tryOnEvent.updateMany({
+    const { count } = await db.tryOnEvent.updateMany({
       where: { id: event.id, status: "pending" },
       data: {
         status: "failed",
         errorCode,
-        errorMessage: errorMessage ?? "Generation failed on the YouCam side.",
+        errorMessage: errorCode
+          ? describeYouCamError(errorCode)
+          : "Generation failed on the YouCam side.",
       },
     });
 
-    if (updateResult.count > 0) {
+    if (count > 0) {
+      // A failed generation is not billable: hand the credit back.
+      await releaseReservation(event.shop, event.overageAmount);
       await upsertDailyAnalytics(event.shop, { tryOnsFailed: 1 });
     }
 
     return;
   }
 
-  const updateResult = await db.tryOnEvent.updateMany({
+  const { count } = await db.tryOnEvent.updateMany({
     where: { id: event.id, status: "pending" },
-    data: {
-      status: "success",
-      errorCode: null,
-      errorMessage: null,
-    },
+    data: { status: "success", errorCode: null, errorMessage: null },
   });
 
-  if (updateResult.count === 0) {
-    return;
-  }
+  // Zero means another poll already settled this generation — the widget polls
+  // every 3s, so this is the common case, not an edge one. Bailing here is what
+  // stops the same try-on being billed repeatedly.
+  if (count === 0) return;
 
-  const config = await db.shopConfig.update({
-    where: { shop: event.shop },
-    data: { creditsUsed: { increment: 1 } },
+  // The credit was already spent at reservation time; only the overage hold, if
+  // any, still needs to become a real Shopify usage record.
+  await settleSuccessfulReservation({
+    shop: event.shop,
+    overageAmount: event.overageAmount,
+    generationId,
   });
-
-  // Bill only try-ons that actually completed, and only past the allowance.
-  const plan = getPlan(config.plan);
-  if (config.creditsUsed > config.monthlyCredits && plan.overagePrice > 0) {
-    const result = await chargeOverage({
-      shop: event.shop,
-      amount: plan.overagePrice,
-      description: `Try-on beyond monthly allowance (${generationId})`,
-    });
-
-    if (result.charged) {
-      await db.shopConfig.update({
-        where: { shop: event.shop },
-        data: { overageChargesTotal: { increment: plan.overagePrice } },
-      });
-    } else {
-      console.warn(
-        `[Billing] Overage not charged for ${event.shop}: ${result.reason ?? "unknown"}`
-      );
-    }
-  }
 
   await upsertDailyAnalytics(event.shop, { tryOnsCompleted: 1 });
 }

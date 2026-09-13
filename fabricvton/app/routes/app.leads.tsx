@@ -7,6 +7,7 @@ import { useLoaderData, useSubmit, Form } from "react-router";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import db from "../db.server";
+import { buildCsv, csvResponseHeaders } from "../csv.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -41,20 +42,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     orderBy: { createdAt: "desc" },
   });
 
-  const csvRows = [
-    "Email,Product,Date",
-    ...allLeads.map((lead) =>
-      `"${lead.email}","${lead.productTitle ?? ""}","${lead.createdAt.toISOString()}"`
-    ),
-  ];
-
-  const csv = csvRows.join("\n");
+  // Every value here is shopper- or merchant-supplied, so it goes through
+  // buildCsv, which neutralizes spreadsheet formula triggers as well as quoting.
+  // A lead of `=HYPERLINK(...)` would otherwise execute when the merchant opens
+  // the export.
+  const csv = buildCsv(
+    ["Email", "Product", "Date"],
+    allLeads.map((lead) => [lead.email, lead.productTitle ?? "", lead.createdAt]),
+  );
 
   return new Response(csv, {
-    headers: {
-      "Content-Type": "text/csv",
-      "Content-Disposition": 'attachment; filename="fabricvton-leads.csv"',
-    },
+    headers: csvResponseHeaders("fabricvton-leads.csv"),
   });
 };
 

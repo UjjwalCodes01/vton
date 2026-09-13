@@ -10,11 +10,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     throw new Response("Unhandled topic", { status: 422 });
   }
 
-  // Delete all shop data from FabricVTON database
+  // Delete all shop data from FabricVTON database. PrivacyRequest is included:
+  // once the shop itself is redacted there is no merchant left to deliver an
+  // export to, so keeping the snapshot would only be keeping personal data.
   await Promise.all([
     db.lead.deleteMany({ where: { shop } }),
     db.tryOnEvent.deleteMany({ where: { shop } }),
     db.analyticsDaily.deleteMany({ where: { shop } }),
+    db.privacyRequest.deleteMany({ where: { shop } }),
     db.shopConfig.deleteMany({ where: { shop } }),
   ]);
 

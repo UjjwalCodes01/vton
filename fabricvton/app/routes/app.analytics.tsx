@@ -3,6 +3,7 @@ import { useLoaderData } from "react-router";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import db from "../db.server";
+import { buildCsv, csvResponseHeaders } from "../csv.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -65,20 +66,21 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     orderBy: { date: "desc" },
   });
 
-  const csvRows = [
-    "Date,Widget Opens,Try-Ons Completed,Emails Captured,Failed Try-Ons",
-    ...dailyStats.map((row) =>
-      `"${new Date(row.date).toLocaleDateString()}","${row.widgetOpens}","${row.tryOnsCompleted}","${row.emailsCaptured}","${row.tryOnsFailed}"`
-    ),
-  ];
-
-  const csv = csvRows.join("\n");
+  // ISO dates rather than toLocaleDateString: the server's locale is not the
+  // merchant's, and an unambiguous date sorts correctly in a spreadsheet.
+  const csv = buildCsv(
+    ["Date", "Widget Opens", "Try-Ons Completed", "Emails Captured", "Failed Try-Ons"],
+    dailyStats.map((row) => [
+      new Date(row.date).toISOString().slice(0, 10),
+      row.widgetOpens,
+      row.tryOnsCompleted,
+      row.emailsCaptured,
+      row.tryOnsFailed,
+    ]),
+  );
 
   return new Response(csv, {
-    headers: {
-      "Content-Type": "text/csv",
-      "Content-Disposition": `attachment; filename="fabricvton-analytics-${days}d.csv"`,
-    },
+    headers: csvResponseHeaders(`fabricvton-analytics-${days}d.csv`),
   });
 };
 

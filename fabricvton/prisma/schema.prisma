@@ -61,6 +61,10 @@ model ShopConfig {
   creditsUsed         Int      @default(0)
   billingCycleStart   DateTime @default(now())
   overageChargesTotal Float    @default(0) // Total overage billed this cycle in USD
+  // USD of overage held by try-ons that have started but not yet settled. Kept
+  // separate from overageChargesTotal so concurrent generations can never
+  // reserve past the usage cap the merchant approved. See app/credits.server.ts.
+  overageReserved     Float    @default(0)
 
   // Integrations
   klaviyoApiKey       String?
@@ -110,11 +114,17 @@ model TryOnEvent {
   providerTaskId  String?  // YouCam task_id for polling
   errorCode       String?  // Provider error code, e.g. error_pose
   errorMessage    String?  // Store error details for debugging
+  // Every `pending` event holds exactly one reserved credit, plus this many USD
+  // of reserved overage (0 when the try-on fits inside the monthly allowance).
+  // Settling the event either bills it or releases it — never both.
+  overageAmount   Float    @default(0)
   createdAt       DateTime @default(now())
 
   @@index([shop])
   @@index([createdAt])
   @@index([providerTaskId])
+  @@index([shop, providerTaskId])
+  @@index([shop, status])
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -147,4 +157,59 @@ model AdminAuditLog {
   @@index([adminShop])
   @@index([targetShop])
   @@index([createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════
+// Fixed-window rate limit counters
+//
+// One row per (scope, window). Incremented with a single atomic
+// INSERT … ON CONFLICT DO UPDATE so the limit holds across app instances,
+// which an in-process counter cannot do. See app/ratelimit.server.ts.
+// ═══════════════════════════════════════════════════════════
+model RateLimitWindow {
+  id    String @id @default(cuid())
+  scope String
+  // Window start as epoch milliseconds, deliberately NOT a DateTime.
+  //
+  // This row is written by raw SQL (the atomic upsert) and read back by the
+  // Prisma query builder (the purge). Those two disagree about how to interpret a
+  // JS Date against `timestamp without time zone`: the raw path applies the
+  // database session's timezone offset, the query builder treats it as UTC. On any
+  // server not running in UTC that skews the purge comparison by the offset and
+  // the counter table never gets cleaned up. An integer has no timezone to
+  // disagree about.
+  windowStartMs BigInt
+  count         Int    @default(0)
+
+  @@unique([scope, windowStartMs])
+  @@index([windowStartMs])
+}
+
+// ═══════════════════════════════════════════════════════════
+// GDPR/CCPA customer data requests (customers/data_request)
+//
+// The webhook compiles the shopper's stored data into exportJson at receipt
+// time, so the record is a point-in-time snapshot even if the data is later
+// redacted. The merchant then downloads it and marks it delivered, which is the
+// auditable half of the workflow.
+// ═══════════════════════════════════════════════════════════
+model PrivacyRequest {
+  id            String    @id @default(cuid())
+  shop          String
+  type          String    @default("customer_data_request")
+  customerId    String?
+  customerEmail String?
+  orderIds      String?   // JSON array of order IDs Shopify included
+  status        String    @default("pending") // pending | delivered | no_data
+  exportJson    String?   // Compiled snapshot of everything we hold
+  recordCount   Int       @default(0)
+  requestedAt   DateTime  @default(now())
+  deliveredAt   DateTime?
+  deliveredTo   String?   // Where the merchant sent it
+  deliveredBy   String?   // Which admin user marked it delivered
+  note          String?
+
+  @@index([shop])
+  @@index([shop, status])
+  @@index([requestedAt])
 }

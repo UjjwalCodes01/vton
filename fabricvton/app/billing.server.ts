@@ -299,8 +299,11 @@ export async function syncShopPlanFromShopifyBilling(
         billingId: null,
         monthlyCredits: entryPlan.credits,
         // Downgrading does not refill the allowance — see isBillingCycleDue.
+        // A cycle roll also clears the in-flight overage hold: the approved cap
+        // is per cycle, so carrying last cycle's reservations into the new one
+        // would understate the new cap's headroom.
         ...(existing && isBillingCycleDue(existing.billingCycleStart)
-          ? { creditsUsed: 0, billingCycleStart: new Date() }
+          ? { creditsUsed: 0, overageReserved: 0, billingCycleStart: new Date() }
           : {}),
       },
     });
@@ -347,7 +350,7 @@ export async function syncShopPlanFromShopifyBilling(
         ? { isSuspended: false, suspendReason: null }
         : {}),
       ...(shouldResetCycle
-        ? { creditsUsed: 0, billingCycleStart: new Date() }
+        ? { creditsUsed: 0, overageReserved: 0, billingCycleStart: new Date() }
         : {}),
     },
   });

@@ -27,16 +27,27 @@
   var capturedEmail = "";
 
   // ── Session id (anonymous, per browser tab) ──────────────
+  // The backend rate-limits per session id and only accepts [A-Za-z0-9_-]{4,64},
+  // so this concatenates two draws: a bare Math.random().toString(36) can come out
+  // only a character or two long, which would fail that check and silently push
+  // the shopper onto a coarser shared bucket.
+  function newSessionId() {
+    return (
+      Math.random().toString(36).slice(2, 10) +
+      Math.random().toString(36).slice(2, 10)
+    ).replace(/[^a-z0-9]/g, "") + "0000".slice(0, 4);
+  }
+
   var sessionId = "";
   try {
     sessionId = sessionStorage.getItem("fvton_sid") || "";
     if (!sessionId) {
-      sessionId = Math.random().toString(36).substring(2);
+      sessionId = newSessionId();
       sessionStorage.setItem("fvton_sid", sessionId);
     }
   } catch (e) {
     // Private mode or blocked storage — fall back to a per-load id.
-    sessionId = Math.random().toString(36).substring(2);
+    sessionId = newSessionId();
   }
 
   function parseJsonSafely(res) {
@@ -291,6 +302,9 @@
     if (status === 403) {
       return "Virtual Try-On is currently disabled for this store.";
     }
+    if (status === 413) {
+      return serverMessage || "That photo is too large. Please choose a smaller image.";
+    }
     if (status === 422 || status === 415) {
       return serverMessage || "That photo can't be used. Please try a clear JPG or PNG.";
     }
@@ -333,9 +347,17 @@
         .then(function (res) {
           return parseJsonSafely(res).then(function (data) {
             if (!res.ok) {
-              throw new Error(
-                messageForStatus(res.status, data.error || data.message || "")
+              var message = messageForStatus(
+                res.status,
+                data.error || data.message || ""
               );
+              // The backend no longer returns provider error details, only a
+              // correlation id. Showing it gives the shopper something concrete
+              // to quote to support, which the old `debug` blob was standing in for.
+              if (data.requestId && res.status >= 500) {
+                message += " (ref: " + data.requestId + ")";
+              }
+              throw new Error(message);
             }
             return data;
           });
@@ -361,7 +383,13 @@
 
     setTimeout(function () {
       fetch(
-        ctx.backendUrl + "/api/tryon?generationId=" + encodeURIComponent(generationId),
+        ctx.backendUrl +
+          "/api/tryon?generationId=" +
+          encodeURIComponent(generationId) +
+          // Lets the backend rate-limit polling per shopper rather than lumping
+          // every visitor on the store into one shared bucket.
+          "&sessionId=" +
+          encodeURIComponent(sessionId),
         { method: "GET" }
       )
         .then(function (res) {
