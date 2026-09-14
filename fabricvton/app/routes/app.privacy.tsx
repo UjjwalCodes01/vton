@@ -37,7 +37,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     return new Response(record.exportJson, {
       headers: attachmentHeaders(
-        `fabricvton-data-request-${record.id}.json`,
+        `clothsy-ai-data-request-${record.id}.json`,
         "application/json; charset=utf-8"
       ),
     });
@@ -117,7 +117,7 @@ export default function Privacy() {
           <div style={{ padding: "20px" }}>
             <p className="fv-text-sm fv-text-subdued" style={{ marginBottom: "16px" }}>
               When a shopper asks your store for their data, Shopify notifies
-              FabricVTON and we compile everything we hold for that email address.
+              Clothsy AI and we compile everything we hold for that email address.
               Download it, send it to the shopper, then mark it delivered here so
               you have a record of having answered. Shopify expects a response
               within 30 days of the request.
@@ -213,13 +213,13 @@ export default function Privacy() {
         </s-card>
       </s-section>
 
-      <s-section heading="What FabricVTON stores, and for how long">
+      <s-section heading="What Clothsy AI stores, and for how long">
         <s-card>
           <div style={{ padding: "20px" }}>
             <ul>
               <li>
                 <strong>Shopper photos and generated try-on images:</strong> never
-                stored by FabricVTON. The photo is passed to the try-on provider
+                stored by Clothsy AI. The photo is passed to the try-on provider
                 (Perfect Corp / YouCam) for processing and the result is served
                 from their URL.
               </li>

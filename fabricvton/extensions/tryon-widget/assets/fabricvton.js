@@ -1,5 +1,5 @@
 /*
- * FabricVTON try-on widget.
+ * Clothsy AI try-on widget.
  *
  * Loaded once per product page with `defer`, so it never blocks rendering.
  * The modal DOM is built lazily on the first click — a shopper who never opens

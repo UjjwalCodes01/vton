@@ -87,12 +87,12 @@ export default function Dashboard() {
   return (
     <s-page heading="Dashboard">
       {data.needsSetup && (
-        <s-section heading="Finish setting up FabricVTON">
+        <s-section heading="Finish setting up Clothsy AI">
           <s-card>
             <div style={{ padding: "20px" }}>
               <p className="fv-text-subdued fv-mb-md">
                 The Try-On button won&apos;t appear on your storefront until you add
-                the FabricVTON block to your product page. It takes about a minute.
+                the Clothsy AI block to your product page. It takes about a minute.
               </p>
 
               <ol
@@ -105,7 +105,7 @@ export default function Dashboard() {
                   <strong>Add block</strong> → <strong>Apps</strong>.
                 </li>
                 <li>
-                  Pick <strong>FabricVTON Try-On</strong>, position it near your
+                  Pick <strong>Clothsy AI Try-On</strong>, position it near your
                   Add to cart button, and <strong>Save</strong>.
                 </li>
               </ol>

@@ -52,7 +52,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   );
 
   return new Response(csv, {
-    headers: csvResponseHeaders("fabricvton-leads.csv"),
+    headers: csvResponseHeaders("clothsy-ai-leads.csv"),
   });
 };
 

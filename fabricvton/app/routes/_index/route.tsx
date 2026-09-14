@@ -6,13 +6,13 @@ import { login } from "../../shopify.server";
 import styles from "./styles.module.css";
 
 export const meta: MetaFunction = () => [
-  { title: "FabricVTON | AI virtual try-on for Shopify" },
+  { title: "Clothsy AI | AI virtual try-on for Shopify" },
   {
     name: "description",
     content:
-      "FabricVTON turns Shopify product pages into premium virtual fitting rooms with AI try-on, lead capture, and merchant analytics.",
+      "Clothsy AI turns Shopify product pages into premium virtual fitting rooms with AI try-on, lead capture, and merchant analytics.",
   },
-  { property: "og:title", content: "FabricVTON | AI virtual try-on for Shopify" },
+  { property: "og:title", content: "Clothsy AI | AI virtual try-on for Shopify" },
   {
     property: "og:description",
     content:
@@ -117,7 +117,7 @@ const plans = [
 
 const faqs = [
   {
-    q: "What does FabricVTON replace?",
+    q: "What does Clothsy AI replace?",
     a: "It replaces static product imagery with a virtual fitting room that feels more interactive and conversion-focused.",
   },
   {
@@ -153,10 +153,10 @@ export default function App() {
       <div className={styles.gridGlow} aria-hidden="true" />
 
       <header className={styles.header}>
-        <a className={styles.brand} href="#top" aria-label="FabricVTON home">
+        <a className={styles.brand} href="#top" aria-label="Clothsy AI home">
           <span className={styles.brandMark}>FV</span>
           <span className={styles.brandText}>
-            <strong>FabricVTON</strong>
+            <strong>Clothsy AI</strong>
             <small>AI virtual try-on for Shopify</small>
           </span>
         </a>
@@ -260,7 +260,7 @@ export default function App() {
             <span className={styles.sectionEyebrow}>Features</span>
             <h2>Everything a fashion merchant needs to sell with confidence.</h2>
             <p>
-              FabricVTON combines storefront experience, operational controls,
+              Clothsy AI combines storefront experience, operational controls,
               and merchant analytics into one focused Shopify app.
             </p>
           </div>

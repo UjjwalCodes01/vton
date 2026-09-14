@@ -106,7 +106,7 @@ export default function Settings() {
             </div>
             <p className="fv-text-subdued fv-mb-md">
               Button text, colours, corner radius, and whether an email is required
-              are all part of the FabricVTON block in your theme, so you can preview
+              are all part of the Clothsy AI block in your theme, so you can preview
               changes against your real product page before publishing.
             </p>
 
@@ -127,7 +127,7 @@ export default function Settings() {
               className="fv-text-sm fv-text-subdued"
               style={{ marginLeft: "12px" }}
             >
-              Product template → the FabricVTON Try-On block
+              Product template → the Clothsy AI Try-On block
             </span>
           </div>
         </s-card>

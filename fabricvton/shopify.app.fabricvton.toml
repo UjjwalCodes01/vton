@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "2cca9a797b9920722956b7f8e87b6a09"
-name = "FabricVTON"
+name = "Clothsy AI"
 application_url = "https://fabricvton-api.onrender.com"
 embedded = true
 

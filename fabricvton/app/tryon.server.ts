@@ -115,7 +115,7 @@ function classifyTryOnError(error: unknown, stage: "upload" | "create" | "genera
       return {
         status: 402,
         message:
-          "Virtual try-on credits have run out. The store owner needs to top up their FabricVTON plan.",
+          "Virtual try-on credits have run out. The store owner needs to top up their Clothsy AI plan.",
       };
     }
 

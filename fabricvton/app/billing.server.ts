@@ -1,4 +1,4 @@
-// Billing plan definitions and helpers for FabricVTON
+// Billing plan definitions and helpers for Clothsy AI
 // Uses Shopify Billing API via GraphQL
 
 import db from "./db.server";

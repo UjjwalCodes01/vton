@@ -1,4 +1,4 @@
-/* FabricVTON try-on widget.
+/* Clothsy AI try-on widget.
    Loaded once per product page; the modal markup itself is only built on first
    click, so nothing here paints until a shopper actually opens the widget. */
 

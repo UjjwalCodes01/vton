@@ -80,7 +80,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   );
 
   return new Response(csv, {
-    headers: csvResponseHeaders(`fabricvton-analytics-${days}d.csv`),
+    headers: csvResponseHeaders(`clothsy-ai-analytics-${days}d.csv`),
   });
 };
 

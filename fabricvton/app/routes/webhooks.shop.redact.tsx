@@ -10,7 +10,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     throw new Response("Unhandled topic", { status: 422 });
   }
 
-  // Delete all shop data from FabricVTON database. PrivacyRequest is included:
+  // Delete all shop data from the Clothsy AI database. PrivacyRequest is included:
   // once the shop itself is redacted there is no merchant left to deliver an
   // export to, so keeping the snapshot would only be keeping personal data.
   await Promise.all([

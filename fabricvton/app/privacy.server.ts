@@ -60,7 +60,7 @@ const PROCESSORS = [
 function retentionSummary(): Record<string, string> {
   return {
     "Uploaded photos and generated images":
-      "Never stored by FabricVTON. Streamed to the try-on provider and discarded.",
+      "Never stored by Clothsy AI. Streamed to the try-on provider and discarded.",
     "Lead email addresses":
       "Held until the merchant deletes them, the customer is redacted, or the shop is uninstalled and redacted.",
     "Try-on history":
