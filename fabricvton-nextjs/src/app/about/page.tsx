@@ -12,7 +12,7 @@ const team = [
     name: "Tejasvi Kesarvani",
     role: "Founder & CEO",
     roleShort: "Founder",
-    bio: "The visionary behind FabricVTON. With deep roots in e-commerce strategy and a passion for fashion-tech, Tejasvi identified the RTO crisis plaguing Shopify merchants and set out to build a solution that changes how shoppers buy clothes online.",
+    bio: "The visionary behind Clothsy AI. With deep roots in e-commerce strategy and a passion for fashion-tech, Tejasvi identified the RTO crisis plaguing Shopify merchants and set out to build a solution that changes how shoppers buy clothes online.",
     photo: "/team/tejasvi.jpg",
     placeholder: "TK",
     color: "#0d9488",
@@ -21,7 +21,7 @@ const team = [
     name: "Rudra Veer Singh Rathore",
     role: "Co-Founder & COO",
     roleShort: "Co-Founder",
-    bio: "Full-stack developer and the technical backbone of FabricVTON. Rudra architects robust, scalable systems and ensures every feature is shipped with quality. His Shopify store experience gives him a uniquely practical lens on every engineering decision.",
+    bio: "Full-stack developer and the technical backbone of Clothsy AI. Rudra architects robust, scalable systems and ensures every feature is shipped with quality. His Shopify store experience gives him a uniquely practical lens on every engineering decision.",
     photo: "/team/rudra.jpg",
     placeholder: "RR",
     color: "#0891b2",
@@ -39,7 +39,7 @@ const team = [
     name: "Ujjwal Tyagi",
     role: "Co-Founder & CIO",
     roleShort: "Co-Founder",
-    bio: "Ujjwal owns the frontend experience and product design at FabricVTON. He designed and built the entire Shopify plugin along with the full website. He crafts every pixel of the widget shoppers interact with and keeps the landing page sharp. Beyond design, he manages cross-team coordination to keep everything moving fast.",
+    bio: "Ujjwal owns the frontend experience and product design at Clothsy AI. He designed and built the entire Shopify plugin along with the full website. He crafts every pixel of the widget shoppers interact with and keeps the landing page sharp. Beyond design, he manages cross-team coordination to keep everything moving fast.",
     photo: "/team/Ujjwal.png",
     placeholder: "UT",
     color: "#f59e0b",
@@ -69,7 +69,7 @@ const milestones = [
   {
     year: "Today",
     icon: "🚀",
-    title: "FabricVTON is live.",
+    title: "Clothsy AI is live.",
     text: "We launched on the Shopify App Store with one mission: make virtual try-on accessible to every fashion brand, not just enterprise players. From boutique D2C labels to large streetwear brands, we believe every merchant deserves the conversion lift that great try-on technology provides. We are just getting started.",
   },
 ];
@@ -109,7 +109,7 @@ export default function AboutPage() {
               <span>before we were founders.</span>
             </motion.h1>
             <motion.p variants={heroChild} className="hero-copy about-hero-copy">
-              FabricVTON was born from a very real frustration — watching great fashion brands lose revenue to returns that never needed to happen in the first place.
+              Clothsy AI was born from a very real frustration — watching great fashion brands lose revenue to returns that never needed to happen in the first place.
             </motion.p>
             <motion.div variants={heroChild} className="about-hero-cta">
               <Link href="/" className="btn btn-primary">Back to Home</Link>
@@ -177,7 +177,7 @@ export default function AboutPage() {
           <FadeUp>
             <div className="faq-header">
               <p className="faq-subtitle">The Team</p>
-              <h2>Meet the people behind FabricVTON.</h2>
+              <h2>Meet the people behind Clothsy AI.</h2>
               <p className="hero-copy" style={{ marginBottom: 0 }}>
                 Four builders united by a shared obsession: helping fashion brands grow without the returns headache.
               </p>

@@ -154,7 +154,9 @@ export default function App() {
 
       <header className={styles.header}>
         <a className={styles.brand} href="#top" aria-label="Clothsy AI home">
-          <span className={styles.brandMark}>FV</span>
+          <span className={styles.brandMark}>
+            <img src="/logo.png" alt="" width={46} height={46} />
+          </span>
           <span className={styles.brandText}>
             <strong>Clothsy AI</strong>
             <small>AI virtual try-on for Shopify</small>

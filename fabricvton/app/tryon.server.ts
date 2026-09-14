@@ -723,7 +723,7 @@ async function syncGenerationOutcome(
         errorCode,
         errorMessage: errorCode
           ? describeYouCamError(errorCode)
-          : "Generation failed on the YouCam side.",
+          : "The image-processing provider could not generate this try-on.",
       },
     });
 

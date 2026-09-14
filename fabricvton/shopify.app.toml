@@ -57,4 +57,4 @@ subpath = "fabricvton"
 prefix = "apps"
 
 [pos]
-embedded = true
+embedded = false

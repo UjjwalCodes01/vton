@@ -4,247 +4,175 @@ import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import db from "../db.server";
 import { getPlan } from "../billing.server";
+import { themeEditorAddBlockUrl } from "../theme-editor.server";
+import { Metric } from "../components/Metric";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
 
-  let config = await db.shopConfig.findUnique({ where: { shop } });
-  if (!config) {
-    config = await db.shopConfig.create({ data: { shop } });
-  }
+  const config =
+    (await db.shopConfig.findUnique({ where: { shop } })) ??
+    (await db.shopConfig.create({ data: { shop } }));
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
-  const todayStats = await db.analyticsDaily.findUnique({
-    where: { shop_date: { shop, date: today } },
-  });
-
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-  const weekStats = await db.analyticsDaily.aggregate({
-    where: { shop, date: { gte: sevenDaysAgo } },
-    _sum: {
-      widgetOpens: true,
-      emailsCaptured: true,
-      tryOnsCompleted: true,
-    },
-  });
-
-  const totalLeads = await db.lead.count({ where: { shop } });
-  const totalTryOns = await db.tryOnEvent.count({ where: { shop } });
-  const plan = getPlan(config.plan);
-  const creditsRemaining = config.monthlyCredits - config.creditsUsed;
+  // Independent reads, so they run concurrently: this loader is on the critical
+  // path of the app's first paint, which Shopify measures as admin LCP.
+  const [todayStats, weekStats, allTimeOpens, totalLeads, totalTryOns] =
+    await Promise.all([
+      db.analyticsDaily.findUnique({ where: { shop_date: { shop, date: today } } }),
+      db.analyticsDaily.aggregate({
+        where: { shop, date: { gte: sevenDaysAgo } },
+        _sum: { widgetOpens: true, emailsCaptured: true, tryOnsCompleted: true },
+      }),
+      db.analyticsDaily.aggregate({ where: { shop }, _sum: { widgetOpens: true } }),
+      db.lead.count({ where: { shop } }),
+      db.tryOnEvent.count({ where: { shop } }),
+    ]);
 
   // No widget activity ever recorded means the merchant most likely hasn't added
-  // the app block to their theme yet — that's the #1 reason a new install looks
-  // "broken", so surface setup instructions until we see a real signal.
-  const totalWidgetOpens = await db.analyticsDaily.aggregate({
-    where: { shop },
-    _sum: { widgetOpens: true },
-  });
-  const needsSetup = (totalWidgetOpens._sum.widgetOpens ?? 0) === 0 && totalTryOns === 0;
+  // the app block to their theme yet — the #1 reason a new install looks
+  // "broken" — so the setup guide stays until there is a real signal.
+  const needsSetup = (allTimeOpens._sum.widgetOpens ?? 0) === 0 && totalTryOns === 0;
 
   return {
-    shop,
     needsSetup,
-    themeEditorUrl: `https://${shop}/admin/themes/current/editor?template=product`,
+    themeEditorUrl: themeEditorAddBlockUrl(shop),
     isEnabled: config.isEnabled,
-    plan: plan.label,
-    planName: config.plan,
-    creditsRemaining,
+    planLabel: getPlan(config.plan).label,
     monthlyCredits: config.monthlyCredits,
     creditsUsed: config.creditsUsed,
-    todayStats: todayStats ?? {
-      widgetOpens: 0,
-      emailsCaptured: 0,
-      tryOnsCompleted: 0,
+    today: {
+      widgetOpens: todayStats?.widgetOpens ?? 0,
+      tryOnsCompleted: todayStats?.tryOnsCompleted ?? 0,
+      emailsCaptured: todayStats?.emailsCaptured ?? 0,
     },
-    weekStats: {
+    week: {
       widgetOpens: weekStats._sum.widgetOpens ?? 0,
-      emailsCaptured: weekStats._sum.emailsCaptured ?? 0,
       tryOnsCompleted: weekStats._sum.tryOnsCompleted ?? 0,
+      emailsCaptured: weekStats._sum.emailsCaptured ?? 0,
     },
     totalLeads,
-    totalTryOns,
   };
 };
 
 export default function Dashboard() {
   const data = useLoaderData<typeof loader>();
-  const creditsPercent = data.monthlyCredits > 0
-    ? Math.round((data.creditsUsed / data.monthlyCredits) * 100)
-    : 0;
-  const isLow = creditsPercent >= 80;
+  const creditsRemaining = Math.max(0, data.monthlyCredits - data.creditsUsed);
+  const creditsPercent =
+    data.monthlyCredits > 0 ? Math.round((data.creditsUsed / data.monthlyCredits) * 100) : 0;
+  const isLow = creditsPercent >= 80 && creditsRemaining > 0;
 
-  // Break out of the embedded iframe so the Theme Editor opens at top level.
-  const openThemeEditor = () => {
-    window.open(data.themeEditorUrl, "_top");
-  };
+  // The theme editor is a top-level admin page, so it must replace the admin
+  // frame rather than load inside the app's iframe.
+  const openThemeEditor = () => window.open(data.themeEditorUrl, "_top");
 
   return (
     <s-page heading="Dashboard">
       {data.needsSetup && (
         <s-section heading="Finish setting up Clothsy AI">
-          <s-card>
-            <div style={{ padding: "20px" }}>
-              <p className="fv-text-subdued fv-mb-md">
-                The Try-On button won&apos;t appear on your storefront until you add
-                the Clothsy AI block to your product page. It takes about a minute.
-              </p>
-
-              <ol
-                className="fv-text-sm"
-                style={{ margin: "0 0 20px", paddingLeft: "20px", lineHeight: 2.2 }}
-              >
-                <li>Open the Theme Editor on your product template.</li>
-                <li>
-                  In the <strong>Product information</strong> section, choose{" "}
-                  <strong>Add block</strong> → <strong>Apps</strong>.
-                </li>
-                <li>
-                  Pick <strong>Clothsy AI Try-On</strong>, position it near your
-                  Add to cart button, and <strong>Save</strong>.
-                </li>
-              </ol>
-
+          <s-stack gap="base">
+            <s-paragraph>
+              The try-on button won&apos;t appear on your storefront until the
+              Clothsy AI block is on your product page. It takes about a minute.
+            </s-paragraph>
+            <s-ordered-list>
+              <s-list-item>
+                Select <s-text type="strong">Add try-on button</s-text>. The theme
+                editor opens with the block already added to your product page.
+              </s-list-item>
+              <s-list-item>Drag it next to your Add to cart button if you like.</s-list-item>
+              <s-list-item>
+                Select <s-text type="strong">Save</s-text> in the theme editor.
+              </s-list-item>
+            </s-ordered-list>
+            <s-stack direction="inline" gap="base" alignItems="center">
               <s-button variant="primary" onClick={openThemeEditor}>
-                Open Theme Editor
+                Add try-on button
               </s-button>
-              <span
-                className="fv-text-sm fv-text-subdued"
-                style={{ marginLeft: "12px" }}
-              >
-                This card disappears once your first shopper opens the widget.
-              </span>
-            </div>
-          </s-card>
+              <s-text color="subdued">
+                This guide disappears once your first shopper opens the try-on.
+              </s-text>
+            </s-stack>
+          </s-stack>
         </s-section>
       )}
 
       {!data.isEnabled && (
-        <s-banner tone="warning">
-          <p>
-            Virtual Try-On is currently <strong>disabled</strong>.{" "}
-            <a href="/app/settings">Go to Settings</a> to enable it.
-          </p>
+        <s-banner tone="warning" heading="Virtual try-on is turned off">
+          <s-paragraph>
+            Shoppers can&apos;t start a try-on until you turn it back on.
+          </s-paragraph>
+          <s-button slot="secondary-actions" href="/app/settings">
+            Go to settings
+          </s-button>
         </s-banner>
       )}
 
-      {isLow && data.creditsRemaining > 0 && (
-        <s-banner tone="warning">
-          <p>
-            ⚠️ You&apos;ve used <strong>{creditsPercent}%</strong> of your monthly credits.{" "}
-            <a href="/app/billing">Upgrade your plan</a> for more.
-          </p>
+      {isLow && (
+        <s-banner tone="warning" heading={`You've used ${creditsPercent}% of this month's try-ons`}>
+          <s-paragraph>Upgrade your plan to keep try-ons running for the rest of the cycle.</s-paragraph>
+          <s-button slot="secondary-actions" href="/app/billing">
+            View plans
+          </s-button>
         </s-banner>
       )}
 
-      {data.creditsRemaining <= 0 && (
-        <s-banner tone="critical">
-          <p>
-            🚫 Monthly try-ons exhausted. The widget is paused until your next
-            billing cycle — <a href="/app/billing">upgrade your plan</a> to
-            resume now.
-          </p>
+      {creditsRemaining <= 0 && data.monthlyCredits > 0 && (
+        <s-banner tone="critical" heading="This month's try-ons are used up">
+          <s-paragraph>
+            Try-ons are paused until your next billing cycle. Upgrade your plan to
+            resume them now.
+          </s-paragraph>
+          <s-button slot="secondary-actions" href="/app/billing">
+            View plans
+          </s-button>
         </s-banner>
       )}
 
-      {/* ── Credit Usage ── */}
-      <s-section heading="Monthly Credits">
-        <s-card>
-          <div style={{ padding: "20px" }}>
-            <div className="fv-flex fv-justify-between fv-items-center fv-mb-md">
-              <div>
-                <span style={{ fontSize: "14px", fontWeight: 600 }}>
-                  Tier: <span style={{ color: "var(--fv-accent)" }}>{data.plan}</span>
-                </span>
-              </div>
-              <div style={{ fontSize: "14px" }}>
-                <strong>{data.creditsUsed}</strong> / {data.monthlyCredits} used
-              </div>
-            </div>
-            <div className="fv-progress-container">
-              <div
-                className="fv-progress-fill"
-                style={{
-                  width: `${Math.min(creditsPercent, 100)}%`,
-                  background: isLow
-                    ? "linear-gradient(135deg, #e53e3e, #fc8181)"
-                    : undefined,
-                }}
-              />
-            </div>
-            <div className="fv-flex fv-justify-between fv-mt-sm">
-              <span className="fv-text-sm fv-text-subdued">
-                {data.creditsRemaining} remaining
-              </span>
-              <span className="fv-text-sm fv-text-subdued">{creditsPercent}%</span>
-            </div>
-          </div>
-        </s-card>
+      <s-section heading="Monthly try-ons">
+        <s-stack gap="small-200">
+          <s-stack direction="inline" gap="small-200" alignItems="center">
+            <s-heading>{creditsRemaining.toLocaleString()} remaining</s-heading>
+            <s-badge tone={creditsRemaining <= 0 ? "critical" : isLow ? "warning" : "success"}>
+              {data.planLabel} plan
+            </s-badge>
+          </s-stack>
+          <s-text color="subdued">
+            {data.creditsUsed.toLocaleString()} of {data.monthlyCredits.toLocaleString()} used
+            this billing cycle ({creditsPercent}%)
+          </s-text>
+        </s-stack>
       </s-section>
 
-      {/* ── Today's Activity ── */}
-      <s-section heading="Today's Activity">
-        <div className="fv-kpi-grid">
-          <div className="fv-kpi-card">
-            <div className="fv-kpi-value">{data.todayStats.widgetOpens}</div>
-            <div className="fv-kpi-label">Widget Opens</div>
-          </div>
-          <div className="fv-kpi-card">
-            <div className="fv-kpi-value accent">{data.todayStats.tryOnsCompleted}</div>
-            <div className="fv-kpi-label">Try-Ons</div>
-          </div>
-          <div className="fv-kpi-card">
-            <div className="fv-kpi-value success">{data.todayStats.emailsCaptured}</div>
-            <div className="fv-kpi-label">Emails Captured</div>
-          </div>
-        </div>
+      <s-section heading="Today">
+        <s-grid gridTemplateColumns="repeat(auto-fit, minmax(160px, 1fr))" gap="base">
+          <Metric label="Try-on opens" value={data.today.widgetOpens} />
+          <Metric label="Try-ons completed" value={data.today.tryOnsCompleted} />
+          <Metric label="Emails captured" value={data.today.emailsCaptured} />
+        </s-grid>
       </s-section>
 
-      {/* ── Last 7 Days ── */}
-      <s-section heading="Last 7 Days">
-        <div className="fv-kpi-grid">
-          <div className="fv-kpi-card">
-            <div className="fv-kpi-value">{data.weekStats.widgetOpens}</div>
-            <div className="fv-kpi-label">Widget Opens</div>
-          </div>
-          <div className="fv-kpi-card">
-            <div className="fv-kpi-value accent">{data.weekStats.tryOnsCompleted}</div>
-            <div className="fv-kpi-label">Try-Ons</div>
-          </div>
-          <div className="fv-kpi-card">
-            <div className="fv-kpi-value success">{data.weekStats.emailsCaptured}</div>
-            <div className="fv-kpi-label">Emails Captured</div>
-          </div>
-          <div className="fv-kpi-card">
-            <div className="fv-kpi-value">{data.totalLeads}</div>
-            <div className="fv-kpi-label">Total Leads</div>
-          </div>
-        </div>
+      <s-section heading="Last 7 days">
+        <s-grid gridTemplateColumns="repeat(auto-fit, minmax(160px, 1fr))" gap="base">
+          <Metric label="Try-on opens" value={data.week.widgetOpens} />
+          <Metric label="Try-ons completed" value={data.week.tryOnsCompleted} />
+          <Metric label="Emails captured" value={data.week.emailsCaptured} />
+          <Metric label="Total leads" value={data.totalLeads} />
+        </s-grid>
       </s-section>
 
-      {/* ── Quick Actions ── */}
-      <s-section slot="aside" heading="Quick Actions">
-        <s-card>
-          <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "10px" }}>
-            <s-button href="/app/settings" variant="primary">
-              ⚙️ Configure Widget
-            </s-button>
-            <s-button href="/app/leads">
-              📧 View & Export Leads
-            </s-button>
-            <s-button href="/app/analytics">
-              📊 Full Analytics
-            </s-button>
-            <s-button href="/app/billing">
-              💳 Manage Plan
-            </s-button>
-          </div>
-        </s-card>
+      <s-section slot="aside" heading="Shortcuts">
+        <s-stack gap="small-200">
+          <s-link href="/app/analytics">View analytics</s-link>
+          <s-link href="/app/leads">View and export leads</s-link>
+          <s-link href="/app/settings">Settings</s-link>
+          <s-link href="/app/billing">Plans and billing</s-link>
+        </s-stack>
       </s-section>
     </s-page>
   );

@@ -15,6 +15,7 @@ import { ROICalculator } from "./components/ui/ROICalculator";
 import { PolaroidMarquee } from "./components/ui/PolaroidMarquee";
 import { TiltCard } from "./components/ui/TiltCard";
 import { TapToDress } from "./components/ui/TapToDress";
+import { SHOPIFY_APP_STORE_URL } from "./lib/site";
 
 /* ── Data ── */
 
@@ -85,7 +86,7 @@ const pricing = [
 
 const faqs = [
   {
-    question: "How does FabricVTON work?",
+    question: "How does Clothsy AI work?",
     answer: "Customers upload a photo on your product page. Our AI generates a realistic image of them wearing the garment in seconds — no downloads, no apps.",
   },
   {
@@ -189,7 +190,7 @@ const features = [
     ),
   },
   {
-    title: "FabricVTON Studio",
+    title: "Clothsy AI Studio",
     text: "Generate professional product photos without the photoshoot. Use AI models to create stunning UGC-style content for your social media, ads, and product pages directly from your dashboard. Uses the same credits as your plan.",
     footer: (
       <a className="feature-link" href="/studio">Explore Studio capabilities →</a>
@@ -208,8 +209,7 @@ const features = [
   },
 ];
 
-const INSTALL_URL =
-  "https://admin.shopify.com/?organization_id=212189841&no_redirect=true&redirect=/oauth/redirect_from_developer_dashboard?client_id%3D73cc9210c28108863a55bc041bddb1c0";
+const INSTALL_URL = SHOPIFY_APP_STORE_URL;
 
 /* ── Hero entrance animation variants ── */
 const heroVariants: any = {
@@ -469,7 +469,7 @@ export default function HomePage() {
             <div className="cta-glow" />
             <h2>Turn hesitation into revenue.</h2>
             <p>
-              Install FabricVTON in under 5 minutes and let your products sell themselves.
+              Install Clothsy AI in under 5 minutes and let your products sell themselves.
             </p>
             <div className="hero-actions" style={{ justifyContent: "center" }}>
               <a className="btn btn-primary" href={INSTALL_URL}>

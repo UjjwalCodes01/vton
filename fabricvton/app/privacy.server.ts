@@ -45,15 +45,20 @@ export interface CustomerDataExport {
 
 const PROCESSORS = [
   {
-    name: "Perfect Corp (YouCam)",
+    name: "AI image-processing provider",
     purpose: "Generating the virtual try-on image",
     dataShared:
       "The photo the shopper uploaded and the public product image URL. Processed transiently; not used to train models.",
   },
   {
     name: "Shopify",
-    purpose: "App hosting, authentication and billing",
+    purpose: "Store platform, authentication and billing",
     dataShared: "Shop identity and subscription state. No shopper photos.",
+  },
+  {
+    name: "Cloud hosting provider",
+    purpose: "Running the app's servers and database",
+    dataShared: "The lead and try-on records listed in this export. No shopper photos.",
   },
 ];
 

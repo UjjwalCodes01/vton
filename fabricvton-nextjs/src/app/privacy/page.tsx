@@ -27,7 +27,7 @@ export default function PrivacyPolicy() {
               </div>
 
               <p>
-                This Privacy Policy describes how FabricVTON ("we", "us", or "our") collects, uses, and discloses information in connection with your installation and use of our Shopify application (the "App"). This policy is directed at Merchants (Store Owners).
+                This Privacy Policy describes how Clothsy AI ("we", "us", or "our") collects, uses, and discloses information in connection with your installation and use of our Shopify application (the "App"). This policy is directed at Merchants (Store Owners).
               </p>
 
               <h2>1. Introduction</h2>
@@ -39,8 +39,8 @@ export default function PrivacyPolicy() {
               <ul>
                 <li><strong>Shopify Account Info:</strong> Name, email address, shop domain, and contact details (via Shopify API).</li>
                 <li><strong>Billing Information:</strong> We do not store credit card details directly; billing is handled via Shopify's Billing API.</li>
-                <li><strong>Studio Assets:</strong> If you use the FabricVTON Studio to generate marketing images, we process the model photos and product images you upload.</li>
-                <li><strong>Customer Data (On your behalf):</strong> To provide the Virtual Try-On service we process your customers&apos; photos, and &mdash; where you have email capture enabled &mdash; we store their email address, the product they viewed, and their try-on history. <em>The email addresses and try-on history are available to you in the app (Leads and Analytics, including CSV export and Klaviyo sync). Customer photos and generated try-on results are NOT: those are never stored by FabricVTON, so neither you nor we can retrieve them afterwards. See the Widget Privacy Policy for details.</em></li>
+                <li><strong>Studio Assets:</strong> If you use the Clothsy AI Studio to generate marketing images, we process the model photos and product images you upload.</li>
+                <li><strong>Customer Data (On your behalf):</strong> To provide the Virtual Try-On service we process your customers&apos; photos, and &mdash; where you have email capture enabled &mdash; we store their email address, the product they viewed, and their try-on history. <em>The email addresses and try-on history are available to you in the app (Leads and Analytics, including CSV export and Klaviyo sync). Customer photos and generated try-on results are NOT: those are never stored by Clothsy AI, so neither you nor we can retrieve them afterwards. See the Widget Privacy Policy for details.</em></li>
               </ul>
 
               <h2>3. How We Use Merchant Information</h2>
@@ -55,19 +55,17 @@ export default function PrivacyPolicy() {
               <p>We adhere to strict data security standards:</p>
               <ul>
                 <li><strong>Encryption:</strong> All data is encrypted in transit (TLS) and at rest.</li>
-                <li><strong>Data Retention:</strong> Customer photos and generated images are never stored by FabricVTON &mdash; they are forwarded to our AI provider for processing and the result is served from the provider. Captured lead emails are retained until you delete them or the shop is redacted, because they are your marketing data. Try-on history has its email stripped after 90 days and the anonymous record deleted after 13 months; aggregate daily analytics are kept for about 25 months. Merchant account data is retained as long as the App is installed.</li>
+                <li><strong>Data Retention:</strong> Customer photos and generated images are never stored by Clothsy AI &mdash; they are forwarded to our AI provider for processing and the result is served from the provider. Captured lead emails are retained until you delete them or the shop is redacted, because they are your marketing data. Try-on history has its email stripped after 90 days and the anonymous record deleted after 13 months; aggregate daily analytics are kept for about 25 months. Merchant account data is retained as long as the App is installed.</li>
                 <li><strong>AI Training:</strong> We DO NOT use your or your customers' data to train our AI models.</li>
               </ul>
 
               <h2>5. Third-Party Subprocessors</h2>
-              <p>We use the following trusted services to run our infrastructure:</p>
+              <p>We use the following categories of trusted service providers to run the Service. Each is bound by data-protection terms, and a current list of providers is available on request.</p>
               <ul>
-                <li><strong>Shopify:</strong> Platform and Billing.</li>
-                <li><strong>Perfect Corp (YouCam):</strong> Virtual try-on image generation. Receives the customer photo and the public product image URL; processes them transiently and does not use them for model training.</li>
-                <li><strong>Render:</strong> Server hosting.</li>
-                <li><strong>PostHog:</strong> Product analytics.</li>
-                <li><strong>Sentry:</strong> Error monitoring.</li>
-                <li><strong>Crisp:</strong> Customer support chat.</li>
+                <li><strong>Shopify:</strong> platform and billing.</li>
+                <li><strong>AI image-processing provider:</strong> generates the virtual try-on image. Receives the customer photo and the public product image URL, processes them transiently, and does not use them for model training.</li>
+                <li><strong>Cloud hosting provider:</strong> runs our servers and database.</li>
+                <li><strong>Website analytics:</strong> measures visits to our marketing website only. It is not used inside your store or the try-on widget.</li>
               </ul>
 
               <h2>6. Your Privacy Policy (Template)</h2>
@@ -77,11 +75,11 @@ export default function PrivacyPolicy() {
               <div className="legal-quote">
                 <strong>Suggested Text for Your Privacy Policy:</strong><br /><br />
                 <em>Virtual Try-On Feature</em><br /><br />
-                Our store uses FabricVTON, a virtual try-on application that allows you to see how products look on you before making a purchase.<br /><br />
-                <strong>How it works:</strong> When you choose to use the virtual try-on feature, you will be asked to upload a photo of yourself. This photo is sent to our AI provider, Perfect Corp (YouCam), which processes it to generate a virtual try-on image.<br /><br />
+                Our store uses Clothsy AI, a virtual try-on application that allows you to see how products look on you before making a purchase.<br /><br />
+                <strong>How it works:</strong> When you choose to use the virtual try-on feature, you will be asked to upload a photo of yourself. This photo is sent to an AI image-processing provider, which processes it to generate a virtual try-on image.<br /><br />
                 <strong>Data Privacy:</strong> Your uploaded photo and the generated result are used solely for this purpose and are never stored by the try-on app. Your photos are NOT used to train AI models.<br /><br />
                 <strong>Email capture:</strong> If we ask for your email address before showing your try-on, that address is saved to our marketing list along with the product you viewed, and we may contact you about our products. You can ask us to delete it at any time.<br /><br />
-                For more details, please refer to the FabricVTON Widget Privacy Policy.
+                For more details, please refer to the Clothsy AI Widget Privacy Policy.
               </div>
 
               <h2>7. Responding to Customer Data Requests</h2>
@@ -89,9 +87,9 @@ export default function PrivacyPolicy() {
                 You are the Data Controller, so a customer&apos;s access or deletion request is your obligation to answer &mdash; but you do not have to compile it by hand:
               </p>
               <ul>
-                <li><strong>Access requests:</strong> when a customer requests their data through Shopify, Shopify notifies FabricVTON and we immediately compile every record we hold for that email address. Open <strong>Privacy</strong> in the FabricVTON app to download it as JSON, send it to the customer, and record that you delivered it. Shopify expects a response within 30 days.</li>
+                <li><strong>Access requests:</strong> when a customer requests their data through Shopify, Shopify notifies Clothsy AI and we immediately compile every record we hold for that email address. Open <strong>Privacy</strong> in the Clothsy AI app to download it as JSON, send it to the customer, and record that you delivered it. Shopify expects a response within 30 days.</li>
                 <li><strong>Deletion requests:</strong> Shopify&apos;s <code>customers/redact</code> webhook is handled automatically. We delete the customer&apos;s lead record, strip their email from their try-on history, and erase any stored export containing their data.</li>
-                <li><strong>Uninstalling:</strong> Shopify&apos;s <code>shop/redact</code> webhook (sent 48 hours after uninstall) deletes all of your shop&apos;s data from FabricVTON.</li>
+                <li><strong>Uninstalling:</strong> Shopify&apos;s <code>shop/redact</code> webhook (sent 48 hours after uninstall) deletes all of your shop&apos;s data from Clothsy AI.</li>
               </ul>
 
               <h2>8. Contact Us</h2>
@@ -101,7 +99,7 @@ export default function PrivacyPolicy() {
 
               <h2>9. Legal</h2>
               <p>
-                <strong>Publisher:</strong> FabricVTON<br />
+                <strong>Publisher:</strong> Clothsy AI<br />
                 <strong>Address:</strong> KIET Group of Institutions, Muradnagar, Ghaziabad, Uttar Pradesh 201206, India.<br />
                 <strong>Hosting:</strong> Vercel Inc., Covina, CA, USA.
               </p>

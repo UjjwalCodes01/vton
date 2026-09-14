@@ -38,10 +38,9 @@ export default function Footer() {
           {/* Brand */}
           <div className="footer-brand">
             <div className="footer-logo">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill="currentColor" />
-              </svg>
-              <span>FABRICVTON</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/clothsy-ai-logo.png" alt="" width={24} height={24} style={{ borderRadius: "6px" }} />
+              <span>CLOTHSY AI</span>
             </div>
             <p className="footer-desc">
               AI-powered virtual try-on for Shopify stores. Boost conversions, cut returns.
@@ -58,7 +57,7 @@ export default function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="footer-social-link"
-                aria-label="FabricVTON on Instagram"
+                aria-label="Clothsy AI on Instagram"
               >
                 <InstagramIcon />
               </a>
@@ -67,14 +66,14 @@ export default function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="footer-social-link"
-                aria-label="FabricVTON on X (Twitter)"
+                aria-label="Clothsy AI on X (Twitter)"
               >
                 <TwitterXIcon />
               </a>
               <a
                 href="mailto:fabricvton@gmail.com"
                 className="footer-social-link"
-                aria-label="Email FabricVTON"
+                aria-label="Email Clothsy AI"
               >
                 <MailIcon />
               </a>
@@ -115,7 +114,7 @@ export default function Footer() {
 
         <div className="footer-bottom">
           <div className="footer-copyright">
-            © {new Date().getFullYear()} FabricVTON. All rights reserved.
+            © {new Date().getFullYear()} Clothsy AI. All rights reserved.
           </div>
           <div className="footer-bottom-right">
             <div className="footer-bottom-socials">

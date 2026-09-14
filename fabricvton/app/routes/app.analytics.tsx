@@ -1,182 +1,154 @@
-import type { ActionFunctionArgs, HeadersFunction, LoaderFunctionArgs } from "react-router";
-import { useLoaderData } from "react-router";
+import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
+import { useLoaderData, useNavigate } from "react-router";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import db from "../db.server";
-import { buildCsv, csvResponseHeaders } from "../csv.server";
+import { ANALYTICS_RANGES, parseDays } from "../analytics-range";
+import { Metric } from "../components/Metric";
+import { useDownload } from "../download";
+import { formatDate } from "../format";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
-
-  const url = new URL(request.url);
-  const days = parseInt(url.searchParams.get("days") || "30");
+  const days = parseDays(new URL(request.url).searchParams.get("days"));
 
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
+  const where = { shop, date: { gte: startDate } };
 
-  const dailyStats = await db.analyticsDaily.findMany({
-    where: { shop, date: { gte: startDate } },
-    orderBy: { date: "asc" },
-  });
-
-  const totals = await db.analyticsDaily.aggregate({
-    where: { shop, date: { gte: startDate } },
-    _sum: {
-      widgetOpens: true,
-      emailsCaptured: true,
-      tryOnsCompleted: true,
-      tryOnsFailed: true,
-    },
-  });
+  const [dailyStats, totals] = await Promise.all([
+    db.analyticsDaily.findMany({ where, orderBy: { date: "desc" } }),
+    db.analyticsDaily.aggregate({
+      where,
+      _sum: {
+        widgetOpens: true,
+        emailsCaptured: true,
+        tryOnsCompleted: true,
+        tryOnsFailed: true,
+      },
+    }),
+  ]);
 
   const opens = totals._sum.widgetOpens ?? 0;
   const completions = totals._sum.tryOnsCompleted ?? 0;
-  const conversionRate = opens > 0 ? ((completions / opens) * 100).toFixed(1) : "0.0";
-  const emailCaptureRate = opens > 0
-    ? (((totals._sum.emailsCaptured ?? 0) / opens) * 100).toFixed(1)
-    : "0.0";
+  const emailsCaptured = totals._sum.emailsCaptured ?? 0;
+  const percentOfOpens = (n: number) => (opens > 0 ? ((n / opens) * 100).toFixed(1) : "0.0");
 
   return {
     days,
-    dailyStats,
+    dailyStats: dailyStats.map((row) => ({
+      id: row.id,
+      date: row.date.toISOString(),
+      widgetOpens: row.widgetOpens,
+      tryOnsCompleted: row.tryOnsCompleted,
+      emailsCaptured: row.emailsCaptured,
+      tryOnsFailed: row.tryOnsFailed,
+    })),
     totals: {
       opens,
       completions,
-      emailsCaptured: totals._sum.emailsCaptured ?? 0,
+      emailsCaptured,
       failed: totals._sum.tryOnsFailed ?? 0,
     },
-    conversionRate,
-    emailCaptureRate,
+    completionRate: percentOfOpens(completions),
+    emailCaptureRate: percentOfOpens(emailsCaptured),
   };
-};
-
-export const action = async ({ request }: ActionFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
-  const shop = session.shop;
-
-  const url = new URL(request.url);
-  const days = parseInt(url.searchParams.get("days") || "30");
-
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - days);
-
-  const dailyStats = await db.analyticsDaily.findMany({
-    where: { shop, date: { gte: startDate } },
-    orderBy: { date: "desc" },
-  });
-
-  // ISO dates rather than toLocaleDateString: the server's locale is not the
-  // merchant's, and an unambiguous date sorts correctly in a spreadsheet.
-  const csv = buildCsv(
-    ["Date", "Widget Opens", "Try-Ons Completed", "Emails Captured", "Failed Try-Ons"],
-    dailyStats.map((row) => [
-      new Date(row.date).toISOString().slice(0, 10),
-      row.widgetOpens,
-      row.tryOnsCompleted,
-      row.emailsCaptured,
-      row.tryOnsFailed,
-    ]),
-  );
-
-  return new Response(csv, {
-    headers: csvResponseHeaders(`clothsy-ai-analytics-${days}d.csv`),
-  });
 };
 
 export default function Analytics() {
   const data = useLoaderData<typeof loader>();
+  const navigate = useNavigate();
+  const { download, pending } = useDownload();
 
   return (
     <s-page heading="Analytics">
-      <div className="fv-filter-bar">
-        <s-button href="?days=7" variant={data.days === 7 ? "primary" : undefined}>Last 7 Days</s-button>
-        <s-button href="?days=14" variant={data.days === 14 ? "primary" : undefined}>Last 14 Days</s-button>
-        <s-button href="?days=30" variant={data.days === 30 ? "primary" : undefined}>Last 30 Days</s-button>
-        <div style={{ flex: 1 }}></div>
-        <form method="post" action={`?days=${data.days}`} target="_blank">
-          <s-button type="submit" variant="secondary">⬇ Export Data (CSV)</s-button>
-        </form>
-      </div>
+      <s-button
+        slot="secondary-actions"
+        icon="export"
+        loading={pending !== null}
+        disabled={data.dailyStats.length === 0}
+        onClick={() =>
+          download(`/app/analytics/export?days=${data.days}`, `clothsy-ai-analytics-${data.days}d.csv`)
+        }
+      >
+        Export CSV
+      </s-button>
 
-      <s-section heading={`Summary (${data.days} Days)`}>
-        <div className="fv-kpi-grid">
-          <div className="fv-kpi-card">
-             <div className="fv-kpi-label fv-mb-sm">Try-On Funnel</div>
-             <div className="fv-flex fv-justify-between fv-items-center fv-mb-sm">
-                <span className="fv-text-subdued">Widget Opens</span>
-                <span className="fv-text-sm" style={{ fontWeight: "bold" }}>{data.totals.opens}</span>
-             </div>
-             <div className="fv-flex fv-justify-between fv-items-center fv-mb-sm">
-                <span className="fv-text-subdued">Try-Ons</span>
-                <span className="fv-kpi-value accent fv-text-sm" style={{ fontSize: "16px" }}>{data.totals.completions}</span>
-             </div>
-             <div className="fv-progress-container" style={{ height: "4px" }}>
-                <div 
-                   className="fv-progress-fill" 
-                   style={{ width: `${data.conversionRate}%` }}
-                />
-             </div>
-             <div className="fv-text-sm fv-mt-sm">
-                <strong>{data.conversionRate}%</strong> completion rate
-             </div>
-          </div>
-          
-          <div className="fv-kpi-card">
-            <div className="fv-kpi-value success">{data.totals.emailsCaptured}</div>
-            <div className="fv-kpi-label">Emails Captured</div>
-            <div className="fv-text-sm fv-text-subdued fv-mt-sm">
-               {data.emailCaptureRate}% capture rate
-            </div>
-          </div>
+      <s-section heading={`Last ${data.days} days`}>
+        <s-stack gap="base">
+          <s-stack direction="inline" gap="small-200">
+            {ANALYTICS_RANGES.map((range) => (
+              <s-press-button
+                key={range}
+                pressed={range === data.days}
+                onClick={() => navigate(`?days=${range}`)}
+              >
+                {`${range} days`}
+              </s-press-button>
+            ))}
+          </s-stack>
 
-          <div className="fv-kpi-card">
-            <div className="fv-kpi-value danger">{data.totals.failed}</div>
-            <div className="fv-kpi-label">Failed try-ons</div>
-            <div className="fv-text-sm fv-text-subdued fv-mt-sm">
-               Usually due to invalid image
-            </div>
-          </div>
-        </div>
+          <s-grid gridTemplateColumns="repeat(auto-fit, minmax(160px, 1fr))" gap="base">
+            <Metric label="Try-on opens" value={data.totals.opens} />
+            <Metric
+              label="Try-ons completed"
+              value={data.totals.completions}
+              detail={`${data.completionRate}% of opens`}
+            />
+            <Metric
+              label="Emails captured"
+              value={data.totals.emailsCaptured}
+              detail={`${data.emailCaptureRate}% of opens`}
+            />
+            <Metric
+              label="Failed try-ons"
+              value={data.totals.failed}
+              detail="Usually an unusable photo"
+            />
+          </s-grid>
+        </s-stack>
       </s-section>
 
-      <s-section heading="Daily Breakdown">
-         <s-card>
-            {data.dailyStats.length === 0 ? (
-               <div className="fv-empty-state">
-               <div className="icon">📊</div>
-               <h3>No Analytics Data</h3>
-               <p>Once shoppers start using the Try-On widget, daily data will appear here.</p>
-               </div>
-            ) : (
-               <div style={{ overflowX: "auto" }}>
-                  <table className="fv-table">
-                  <thead>
-                     <tr>
-                        <th>Date</th>
-                        <th>Widget Opens</th>
-                        <th>Try-Ons</th>
-                        <th>Emails Captured</th>
-                        <th>Failed</th>
-                     </tr>
-                  </thead>
-                  <tbody>
-                     {data.dailyStats.map((row) => (
-                        <tr key={row.id}>
-                        <td>
-                           {new Date(row.date).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}
-                        </td>
-                        <td>{row.widgetOpens}</td>
-                        <td><span className="fv-badge purple">{row.tryOnsCompleted}</span></td>
-                        <td>{row.emailsCaptured > 0 ? <span className="fv-badge success">{row.emailsCaptured}</span> : "0"}</td>
-                        <td>{row.tryOnsFailed > 0 ? <span className="fv-badge danger">{row.tryOnsFailed}</span> : "0"}</td>
-                        </tr>
-                     ))}
-                  </tbody>
-                  </table>
-               </div>
-            )}
-         </s-card>
+      <s-section heading="Daily breakdown" padding="none">
+        {data.dailyStats.length === 0 ? (
+          <s-box padding="base">
+            <s-stack gap="small-200">
+              <s-heading>No activity in this period</s-heading>
+              <s-paragraph>
+                Daily numbers appear here once shoppers start using the try-on
+                button on your product pages.
+              </s-paragraph>
+            </s-stack>
+          </s-box>
+        ) : (
+          <s-table>
+            <s-table-header-row>
+              <s-table-header listSlot="primary">Date</s-table-header>
+              <s-table-header format="numeric">Try-on opens</s-table-header>
+              <s-table-header format="numeric">Try-ons completed</s-table-header>
+              <s-table-header format="numeric">Emails captured</s-table-header>
+              <s-table-header format="numeric">Failed</s-table-header>
+            </s-table-header-row>
+            <s-table-body>
+              {data.dailyStats.map((row) => (
+                <s-table-row key={row.id}>
+                  <s-table-cell>{formatDate(row.date)}</s-table-cell>
+                  <s-table-cell>{row.widgetOpens}</s-table-cell>
+                  <s-table-cell>{row.tryOnsCompleted}</s-table-cell>
+                  <s-table-cell>{row.emailsCaptured}</s-table-cell>
+                  <s-table-cell>
+                    {row.tryOnsFailed > 0 ? (
+                      <s-badge tone="critical">{row.tryOnsFailed}</s-badge>
+                    ) : (
+                      0
+                    )}
+                  </s-table-cell>
+                </s-table-row>
+              ))}
+            </s-table-body>
+          </s-table>
+        )}
       </s-section>
     </s-page>
   );

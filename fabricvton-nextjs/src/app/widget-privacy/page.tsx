@@ -12,7 +12,7 @@ export default function WidgetPrivacyPolicy() {
           <FadeUp>
             <div className="legal-header">
               <h1>Privacy Policy for Shoppers</h1>
-              <p className="effective-date">Applicable to users of the FabricVTON Virtual Try-On Widget</p>
+              <p className="effective-date">Applicable to users of the Clothsy AI Virtual Try-On Widget</p>
               <p className="effective-date">Last Updated: 14th September, 2026</p>
             </div>
           </FadeUp>
@@ -20,7 +20,7 @@ export default function WidgetPrivacyPolicy() {
           <FadeUp delay={0.1}>
             <div className="legal-content">
               <p>
-                You are reading this because you are visiting an online store that uses FabricVTON to provide a virtual try-on experience. This policy explains exactly what happens to your data when you use this feature.
+                You are reading this because you are visiting an online store that uses Clothsy AI to provide a virtual try-on experience. This policy explains exactly what happens to your data when you use this feature.
               </p>
 
               <h2>1. What Information We Collect</h2>
@@ -42,8 +42,8 @@ export default function WidgetPrivacyPolicy() {
               <h2>3. Data Retention</h2>
               <p>We operate with a strict data minimization policy. Different data is kept for different lengths of time, so here is all of it:</p>
               <ul>
-                <li><strong>Your photo and the generated image:</strong> never stored by FabricVTON at all. Your photo is passed straight to our AI provider for processing, and the result is delivered to your browser from their servers. Neither image is written to a FabricVTON database or disk.</li>
-                <li><strong>Your email address:</strong> held as a marketing lead for the store owner until they delete it, until the store uninstalls FabricVTON, or until you ask for it to be removed. Because this is the store owner&apos;s own marketing data, we do not expire it on a timer &mdash; see &quot;Your Rights&quot; below to have it erased.</li>
+                <li><strong>Your photo and the generated image:</strong> never stored by Clothsy AI at all. Your photo is passed straight to our AI provider for processing, and the result is delivered to your browser from their servers. Neither image is written to a Clothsy AI database or disk.</li>
+                <li><strong>Your email address:</strong> held as a marketing lead for the store owner until they delete it, until the store uninstalls Clothsy AI, or until you ask for it to be removed. Because this is the store owner&apos;s own marketing data, we do not expire it on a timer &mdash; see &quot;Your Rights&quot; below to have it erased.</li>
                 <li><strong>Try-on history:</strong> your email is stripped from these records after 90 days. The remaining anonymous record (product, time, outcome) is deleted after 13 months.</li>
                 <li><strong>Aggregate statistics:</strong> daily totals containing no personal data, kept for about 25 months.</li>
               </ul>
@@ -51,8 +51,8 @@ export default function WidgetPrivacyPolicy() {
               <h2>4. Who Sees Your Data?</h2>
               <ul>
                 <li><strong>The Merchant:</strong> the owner of the store you are visiting is the &quot;Data Controller&quot;. They receive your email address, the product you tried on, and your try-on history, and they can export that to a spreadsheet or to their email marketing tool. <em>They cannot see your uploaded photo or your generated try-on result &mdash; those are never stored anywhere the store owner could reach them.</em></li>
-                <li><strong>FabricVTON (Us):</strong> we act as the &quot;Data Processor&quot; on the store owner&apos;s behalf.</li>
-                <li><strong>Perfect Corp (YouCam):</strong> our AI provider, who performs the image generation. Your photo and the public product image URL are sent to them for processing. They process the images transiently and do not use them for model training. Their handling of the image is additionally governed by Perfect Corp&apos;s own privacy policy.</li>
+                <li><strong>Clothsy AI (Us):</strong> we act as the &quot;Data Processor&quot; on the store owner&apos;s behalf.</li>
+                <li><strong>Our AI image-processing provider:</strong> performs the image generation. Your photo and the public product image URL are sent to them for processing. They process the images transiently, are contractually bound to protect them, and do not use them for model training.</li>
               </ul>
               <p>We do not sell your data, and we do not share it with advertisers.</p>
 

@@ -64,6 +64,39 @@
     });
   }
 
+  // ── Stylesheet (loaded on first intent, not on page load) ─
+  // The block no longer links fabricvton.css: it styles only the modal, and a
+  // render-blocking request on every product page view is exactly what the
+  // storefront speed check penalises. It is fetched when a shopper hovers,
+  // focuses, or taps the button, so by the time they click it is usually ready.
+
+  var stylesPromise = null;
+
+  function loadStyles(url) {
+    if (stylesPromise) return stylesPromise;
+    stylesPromise = new Promise(function (resolve) {
+      if (!url) return resolve();
+      var link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = url;
+      // An unstyled modal is still better than no modal, so a failed or slow
+      // stylesheet never blocks opening it.
+      link.onload = resolve;
+      link.onerror = resolve;
+      setTimeout(resolve, 3000);
+      document.head.appendChild(link);
+    });
+    return stylesPromise;
+  }
+
+  function warmStyles(event) {
+    var button = event.target.closest && event.target.closest("[data-fabricvton-button]");
+    if (button) loadStyles(button.getAttribute("data-css-url"));
+  }
+
+  document.addEventListener("pointerover", warmStyles, { passive: true });
+  document.addEventListener("focusin", warmStyles);
+
   // ── Modal construction (first open only) ─────────────────
 
   function buildModal() {
@@ -431,7 +464,7 @@
     if (!button) return;
 
     event.preventDefault();
-    open({
+    var config = {
       shop: button.getAttribute("data-shop") || "",
       backendUrl: button.getAttribute("data-backend-url") || "",
       productId: button.getAttribute("data-product-id") || "",
@@ -439,6 +472,11 @@
       productImageUrl: button.getAttribute("data-product-image") || "",
       requireEmail: button.getAttribute("data-require-email") === "true",
       version: button.getAttribute("data-version") || ""
+    };
+    // Opened only once the modal's stylesheet is in, so the first open never
+    // flashes unstyled markup.
+    loadStyles(button.getAttribute("data-css-url")).then(function () {
+      open(config);
     });
   });
 })();

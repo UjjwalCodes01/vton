@@ -3,13 +3,16 @@ import type {
   HeadersFunction,
   LoaderFunctionArgs,
 } from "react-router";
-import { Form, useLoaderData } from "react-router";
+import { useFetcher, useLoaderData } from "react-router";
+import { useEffect } from "react";
+import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import db from "../db.server";
 import { markDataRequestDelivered } from "../privacy.server";
 import { RETENTION } from "../retention.server";
-import { attachmentHeaders } from "../csv.server";
+import { useDownload } from "../download";
+import { formatDate } from "../format";
 
 // The merchant-facing half of the customers/data_request workflow.
 //
@@ -22,45 +25,39 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
 
-  const url = new URL(request.url);
-  const downloadId = url.searchParams.get("download");
-
-  if (downloadId) {
-    // Scoped by shop, so an id from another store's request resolves to nothing.
-    const record = await db.privacyRequest.findFirst({
-      where: { id: downloadId, shop },
-    });
-
-    if (!record?.exportJson) {
-      throw new Response("Export not available", { status: 404 });
-    }
-
-    return new Response(record.exportJson, {
-      headers: attachmentHeaders(
-        `clothsy-ai-data-request-${record.id}.json`,
-        "application/json; charset=utf-8"
-      ),
-    });
-  }
-
-  const requests = await db.privacyRequest.findMany({
-    where: { shop },
-    orderBy: { requestedAt: "desc" },
-    take: 100,
-  });
+  // The export payloads can be large, and this page only needs to know which
+  // requests have one, so the blob column is never read here. Downloads are
+  // served by the /app/privacy/export resource route.
+  const [requests, withExport] = await Promise.all([
+    db.privacyRequest.findMany({
+      where: { shop },
+      orderBy: { requestedAt: "desc" },
+      take: 100,
+      select: {
+        id: true,
+        customerEmail: true,
+        customerId: true,
+        status: true,
+        recordCount: true,
+        requestedAt: true,
+        deliveredAt: true,
+        deliveredTo: true,
+        note: true,
+      },
+    }),
+    db.privacyRequest.findMany({
+      where: { shop, exportJson: { not: null } },
+      select: { id: true },
+    }),
+  ]);
+  const exportable = new Set(withExport.map((record) => record.id));
 
   return {
     requests: requests.map((record) => ({
-      id: record.id,
-      customerEmail: record.customerEmail,
-      customerId: record.customerId,
-      status: record.status,
-      recordCount: record.recordCount,
+      ...record,
       requestedAt: record.requestedAt.toISOString(),
       deliveredAt: record.deliveredAt?.toISOString() ?? null,
-      deliveredTo: record.deliveredTo,
-      note: record.note,
-      hasExport: Boolean(record.exportJson),
+      hasExport: exportable.has(record.id),
       // Shopify's deadline is 30 days from receipt; surfacing the remaining days
       // is the difference between a list and something a merchant can act on.
       daysRemaining: Math.max(
@@ -100,151 +97,181 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     : { success: false, message: "That request was already closed." };
 };
 
-function statusLabel(status: string) {
-  if (status === "delivered") return "✅ Delivered";
-  if (status === "no_data") return "➖ No data held";
-  return "⏳ Awaiting delivery";
+type RequestRecord = ReturnType<typeof useLoaderData<typeof loader>>["requests"][number];
+
+function StatusBadge({ status }: { status: string }) {
+  if (status === "delivered") return <s-badge tone="success">Delivered</s-badge>;
+  if (status === "no_data") return <s-badge tone="neutral">No data held</s-badge>;
+  return <s-badge tone="warning">Awaiting delivery</s-badge>;
+}
+
+function RequestRow({
+  record,
+  onDownload,
+  downloading,
+}: {
+  record: RequestRecord;
+  onDownload: (id: string) => void;
+  downloading: boolean;
+}) {
+  // One fetcher per row, so marking one request delivered doesn't put every
+  // row's button into a loading state.
+  const fetcher = useFetcher<typeof action>();
+  const shopify = useAppBridge();
+  const result = fetcher.data;
+
+  useEffect(() => {
+    if (result) shopify.toast.show(result.message, { isError: !result.success });
+  }, [result, shopify]);
+
+  const isOpen = !record.deliveredAt && record.status !== "no_data";
+
+  return (
+    <s-table-row>
+      <s-table-cell>
+        <s-stack gap="small-100">
+          <s-text>{record.customerEmail ?? "No email supplied"}</s-text>
+          {record.customerId && (
+            <s-text color="subdued">Shopify customer {record.customerId}</s-text>
+          )}
+        </s-stack>
+      </s-table-cell>
+      <s-table-cell>
+        <s-stack gap="small-100">
+          <s-text>{formatDate(record.requestedAt)}</s-text>
+          {isOpen && (
+            <s-text color="subdued">
+              {record.daysRemaining} day{record.daysRemaining === 1 ? "" : "s"} left
+            </s-text>
+          )}
+        </s-stack>
+      </s-table-cell>
+      <s-table-cell>{record.recordCount}</s-table-cell>
+      <s-table-cell>
+        <s-stack gap="small-100">
+          <StatusBadge status={record.status} />
+          {record.deliveredAt && (
+            <s-text color="subdued">
+              {formatDate(record.deliveredAt)}
+              {record.deliveredTo ? ` to ${record.deliveredTo}` : ""}
+            </s-text>
+          )}
+          {record.note && <s-text color="subdued">{record.note}</s-text>}
+        </s-stack>
+      </s-table-cell>
+      <s-table-cell>
+        <s-stack gap="small-200">
+          {record.hasExport && (
+            <s-button icon="export" loading={downloading} onClick={() => onDownload(record.id)}>
+              Download
+            </s-button>
+          )}
+          {!record.deliveredAt && (
+            <fetcher.Form method="post">
+              <input type="hidden" name="id" value={record.id} />
+              <s-stack direction="inline" gap="small-200" alignItems="end">
+                <s-email-field
+                  name="deliveredTo"
+                  label="Sent to"
+                  labelAccessibilityVisibility="exclusive"
+                  placeholder="Sent to (email)"
+                />
+                <s-button type="submit" loading={fetcher.state !== "idle"}>
+                  Mark delivered
+                </s-button>
+              </s-stack>
+            </fetcher.Form>
+          )}
+        </s-stack>
+      </s-table-cell>
+    </s-table-row>
+  );
 }
 
 export default function Privacy() {
   const { requests, retention } = useLoaderData<typeof loader>();
+  const { download, pending } = useDownload();
   const open = requests.filter((record) => !record.deliveredAt && record.status !== "no_data");
+
+  const downloadPath = (id: string) => `/app/privacy/export?id=${encodeURIComponent(id)}`;
 
   return (
     <s-page heading="Privacy requests">
       <s-section heading="Customer data requests">
-        <s-card>
-          <div style={{ padding: "20px" }}>
-            <p className="fv-text-sm fv-text-subdued" style={{ marginBottom: "16px" }}>
-              When a shopper asks your store for their data, Shopify notifies
-              Clothsy AI and we compile everything we hold for that email address.
-              Download it, send it to the shopper, then mark it delivered here so
-              you have a record of having answered. Shopify expects a response
-              within 30 days of the request.
-            </p>
+        <s-stack gap="base">
+          <s-paragraph>
+            When a shopper asks your store for their data, Shopify notifies
+            Clothsy AI and we compile everything we hold for that email address.
+            Download it, send it to the shopper, then mark it delivered here so you
+            have a record of having answered. Shopify expects a response within 30
+            days of the request.
+          </s-paragraph>
 
-            {open.length > 0 && (
-              <s-banner tone="warning">
-                {open.length} request{open.length === 1 ? "" : "s"} awaiting delivery.
-              </s-banner>
-            )}
+          {open.length > 0 && (
+            <s-banner tone="warning">
+              {open.length} request{open.length === 1 ? "" : "s"} awaiting delivery.
+            </s-banner>
+          )}
 
-            {requests.length === 0 ? (
-              <div className="fv-empty-state">
-                <div className="icon">🔒</div>
-                <h3>No data requests</h3>
-                <p>Requests forwarded by Shopify will appear here.</p>
-              </div>
-            ) : (
-              <table className="fv-table" style={{ width: "100%", marginTop: "16px" }}>
-                <thead>
-                  <tr>
-                    <th>Customer</th>
-                    <th>Requested</th>
-                    <th>Records</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {requests.map((record) => (
-                    <tr key={record.id}>
-                      <td>
-                        {record.customerEmail ?? "(no email supplied)"}
-                        {record.customerId && (
-                          <div className="fv-text-sm fv-text-subdued">
-                            Shopify customer {record.customerId}
-                          </div>
-                        )}
-                      </td>
-                      <td>
-                        {new Date(record.requestedAt).toLocaleDateString()}
-                        {!record.deliveredAt && record.status !== "no_data" && (
-                          <div className="fv-text-sm fv-text-subdued">
-                            {record.daysRemaining} day
-                            {record.daysRemaining === 1 ? "" : "s"} left
-                          </div>
-                        )}
-                      </td>
-                      <td>{record.recordCount}</td>
-                      <td>
-                        {statusLabel(record.status)}
-                        {record.deliveredAt && (
-                          <div className="fv-text-sm fv-text-subdued">
-                            {new Date(record.deliveredAt).toLocaleDateString()}
-                            {record.deliveredTo ? ` → ${record.deliveredTo}` : ""}
-                          </div>
-                        )}
-                        {record.note && (
-                          <div className="fv-text-sm fv-text-subdued">{record.note}</div>
-                        )}
-                      </td>
-                      <td>
-                        <div className="fv-flex fv-items-center fv-gap-md fv-flex-wrap">
-                          {record.hasExport && (
-                            <s-button
-                              href={`?download=${record.id}`}
-                              variant="secondary"
-                              target="_blank"
-                            >
-                              ⬇ Download JSON
-                            </s-button>
-                          )}
-                          {!record.deliveredAt && (
-                            <Form method="post" className="fv-flex fv-items-center fv-gap-md">
-                              <input type="hidden" name="id" value={record.id} />
-                              <input
-                                name="deliveredTo"
-                                className="fv-input"
-                                placeholder="Sent to (email)"
-                                style={{ width: "180px" }}
-                              />
-                              <s-button type="submit">Mark delivered</s-button>
-                            </Form>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </s-card>
+          {requests.length === 0 ? (
+            <s-stack gap="small-200">
+              <s-heading>No data requests</s-heading>
+              <s-paragraph>Requests forwarded by Shopify will appear here.</s-paragraph>
+            </s-stack>
+          ) : (
+            <s-table>
+              <s-table-header-row>
+                <s-table-header listSlot="primary">Customer</s-table-header>
+                <s-table-header>Requested</s-table-header>
+                <s-table-header format="numeric">Records</s-table-header>
+                <s-table-header>Status</s-table-header>
+                <s-table-header>Actions</s-table-header>
+              </s-table-header-row>
+              <s-table-body>
+                {requests.map((record) => (
+                  <RequestRow
+                    key={record.id}
+                    record={record}
+                    downloading={pending === downloadPath(record.id)}
+                    onDownload={(id) =>
+                      download(downloadPath(id), `clothsy-ai-data-request-${id}.json`)
+                    }
+                  />
+                ))}
+              </s-table-body>
+            </s-table>
+          )}
+        </s-stack>
       </s-section>
 
       <s-section heading="What Clothsy AI stores, and for how long">
-        <s-card>
-          <div style={{ padding: "20px" }}>
-            <ul>
-              <li>
-                <strong>Shopper photos and generated try-on images:</strong> never
-                stored by Clothsy AI. The photo is passed to the try-on provider
-                (Perfect Corp / YouCam) for processing and the result is served
-                from their URL.
-              </li>
-              <li>
-                <strong>Lead email addresses:</strong> kept until you delete them,
-                the shop is uninstalled and redacted, or Shopify sends a
-                customers/redact request for that shopper. These are yours.
-              </li>
-              <li>
-                <strong>Try-on history:</strong> the email is removed after{" "}
-                {retention.tryOnEventEmailDays} days and the anonymous event record
-                is deleted after {retention.tryOnEventDays} days.
-              </li>
-              <li>
-                <strong>Daily analytics:</strong> aggregate counts only, deleted
-                after {retention.analyticsDailyDays} days.
-              </li>
-              <li>
-                <strong>These request records:</strong> the downloadable export is
-                erased {retention.privacyExportPayloadDays} days after delivery;
-                the audit entry is kept for {retention.privacyRequestDays} days.
-              </li>
-            </ul>
-          </div>
-        </s-card>
+        <s-unordered-list>
+          <s-list-item>
+            <s-text type="strong">Shopper photos and generated try-on images:</s-text>{" "}
+            never stored by Clothsy AI. The photo is passed to the try-on provider
+            (our AI image-processing provider) for processing and the result is served from
+            their URL.
+          </s-list-item>
+          <s-list-item>
+            <s-text type="strong">Lead email addresses:</s-text> kept until you
+            delete them, the shop is uninstalled and redacted, or Shopify sends a
+            customers/redact request for that shopper. These are yours.
+          </s-list-item>
+          <s-list-item>
+            <s-text type="strong">Try-on history:</s-text> the email is removed
+            after {retention.tryOnEventEmailDays} days and the anonymous event
+            record is deleted after {retention.tryOnEventDays} days.
+          </s-list-item>
+          <s-list-item>
+            <s-text type="strong">Daily analytics:</s-text> aggregate counts only,
+            deleted after {retention.analyticsDailyDays} days.
+          </s-list-item>
+          <s-list-item>
+            <s-text type="strong">These request records:</s-text> the downloadable
+            export is erased {retention.privacyExportPayloadDays} days after
+            delivery; the audit entry is kept for {retention.privacyRequestDays} days.
+          </s-list-item>
+        </s-unordered-list>
       </s-section>
     </s-page>
   );

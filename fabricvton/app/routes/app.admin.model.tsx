@@ -95,7 +95,7 @@ export default function ModelControl() {
       <div className="fv-flex fv-gap-md fv-flex-wrap fv-items-start">
          <div style={{ flex: "1 1 400px" }}>
             {/* YouCam API Status */}
-            <s-section heading="YouCam API Health">
+            <s-section heading="AI Provider Health">
                <s-card>
                   <div style={{ padding: "24px" }}>
                   {data.providerHealth.ok ? (
@@ -114,8 +114,8 @@ export default function ModelControl() {
                            <div className="fv-text-subdued">{data.providerHealth.detail}</div>
                         </dl>
                         <p className="fv-text-sm fv-text-subdued fv-mt-md">
-                           The AI Clothes API does not expose a credit balance — track remaining
-                           units in the YouCam console.
+                           The provider API does not expose a credit balance — track remaining
+                           units in the provider console.
                         </p>
                      </>
                   ) : (
@@ -125,7 +125,7 @@ export default function ModelControl() {
                            <span style={{ fontWeight: 600 }}>API Unreachable</span>
                         </div>
                         <s-banner tone="critical">
-                           <p>Cannot authenticate with YouCam: {data.providerHealth.detail}</p>
+                           <p>Cannot authenticate with the AI provider: {data.providerHealth.detail}</p>
                         </s-banner>
                      </>
                   )}
@@ -152,8 +152,8 @@ export default function ModelControl() {
                         <div className="fv-mb-md">
                            <label htmlFor="model-provider" className="fv-text-sm fv-mb-sm" style={{ display: "block" }}>Provider Engine</label>
                            <select name="modelProvider" className="fv-select fv-w-full" defaultValue={data.currentProvider}>
-                              <option hidden value={data.currentProvider}>{data.currentProvider}</option>
-                              <option value="youcam">YouCam / Perfect Corp (Primary)</option>
+                              <option hidden value={data.currentProvider}>{data.currentProvider === "youcam" ? "Primary AI provider" : data.currentProvider}</option>
+                              <option value="youcam">Primary AI provider</option>
                               <option value="custom">Custom Node (GCP)</option>
                            </select>
                         </div>

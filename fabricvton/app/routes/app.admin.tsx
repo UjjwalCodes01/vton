@@ -103,7 +103,7 @@ export default function SuperAdminDashboard() {
                 <div style={{ padding: "32px 24px", display: "flex", flexDirection: "column", height: "100%", background: "linear-gradient(145deg, #ffffff, #f9fafb)" }}>
                   <div className="fv-flex fv-items-center fv-justify-between fv-mb-lg">
                     <div className="fv-section-title" style={{ margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span style={{ fontSize: "20px" }}>🤖</span> YouCam API Status
+                      <span style={{ fontSize: "20px" }}>🤖</span> AI Provider Status
                     </div>
                     {data.providerHealth.ok ? (
                       <span className="fv-badge success" style={{ padding: "4px 12px" }}>● Connected</span>
@@ -121,12 +121,12 @@ export default function SuperAdminDashboard() {
                           </div>
                           <div className="fv-text-sm fv-text-subdued" style={{ marginTop: "12px" }}>
                             Auth: {data.providerHealth.authMode === "s2s" ? "S2S credential exchange" : "direct bearer key"}.
-                            Credit balance is not exposed by the AI Clothes API — check the YouCam console.
+                            The provider API does not expose a credit balance — check the provider console.
                           </div>
                         </>
                     ) : (
                         <s-banner tone="critical">
-                            <p>Unable to authenticate with YouCam: {data.providerHealth.detail}</p>
+                            <p>Unable to authenticate with the AI provider: {data.providerHealth.detail}</p>
                         </s-banner>
                     )}
                   </div>

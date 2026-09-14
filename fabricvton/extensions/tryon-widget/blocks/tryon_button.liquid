@@ -1,14 +1,15 @@
 {% comment %}
   Clothsy AI – Virtual Try-On app block.
 
-  Renders only a button. The modal markup and all behaviour live in
-  assets/fabricvton.js, which loads deferred and builds its DOM on first click,
-  so a product page that nobody interacts with pays almost nothing for this app.
+  Renders only a button, styled inline. The modal markup and all behaviour live
+  in assets/fabricvton.js, which loads deferred and builds its DOM on first
+  click. The modal stylesheet is not linked here either: every rule in it styles
+  the modal, so the script fetches it when a shopper first reaches for the
+  button. A product page that nobody interacts with pays for one deferred script
+  and nothing that blocks rendering.
 {% endcomment %}
 
 {%- if block.settings.enabled -%}
-  {{ 'fabricvton.css' | asset_url | stylesheet_tag }}
-
   <div class="fabricvton-widget" style="margin: 12px 0;">
     <button
       type="button"
@@ -20,6 +21,7 @@
       data-product-image="{{ product.featured_image | image_url: width: 1024 }}"
       data-require-email="{{ block.settings.require_email }}"
       data-version="{{ 'now' | date: '%s' }}"
+      data-css-url="{{ 'fabricvton.css' | asset_url }}"
       style="
         background-color: {{ block.settings.button_color }};
         color: {{ block.settings.button_text_color }};

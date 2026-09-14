@@ -13,7 +13,7 @@ function TgmHero() {
         <span className="tgm-collab-dot" />
         <span>The Giving Movement</span>
         <span className="tgm-collab-sep">&times;</span>
-        <span className="tgm-collab-fv">FabricVTON AI</span>
+        <span className="tgm-collab-fv">Clothsy AI</span>
       </div>
 
       <h1 className="tgm-hero-title">
@@ -22,7 +22,7 @@ function TgmHero() {
         <span className="tgm-gradient-text">On Real People.</span>
       </h1>
       <p className="tgm-hero-sub">
-        Here&apos;s exactly what FabricVTON generates for The Giving Movement
+        Here&apos;s exactly what Clothsy AI generates for The Giving Movement
         &mdash; a single product photo transformed into a photorealistic model
         try-on, automatically.
       </p>
@@ -99,7 +99,7 @@ function TgmSourceRow({ product }: { product: TgmProduct }) {
                 fill="white"
               />
             </svg>
-            FabricVTON AI
+            Clothsy AI
           </div>
         </div>
         <svg
@@ -158,7 +158,7 @@ function TgmComposite({ product }: { product: TgmProduct }) {
           Before (original outfit)
         </div>
         <div className="tgm-composite-center-label">
-          <span>FabricVTON Result</span>
+          <span>Clothsy AI Result</span>
         </div>
         <div className="tgm-composite-tag-right">
           <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
@@ -183,7 +183,7 @@ function TgmComposite({ product }: { product: TgmProduct }) {
 
       <p className="tgm-composite-caption">
         Left: Model wearing their own garment &nbsp;&middot;&nbsp; Right:
-        FabricVTON AI-generated try-on of TGM product
+        Clothsy AI-generated try-on of TGM product
       </p>
     </div>
   );
@@ -216,7 +216,7 @@ function TgmCallToAction() {
         <div className="tgm-cta-left">
           <div className="tgm-cta-eyebrow">Ready to go live?</div>
           <h3 className="tgm-cta-title">
-            Add FabricVTON to The Giving Movement store
+            Add Clothsy AI to The Giving Movement store
           </h3>
           <p className="tgm-cta-body">
             What you&apos;ve seen above is exactly what your shoppers will

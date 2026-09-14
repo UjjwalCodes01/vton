@@ -19,17 +19,17 @@ export default function TermsOfService() {
           <FadeUp delay={0.1}>
             <div className="legal-content">
               <p>
-                Welcome to FabricVTON! By installing our Shopify Application or using our website, you agree to these Terms of Service. Please read them carefully.
+                Welcome to Clothsy AI! By installing our Shopify Application or using our website, you agree to these Terms of Service. Please read them carefully.
               </p>
 
               <h2>1. Acceptance of Terms</h2>
               <p>
-                By accessing or using the FabricVTON application ("App"), website, or services (collectively, the "Service"), provided by FabricVTON ("we," "us," or "our"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, you may not use the Service.
+                By accessing or using the Clothsy AI application ("App"), website, or services (collectively, the "Service"), provided by Clothsy AI ("we," "us," or "our"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, you may not use the Service.
               </p>
 
               <h2>2. Description of Service</h2>
               <p>
-                FabricVTON is a Shopify application that provides AI-powered virtual try-on capabilities for e-commerce stores. The Service allows merchants to offer their customers the ability to visualize products on themselves or models using artificial intelligence.
+                Clothsy AI is a Shopify application that provides AI-powered virtual try-on capabilities for e-commerce stores. The Service allows merchants to offer their customers the ability to visualize products on themselves or models using artificial intelligence.
               </p>
 
               <h2>3. User Accounts</h2>
@@ -73,7 +73,7 @@ export default function TermsOfService() {
 
               <h2>8. Limitation of Liability</h2>
               <p>
-                To the maximum extent permitted by law, FabricVTON shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of profits, data, or goodwill, arising out of or in connection with your use of the Service. The Service is provided "as is" and "as available" without warranties of any kind.
+                To the maximum extent permitted by law, Clothsy AI shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of profits, data, or goodwill, arising out of or in connection with your use of the Service. The Service is provided "as is" and "as available" without warranties of any kind.
               </p>
 
               <h2>9. Governing Law</h2>
@@ -89,7 +89,7 @@ export default function TermsOfService() {
               <h2>11. Contact Information</h2>
               <p>If you have any questions about these Terms, please contact us at:</p>
               <p>
-                <strong>FabricVTON</strong><br />
+                <strong>Clothsy AI</strong><br />
                 KIET Group of Institutions<br />
                 Muradnagar, Ghaziabad<br />
                 Uttar Pradesh 201206, India<br />

@@ -9,20 +9,19 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import db from "../db.server";
 import { useEffect } from "react";
+import { themeEditorProductUrl } from "../theme-editor.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
 
-  let config = await db.shopConfig.findUnique({ where: { shop } });
-  if (!config) {
-    config = await db.shopConfig.create({ data: { shop } });
-  }
+  const config =
+    (await db.shopConfig.findUnique({ where: { shop } })) ??
+    (await db.shopConfig.create({ data: { shop } }));
 
   return {
-    shop,
     isEnabled: config.isEnabled,
-    themeEditorUrl: `https://${shop}/admin/themes/current/editor?template=product`,
+    themeEditorUrl: themeEditorProductUrl(shop),
   };
 };
 
@@ -42,7 +41,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     update: { isEnabled },
   });
 
-  return { success: true };
+  return { isEnabled };
 };
 
 export default function Settings() {
@@ -50,87 +49,61 @@ export default function Settings() {
   const fetcher = useFetcher<typeof action>();
   const shopify = useAppBridge();
   const isSaving = fetcher.state !== "idle";
-  const saved = fetcher.data?.success;
+  const result = fetcher.data;
 
   useEffect(() => {
-    if (saved) {
-      shopify.toast.show("Settings saved successfully!");
+    if (result) {
+      shopify.toast.show(result.isEnabled ? "Virtual try-on turned on" : "Virtual try-on turned off");
     }
-  }, [saved, shopify]);
+  }, [result, shopify]);
 
-  // Break out of the embedded iframe so the Theme Editor opens at top level.
-  const openThemeEditor = () => {
-    window.open(themeEditorUrl, "_top");
-  };
+  // The theme editor is a top-level admin page, so it must replace the admin
+  // frame rather than load inside the app's iframe.
+  const openThemeEditor = () => window.open(themeEditorUrl, "_top");
 
+  // A single on/off setting that applies immediately: a status plus one action
+  // button, rather than a form with a separate Save step.
   return (
     <s-page heading="Settings">
-      <fetcher.Form method="post">
-        <s-section heading="App Status">
-          <s-card>
-            <div style={{ padding: "20px" }}>
-              <div className="fv-section-title">
-                <span className="icon">🟢</span> Enable / Disable Try-On
-              </div>
-              <p className="fv-text-subdued fv-mb-md">
-                The master switch. When disabled, try-on requests are rejected even
-                if the widget is still placed in your theme.
-              </p>
-              <select
-                name="isEnabled"
-                className="fv-select"
-                defaultValue={isEnabled ? "true" : "false"}
-                style={{ minWidth: "200px" }}
-              >
-                <option value="true">Enabled (Visible to customers)</option>
-                <option value="false">Disabled (Hidden)</option>
-              </select>
-            </div>
-          </s-card>
-        </s-section>
-
-        <s-card>
-          <div style={{ padding: "16px", textAlign: "right" }}>
-            <s-button type="submit" loading={isSaving} variant="primary">
-              {saved ? "Saved Successfully" : "Save Settings"}
+      <s-section heading="Virtual try-on">
+        <s-stack direction="inline" justifyContent="space-between" alignItems="center" gap="base">
+          <s-stack gap="small-200">
+            <s-stack direction="inline" gap="small-200" alignItems="center">
+              <s-text type="strong">Virtual try-on</s-text>
+              <s-badge tone={isEnabled ? "success" : "neutral"}>{isEnabled ? "On" : "Off"}</s-badge>
+            </s-stack>
+            <s-text color="subdued">
+              When off, shoppers can&apos;t start a try-on, even if the button is
+              still in your theme.
+            </s-text>
+          </s-stack>
+          <fetcher.Form method="post">
+            <input type="hidden" name="isEnabled" value={isEnabled ? "false" : "true"} />
+            <s-button type="submit" loading={isSaving} variant={isEnabled ? "secondary" : "primary"}>
+              {isEnabled ? "Turn off" : "Turn on"}
             </s-button>
-          </div>
-        </s-card>
-      </fetcher.Form>
+          </fetcher.Form>
+        </s-stack>
+      </s-section>
 
-      <s-section heading="Widget Appearance">
-        <s-card>
-          <div style={{ padding: "20px" }}>
-            <div className="fv-section-title">
-              <span className="icon">🎨</span> Customized in the Theme Editor
-            </div>
-            <p className="fv-text-subdued fv-mb-md">
-              Button text, colours, corner radius, and whether an email is required
-              are all part of the Clothsy AI block in your theme, so you can preview
-              changes against your real product page before publishing.
-            </p>
-
-            <ul
-              className="fv-text-sm"
-              style={{ margin: "0 0 20px", paddingLeft: "20px", lineHeight: 2 }}
-            >
-              <li>Button text and colours</li>
-              <li>Corner radius</li>
-              <li>Require email before try-on</li>
-              <li>Where the button sits on the product page</li>
-            </ul>
-
-            <s-button variant="primary" onClick={openThemeEditor}>
-              Open Theme Editor
-            </s-button>
-            <span
-              className="fv-text-sm fv-text-subdued"
-              style={{ marginLeft: "12px" }}
-            >
-              Product template → the Clothsy AI Try-On block
-            </span>
-          </div>
-        </s-card>
+      <s-section heading="Button appearance">
+        <s-stack gap="base">
+          <s-paragraph>
+            The button&apos;s text, colors, corner radius, and whether shoppers
+            must enter an email are set on the Clothsy AI Try-On block in your
+            theme, so you can preview changes on your real product page before
+            publishing.
+          </s-paragraph>
+          <s-unordered-list>
+            <s-list-item>Button text and colors</s-list-item>
+            <s-list-item>Corner radius</s-list-item>
+            <s-list-item>Require an email before the try-on</s-list-item>
+            <s-list-item>Where the button sits on the product page</s-list-item>
+          </s-unordered-list>
+          <s-stack direction="inline">
+            <s-button onClick={openThemeEditor}>Open theme editor</s-button>
+          </s-stack>
+        </s-stack>
       </s-section>
     </s-page>
   );

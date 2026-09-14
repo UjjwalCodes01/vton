@@ -3,6 +3,7 @@
 import CalDemoButton from "./CalDemoButton";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { SHOPIFY_APP_STORE_URL } from "../lib/site";
 
 export default function StickyHeader() {
 	const [isScrolled, setIsScrolled] = useState(false);
@@ -21,9 +22,10 @@ export default function StickyHeader() {
 		<div className={`header-wrapper ${isScrolled ? "is-scrolled" : ""}`}>
 			<header className="site-header">
 				<div className="site-header-shell">
-					<Link className="brand" href="/">
+					<Link className="brand" href="/" aria-label="Clothsy AI home">
 						{/* eslint-disable-next-line @next/next/no-img-element */}
-						<img src="/fabricvton-removebg.png" alt="FabricVTON Logo" style={{ height: "40px", width: "auto" }} />
+						<img src="/clothsy-ai-logo.png" alt="" width={36} height={36} style={{ borderRadius: "8px" }} />
+						<span className="brand-name">Clothsy AI</span>
 					</Link>
 
 					<nav className="nav-links">
@@ -37,7 +39,7 @@ export default function StickyHeader() {
 
 					<a
 						className="btn btn-primary"
-						href="https://admin.shopify.com/?organization_id=212189841&no_redirect=true&redirect=/oauth/redirect_from_developer_dashboard?client_id%3D73cc9210c28108863a55bc041bddb1c0"
+						href={SHOPIFY_APP_STORE_URL}
 					>
 						Install on Shopify
 					</a>
