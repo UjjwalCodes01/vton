@@ -16,7 +16,7 @@ export default function DemoStore() {
       {/* ── Announcement Bar ── */}
       <div className="demo-announcement">
         <Sparkles size={13} />
-        <span>This is a <strong>live demo store</strong> powered by Clothsy AI — click any product to Try It On</span>
+        <span>This is a <strong>live demo store</strong> powered by FabricVTON — click any product to Try It On</span>
         <Link href="/" className="demo-announcement-cta">Get it for your store →</Link>
       </div>
 
@@ -25,7 +25,7 @@ export default function DemoStore() {
         <div className="demo-header-inner">
           <Link href="/" className="demo-back-link">
             <ArrowLeft size={15} />
-            <span>Back to Clothsy AI</span>
+            <span>Back to FabricVTON</span>
           </Link>
           <div className="demo-brand">
             <span className="demo-brand-name">Thread & Co.</span>
@@ -112,11 +112,11 @@ export default function DemoStore() {
           <p className="demo-footer-brand">Thread & Co.</p>
           <p className="demo-footer-powered">
             Virtual Try-On powered by{" "}
-            <Link href="/" className="demo-footer-link">Clothsy AI</Link>
+            <Link href="/" className="demo-footer-link">FabricVTON</Link>
             {" "}— Install it on your Shopify store for free.
           </p>
           <Link href="/" className="demo-footer-cta">
-            Get Clothsy AI for your store →
+            Get FabricVTON for your store →
           </Link>
         </div>
       </footer>

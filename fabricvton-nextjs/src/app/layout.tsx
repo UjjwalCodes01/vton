@@ -16,42 +16,21 @@ const geistMono = Geist_Mono({
 import Footer from "./components/Footer";
 import { SHOPIFY_APP_STORE_URL, SITE_NAME, SITE_URL } from "./lib/site";
 
+const TITLE = "FabricVTON - AI-Powered Virtual Try-On for Shopify";
 const DESCRIPTION =
-  "Clothsy AI adds AI virtual try-on to Shopify product pages. Shoppers see clothes on themselves before they buy, so you get more conversions and fewer returns.";
+  "AI-powered virtual try-on for Shopify fashion stores. Boost conversions, cut returns.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: {
-    default: "Clothsy AI – Virtual Try-On for Shopify Fashion Stores",
-    template: "%s | Clothsy AI",
-  },
+  title: { default: TITLE, template: `%s | ${SITE_NAME}` },
   description: DESCRIPTION,
   applicationName: SITE_NAME,
-  keywords: [
-    "Clothsy AI",
-    "Clothsy",
-    "virtual try-on",
-    "AI virtual try-on",
-    "Shopify virtual try-on app",
-    "virtual fitting room",
-  ],
   alternates: { canonical: "/" },
-  openGraph: {
-    type: "website",
-    url: "/",
-    siteName: SITE_NAME,
-    title: "Clothsy AI – Virtual Try-On for Shopify Fashion Stores",
-    description: DESCRIPTION,
-  },
-  twitter: {
-    card: "summary",
-    title: "Clothsy AI – Virtual Try-On for Shopify Fashion Stores",
-    description: DESCRIPTION,
-  },
+  openGraph: { type: "website", url: "/", siteName: SITE_NAME, title: TITLE, description: DESCRIPTION },
+  twitter: { card: "summary", title: TITLE, description: DESCRIPTION },
 };
 
-// Structured data naming the product explicitly, so search engines can show
-// the site for a "Clothsy AI" query rather than only matching page text.
+// Structured data naming the product, so search engines can match it by name.
 const JSON_LD = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
@@ -61,7 +40,6 @@ const JSON_LD = {
   applicationCategory: "BusinessApplication",
   operatingSystem: "Shopify",
   installUrl: SHOPIFY_APP_STORE_URL,
-  image: `${SITE_URL}/icon.png`,
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
 };
 

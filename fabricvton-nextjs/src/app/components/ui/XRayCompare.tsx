@@ -145,7 +145,7 @@ export function XRayCompare() {
 
         {/* "Powered by" badge */}
         <div className="xray-powered-badge">
-          <span>✦</span> Clothsy AI
+          <span>✦</span> FabricVTON AI
         </div>
       </div>
 

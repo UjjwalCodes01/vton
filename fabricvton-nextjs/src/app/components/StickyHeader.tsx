@@ -22,10 +22,9 @@ export default function StickyHeader() {
 		<div className={`header-wrapper ${isScrolled ? "is-scrolled" : ""}`}>
 			<header className="site-header">
 				<div className="site-header-shell">
-					<Link className="brand" href="/" aria-label="Clothsy AI home">
+					<Link className="brand" href="/">
 						{/* eslint-disable-next-line @next/next/no-img-element */}
-						<img src="/clothsy-ai-logo.png" alt="" width={36} height={36} style={{ borderRadius: "8px" }} />
-						<span className="brand-name">Clothsy AI</span>
+						<img src="/fabricvton-removebg.png" alt="FabricVTON Logo" style={{ height: "40px", width: "auto" }} />
 					</Link>
 
 					<nav className="nav-links">

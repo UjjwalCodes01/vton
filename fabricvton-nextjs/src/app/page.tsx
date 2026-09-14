@@ -86,7 +86,7 @@ const pricing = [
 
 const faqs = [
   {
-    question: "How does Clothsy AI work?",
+    question: "How does FabricVTON work?",
     answer: "Customers upload a photo on your product page. Our AI generates a realistic image of them wearing the garment in seconds — no downloads, no apps.",
   },
   {
@@ -190,7 +190,7 @@ const features = [
     ),
   },
   {
-    title: "Clothsy AI Studio",
+    title: "FabricVTON Studio",
     text: "Generate professional product photos without the photoshoot. Use AI models to create stunning UGC-style content for your social media, ads, and product pages directly from your dashboard. Uses the same credits as your plan.",
     footer: (
       <a className="feature-link" href="/studio">Explore Studio capabilities →</a>
@@ -469,7 +469,7 @@ export default function HomePage() {
             <div className="cta-glow" />
             <h2>Turn hesitation into revenue.</h2>
             <p>
-              Install Clothsy AI in under 5 minutes and let your products sell themselves.
+              Install FabricVTON in under 5 minutes and let your products sell themselves.
             </p>
             <div className="hero-actions" style={{ justifyContent: "center" }}>
               <a className="btn btn-primary" href={INSTALL_URL}>

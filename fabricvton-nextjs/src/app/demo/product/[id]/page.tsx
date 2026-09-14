@@ -281,7 +281,7 @@ export default function ProductDetailPage() {
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                 <div className="tryon-powered" style={{ marginBottom: "16px" }}>
                   <Sparkles size={12} />
-                  <span>Powered by Clothsy AI</span>
+                  <span>Powered by FabricVTON AI</span>
                 </div>
                 <h2 className="tryon-title" style={{ textAlign: "center", marginBottom: "8px" }}>
                   Virtual Try-On
@@ -392,7 +392,7 @@ export default function ProductDetailPage() {
           <p className="demo-footer-brand">Thread & Co.</p>
           <p className="demo-footer-powered">
             Virtual Try-On powered by{" "}
-            <Link href="/" className="demo-footer-link">Clothsy AI</Link>
+            <Link href="/" className="demo-footer-link">FabricVTON</Link>
           </p>
         </div>
       </footer>
