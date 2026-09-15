@@ -59,7 +59,15 @@ class Clothsy_AI_Connection {
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}
-		Clothsy_AI_Settings::set_connection_status( 'connected' );
+
+		// A site that was connected before gets its previous store back (leads,
+		// statistics and plan), under that store's id and this connection's secret.
+		$connection = Clothsy_AI_Settings::connection();
+		if ( $connection && ! empty( $result['storeId'] ) && $result['storeId'] !== $connection['store_id'] ) {
+			Clothsy_AI_Settings::save_connection( (string) $result['storeId'], $connection['secret'], 'connected' );
+		} else {
+			Clothsy_AI_Settings::set_connection_status( 'connected' );
+		}
 		delete_transient( 'clothsy_ai_status' );
 		return true;
 	}
@@ -67,10 +75,21 @@ class Clothsy_AI_Connection {
 	/**
 	 * Disconnects: Clothsy AI destroys the secret, then it is forgotten here.
 	 * Local credentials are cleared even if Clothsy AI can't be reached.
+	 *
+	 * On a copy of the site (staging, a clone), only the local credentials are
+	 * forgotten: they belong to the live store, which must stay connected.
 	 */
 	public static function disconnect(): void {
-		Clothsy_AI_Api_Client::post_signed( '/api/woo/disconnect' );
+		if ( self::is_this_site() ) {
+			Clothsy_AI_Api_Client::post_signed( '/api/woo/disconnect', array( 'siteUrl' => home_url() ) );
+		}
 		Clothsy_AI_Settings::clear_connection();
+	}
+
+	/** Whether the stored credentials were issued for this site's current URL. */
+	public static function is_this_site(): bool {
+		$connection = Clothsy_AI_Settings::connection();
+		return $connection && untrailingslashit( $connection['site_url'] ) === untrailingslashit( home_url() );
 	}
 
 	/**
@@ -107,8 +126,6 @@ class Clothsy_AI_Connection {
 	 */
 	public static function is_ready(): bool {
 		$connection = Clothsy_AI_Settings::connection();
-		return $connection
-			&& 'connected' === $connection['status']
-			&& untrailingslashit( $connection['site_url'] ) === untrailingslashit( home_url() );
+		return $connection && 'connected' === $connection['status'] && self::is_this_site();
 	}
 }

@@ -3,6 +3,7 @@ import db from "../db.server";
 import { getPlan, isBillingCycleDue } from "../billing.server";
 import { clampText } from "../tryon-input.server";
 import { originMatchesStore, parseJsonBody, verifySignedRequest } from "../woo/auth.server";
+import { billingState, refreshStaleSubscriptions } from "../woo/billing.server";
 import { methodNotAllowed, wooError, wooJson } from "../woo/http.server";
 
 /**
@@ -17,9 +18,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (request.method !== "POST") return methodNotAllowed();
 
   try {
-    const { store, body } = await verifySignedRequest(request);
+    const { store: signedStore, body } = await verifySignedRequest(request);
     const data = parseJsonBody(body);
-    const shop = store.shop;
+    const shop = signedStore.shop;
+
+    // Catches up on any webhook we missed before reporting the plan.
+    await refreshStaleSubscriptions(signedStore).catch((error) => console.warn("[Billing] refresh failed:", error));
+    const store = await db.shopConfig.findUniqueOrThrow({ where: { shop } });
 
     await db.shopConfig.update({
       where: { shop },
@@ -34,12 +39,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     const since = new Date();
     since.setDate(since.getDate() - 30);
-    const [totals, totalLeads] = await Promise.all([
+    const [totals, totalLeads, billing] = await Promise.all([
       db.analyticsDaily.aggregate({
         where: { shop, date: { gte: since } },
         _sum: { widgetOpens: true, tryOnsCompleted: true, emailsCaptured: true, tryOnsFailed: true },
       }),
       db.lead.count({ where: { shop } }),
+      billingState(store),
     ]);
 
     const plan = getPlan(store.plan);
@@ -61,6 +67,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         failed: totals._sum.tryOnsFailed ?? 0,
       },
       totalLeads,
+      billing,
     });
   } catch (error) {
     return wooError(error, "status");

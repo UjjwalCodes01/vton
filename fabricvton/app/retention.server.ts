@@ -30,6 +30,12 @@
 //                                      purpose); the audit record itself is kept
 //                                      24 months as proof of handling.
 //   Rate-limit counters                2 hours. See app/ratelimit.server.ts.
+//   Disconnected WooCommerce stores    30 days after disconnecting, then the
+//                                      store and its leads, try-on history and
+//                                      analytics are deleted. Until then,
+//                                      reconnecting from the same site restores
+//                                      them (see api.woo.verify.tsx). The
+//                                      WooCommerce counterpart of shop/redact.
 
 import db from "./db.server";
 
@@ -46,6 +52,8 @@ export const RETENTION = {
   privacyExportPayloadDays: 30,
   /** How long the audit record of a privacy request is kept. */
   privacyRequestDays: 730, // 24 months
+  /** How long a disconnected WooCommerce store's data waits for a reconnect. */
+  wooDisconnectedStoreDays: 30,
 } as const;
 
 export interface PurgeSummary {
@@ -56,6 +64,8 @@ export interface PurgeSummary {
   privacyRequestsDeleted: number;
   wooNoncesDeleted: number;
   wooPendingStoresDeleted: number;
+  wooDisconnectedStoresDeleted: number;
+  billingWebhookEventsDeleted: number;
 }
 
 function cutoff(days: number) {
@@ -78,6 +88,8 @@ export async function purgeExpiredData(): Promise<PurgeSummary> {
     privacyRequestsDeleted: 0,
     wooNoncesDeleted: 0,
     wooPendingStoresDeleted: 0,
+    wooDisconnectedStoresDeleted: 0,
+    billingWebhookEventsDeleted: 0,
   };
 
   // Drop the identifier from older try-on rows but keep the row, so analytics
@@ -141,6 +153,34 @@ export async function purgeExpiredData(): Promise<PurgeSummary> {
       },
     })
   ).count;
+
+  // Razorpay retries a webhook for at most 24 hours (support can replay up to
+  // 15 days), so its delivery ids only need remembering for a while.
+  summary.billingWebhookEventsDeleted = (
+    await db.billingWebhookEvent.deleteMany({ where: { receivedAt: { lt: cutoff(30) } } })
+  ).count;
+
+  // Stores that disconnected and never came back. Everything keyed by the
+  // store goes with it — this is the WooCommerce equivalent of shop/redact.
+  const abandoned = await db.shopConfig.findMany({
+    where: {
+      platform: "woocommerce",
+      connectionStatus: "disconnected",
+      disconnectedAt: { lt: cutoff(RETENTION.wooDisconnectedStoreDays) },
+    },
+    select: { shop: true },
+    take: 100,
+  });
+  for (const { shop } of abandoned) {
+    await db.$transaction([
+      db.lead.deleteMany({ where: { shop } }),
+      db.tryOnEvent.deleteMany({ where: { shop } }),
+      db.analyticsDaily.deleteMany({ where: { shop } }),
+      db.privacyRequest.deleteMany({ where: { shop } }),
+      db.shopConfig.deleteMany({ where: { shop, connectionStatus: "disconnected" } }),
+    ]);
+    summary.wooDisconnectedStoresDeleted += 1;
+  }
 
   const touched = Object.values(summary).some((count) => count > 0);
   if (touched) {

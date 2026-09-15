@@ -13,3 +13,12 @@
 .clothsy-ai-metric { border: 1px solid #dcdcde; border-radius: 4px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
 .clothsy-ai-metric span { color: #50575e; }
 .clothsy-ai-metric strong { font-size: 1.4em; }
+.clothsy-ai-plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 12px 0; }
+.clothsy-ai-plan { border: 1px solid #dcdcde; border-radius: 6px; padding: 14px; display: flex; flex-direction: column; gap: 6px; }
+.clothsy-ai-plan.is-featured { border-color: #6226fc; box-shadow: 0 0 0 1px #6226fc; }
+.clothsy-ai-plan.is-current { background: #f6f3ff; }
+.clothsy-ai-plan h3 { margin: 0; font-size: 1.05em; }
+.clothsy-ai-plan-price { font-size: 1.5em; font-weight: 600; }
+.clothsy-ai-plan-price small { font-size: 0.6em; font-weight: 400; color: #50575e; }
+.clothsy-ai-plan form, .clothsy-ai-plan .button { margin-top: auto; }
+.clothsy-ai-plan .clothsy-ai-inline-form, .clothsy-ai-plan .clothsy-ai-inline-form .button { width: 100%; margin-right: 0; text-align: center; }

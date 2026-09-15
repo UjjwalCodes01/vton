@@ -92,6 +92,9 @@ model ShopConfig {
   // pending (registered, domain not yet proven) | connected | disconnected
   connectionStatus    String?
   siteVerifiedAt      DateTime?
+  // Set on disconnect; the store's data is purged RETENTION.wooDisconnectedStoreDays
+  // later unless the same site reconnects first.
+  disconnectedAt      DateTime?
   pluginVersion       String?
   lastHeartbeatAt     DateTime?
   adminEmail          String?
@@ -103,6 +106,66 @@ model ShopConfig {
   updatedAt           DateTime @updatedAt
 
   @@index([platform])
+  @@index([siteUrl])
+}
+
+// ═══════════════════════════════════════════════════════════
+// Razorpay subscriptions for WooCommerce stores
+//
+// Shopify stores are billed by Shopify; WooCommerce stores pay us directly.
+// One row per Razorpay subscription we create. Razorpay is the source of
+// truth: every webhook or checkout return re-fetches the subscription and
+// mirrors it here (see app/woo/billing.server.ts), so events arriving late,
+// twice or out of order can't leave a store on the wrong plan.
+// ═══════════════════════════════════════════════════════════
+model BillingSubscription {
+  id               String    @id // Razorpay subscription id (sub_…)
+  shop             String
+  plan             String    // internal plan key: starter | growth | pro | scale
+  interval         String    // monthly | annual
+  providerPlanId   String    // Razorpay plan id (plan_…)
+  amount           Int       // per billing period, in the currency's smallest unit
+  currency         String
+  // created | authenticated | active | pending | halted | cancelled | completed | expired | paused
+  status           String    @default("created")
+  // Opaque id in our hosted checkout page's URL, so the subscription id and
+  // store id never appear in links.
+  checkoutToken    String    @unique
+  // WordPress admin page the merchant returns to after paying. Always on the
+  // store's own origin (checked when the checkout is created).
+  returnUrl        String
+  // Set for a downgrade, which starts when the current plan's period ends.
+  startAt          DateTime?
+  // When the checkout return carried a valid Razorpay payment signature.
+  // Razorpay can still report "created" for a moment after paying, so this
+  // lets the plan switch at once instead of waiting for the webhook.
+  paymentVerifiedAt DateTime?
+  currentStart     DateTime?
+  currentEnd       DateTime?
+  cancelAtCycleEnd Boolean   @default(false)
+  endedAt          DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([shop])
+}
+
+// Our plans as Razorpay plan objects. Razorpay plans are immutable, so the key
+// includes the price: changing a price in PLANS creates a new Razorpay plan for
+// new subscriptions and leaves existing subscribers on the one they bought.
+model BillingProviderPlan {
+  key            String   @id // "<plan>:<interval>:<currency>:<amount>"
+  providerPlanId String
+  createdAt      DateTime @default(now())
+}
+
+// Razorpay webhook deliveries already handled, by event id. Razorpay retries a
+// delivery until it gets a 2xx, so the same event can arrive more than once.
+model BillingWebhookEvent {
+  id         String   @id
+  receivedAt DateTime @default(now())
+
+  @@index([receivedAt])
 }
 
 // ═══════════════════════════════════════════════════════════

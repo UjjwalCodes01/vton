@@ -1,7 +1,8 @@
 import type { ActionFunctionArgs } from "react-router";
 import { randomBytes } from "node:crypto";
 import db from "../db.server";
-import { parseJsonBody, storeSecret, verifySignedRequest, WooAuthError } from "../woo/auth.server";
+import { RETENTION } from "../retention.server";
+import { parseJsonBody, storeSecret, verifySignedRequest, WOO_PLATFORM, WooAuthError } from "../woo/auth.server";
 import { hmacHex, safeEqual } from "../woo/crypto.server";
 import { methodNotAllowed, wooError, wooJson } from "../woo/http.server";
 import { fetchStoreJson, normaliseStoreUrl, storeUrlString, UnsafeUrlError } from "../woo/net.server";
@@ -57,6 +58,50 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     const siteUrlString = storeUrlString(siteUrl);
+
+    // A first-time connection from a site that was connected before takes over
+    // that store instead of starting from scratch, so disconnecting and
+    // reconnecting (or reconnecting after WordPress salts were reset, which
+    // makes the plugin forget its credentials) keeps leads, stats and plan.
+    // Answering the challenge from this URL is the same proof of control the
+    // original connection gave.
+    if (store.connectionStatus === "pending") {
+      const previous = await db.shopConfig.findFirst({
+        where: {
+          platform: WOO_PLATFORM,
+          siteUrl: siteUrlString,
+          shop: { not: store.shop },
+          OR: [
+            { connectionStatus: "connected" },
+            {
+              connectionStatus: "disconnected",
+              disconnectedAt: { gte: new Date(Date.now() - RETENTION.wooDisconnectedStoreDays * 24 * 60 * 60 * 1000) },
+            },
+          ],
+        },
+        orderBy: { updatedAt: "desc" },
+      });
+      if (previous) {
+        await db.$transaction([
+          db.shopConfig.delete({ where: { shop: store.shop } }),
+          db.shopConfig.update({
+            where: { shop: previous.shop },
+            data: {
+              siteSecretEnc: store.siteSecretEnc,
+              connectionStatus: "connected",
+              siteVerifiedAt: new Date(),
+              disconnectedAt: null,
+              pluginVersion: store.pluginVersion ?? previous.pluginVersion,
+              adminEmail: store.adminEmail ?? previous.adminEmail,
+              storeName: store.storeName ?? previous.storeName,
+            },
+          }),
+        ]);
+        console.log(`[Woo] ${store.shop} verified at ${siteUrl.origin}; restored previous store ${previous.shop}`);
+        return wooJson({ connected: true, siteUrl: siteUrlString, storeId: previous.shop, restored: true });
+      }
+    }
+
     const moved = store.siteUrl !== siteUrlString;
     await db.shopConfig.update({
       where: { shop: store.shop },

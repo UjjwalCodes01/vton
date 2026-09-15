@@ -22,7 +22,7 @@ class Clothsy_AI_Admin {
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
 		add_action( 'admin_notices', array( __CLASS__, 'plugins_screen_notice' ) );
 
-		foreach ( array( 'connect', 'reverify', 'disconnect', 'toggle', 'save_settings', 'leads_csv' ) as $action ) {
+		foreach ( array( 'connect', 'reverify', 'disconnect', 'toggle', 'save_settings', 'leads_csv', 'choose_plan', 'cancel_plan' ) as $action ) {
 			add_action( 'admin_post_clothsy_ai_' . $action, array( __CLASS__, 'handle_' . $action ) );
 		}
 	}
@@ -100,8 +100,8 @@ class Clothsy_AI_Admin {
 
 	public static function handle_save_settings(): void {
 		self::guard( 'save_settings' );
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- checked in guard(); each field is sanitized in save().
-		$input = isset( $_POST['clothsy_ai'] ) && is_array( $_POST['clothsy_ai'] ) ? wp_unslash( $_POST['clothsy_ai'] ) : array();
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- checked in guard(); save() then validates each field.
+		$input = isset( $_POST['clothsy_ai'] ) && is_array( $_POST['clothsy_ai'] ) ? map_deep( wp_unslash( $_POST['clothsy_ai'] ), 'sanitize_text_field' ) : array();
 		Clothsy_AI_Settings::save( $input );
 		self::finish( true, __( 'Button settings saved.', 'clothsy-ai' ) );
 	}
@@ -118,6 +118,56 @@ class Clothsy_AI_Admin {
 		header( 'Content-Disposition: attachment; filename="clothsy-ai-leads-' . gmdate( 'Y-m-d' ) . '.csv"' );
 		echo $csv; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- a CSV file download, already formula-neutralised by Clothsy AI.
 		exit;
+	}
+
+	/**
+	 * Sends the merchant to Clothsy AI's checkout page for the chosen plan.
+	 * Payment happens there, never in WordPress; afterwards the merchant is
+	 * sent back to this screen.
+	 */
+	public static function handle_choose_plan(): void {
+		self::guard( 'choose_plan' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- checked in guard().
+		$plan   = isset( $_POST['plan'] ) ? sanitize_key( wp_unslash( $_POST['plan'] ) ) : '';
+		$result = Clothsy_AI_Api_Client::post_signed(
+			'/api/woo/billing/checkout',
+			array(
+				'plan'      => $plan,
+				'returnUrl' => self::page_url(),
+			)
+		);
+		if ( is_wp_error( $result ) ) {
+			self::finish( $result, '' );
+		}
+
+		$url = isset( $result['checkoutUrl'] ) ? (string) $result['checkoutUrl'] : '';
+		if ( ! str_starts_with( $url, untrailingslashit( CLOTHSY_AI_API_BASE ) . '/' ) ) {
+			self::finish( new WP_Error( 'clothsy_ai_bad_response', __( 'Clothsy AI returned an unexpected response. Please try again.', 'clothsy-ai' ) ), '' );
+		}
+		add_filter( 'allowed_redirect_hosts', array( __CLASS__, 'allow_service_host' ) );
+		wp_safe_redirect( $url );
+		exit;
+	}
+
+	/**
+	 * Lets wp_safe_redirect() send the merchant to the Clothsy AI checkout.
+	 *
+	 * @param string[] $hosts Allowed hosts.
+	 * @return string[]
+	 */
+	public static function allow_service_host( array $hosts ): array {
+		$hosts[] = (string) wp_parse_url( CLOTHSY_AI_API_BASE, PHP_URL_HOST );
+		return $hosts;
+	}
+
+	public static function handle_cancel_plan(): void {
+		self::guard( 'cancel_plan' );
+		$result = Clothsy_AI_Api_Client::post_signed( '/api/woo/billing/cancel' );
+		delete_transient( 'clothsy_ai_status' );
+		self::finish(
+			is_wp_error( $result ) ? $result : true,
+			__( 'Your plan is cancelled. It stays active until the end of the period you paid for, then your store moves to the free Basic plan.', 'clothsy-ai' )
+		);
 	}
 
 	/**
@@ -191,6 +241,20 @@ class Clothsy_AI_Admin {
 		$notice = get_transient( 'clothsy_ai_notice_' . get_current_user_id() );
 		delete_transient( 'clothsy_ai_notice_' . get_current_user_id() );
 
+		// Set by Clothsy AI's checkout when it sends the merchant back. Display
+		// only: the plan itself always comes from Clothsy AI.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$billing_return = isset( $_GET['clothsy_billing'] ) ? sanitize_key( wp_unslash( $_GET['clothsy_billing'] ) ) : '';
+		if ( 'success' === $billing_return || 'scheduled' === $billing_return ) {
+			delete_transient( 'clothsy_ai_status' );
+			$notice = array(
+				'type'    => 'success',
+				'message' => 'success' === $billing_return
+					? __( 'Thank you! Your new plan is active.', 'clothsy-ai' )
+					: __( 'Your plan change is confirmed. It takes effect when your current billing period ends.', 'clothsy-ai' ),
+			);
+		}
+
 		$connection = Clothsy_AI_Settings::connection();
 		$status     = $connection && 'connected' === $connection['status'] ? Clothsy_AI_Connection::status() : null;
 		$remote     = is_array( $status ) ? $status : null;
@@ -204,6 +268,7 @@ class Clothsy_AI_Admin {
 				<?php esc_html_e( 'Clothsy AI', 'clothsy-ai' ); ?>
 			</h1>
 			<p class="clothsy-ai-subtitle"><?php esc_html_e( 'Virtual try-on for your product pages.', 'clothsy-ai' ); ?></p>
+			<hr class="wp-header-end" />
 
 			<?php if ( is_array( $notice ) ) : ?>
 				<div class="notice notice-<?php echo esc_attr( $notice['type'] ); ?> is-dismissible"><p><?php echo esc_html( $notice['message'] ); ?></p></div>
@@ -213,6 +278,7 @@ class Clothsy_AI_Admin {
 
 			<?php if ( $remote && ! $moved ) : ?>
 				<?php self::render_usage( $remote ); ?>
+				<?php self::render_plan( $remote ); ?>
 			<?php endif; ?>
 
 			<?php self::render_settings(); ?>
@@ -265,7 +331,7 @@ class Clothsy_AI_Admin {
 				<?php if ( is_wp_error( $status ) ) : ?>
 					<p class="clothsy-ai-warning"><?php echo esc_html( $status->get_error_message() ); ?></p>
 				<?php endif; ?>
-				<?php self::action_button( 'disconnect', __( 'Disconnect', 'clothsy-ai' ), 'button button-link-delete', array(), __( 'Disconnect Clothsy AI? The try-on button will disappear from your store.', 'clothsy-ai' ) ); ?>
+				<?php self::action_button( 'disconnect', __( 'Disconnect', 'clothsy-ai' ), 'button button-link-delete', array(), __( 'Disconnect Clothsy AI? The try-on button will disappear from your store. Your leads and statistics are kept for 30 days in case you reconnect.', 'clothsy-ai' ) ); ?>
 			<?php endif; ?>
 		</div>
 		<?php
@@ -336,6 +402,158 @@ class Clothsy_AI_Admin {
 			<?php self::action_button( 'leads_csv', __( 'Download leads (CSV)', 'clothsy-ai' ) ); ?>
 		</div>
 		<?php
+	}
+
+	/**
+	 * The Plan section: current plan, paid plans, and cancelling.
+	 *
+	 * @param array<string,mixed> $status Remote status.
+	 */
+	private static function render_plan( array $status ): void {
+		$billing   = is_array( $status['billing'] ?? null ) ? $status['billing'] : array();
+		$current   = is_array( $billing['current'] ?? null ) ? $billing['current'] : null;
+		$scheduled = is_array( $billing['scheduled'] ?? null ) ? $billing['scheduled'] : null;
+		$plans     = is_array( $billing['plans'] ?? null ) ? $billing['plans'] : array();
+		$currency  = (string) ( $billing['currency'] ?? 'USD' );
+
+		$current_price = 0.0;
+		foreach ( $plans as $plan ) {
+			if ( $current && ( $plan['name'] ?? '' ) === $current['plan'] ) {
+				$current_price = (float) $plan['price'];
+			}
+		}
+		?>
+		<div class="clothsy-ai-card">
+			<h2><?php esc_html_e( 'Plan', 'clothsy-ai' ); ?></h2>
+
+			<?php if ( ! $current ) : ?>
+				<p>
+					<?php
+					printf(
+						/* translators: %s: number of try-ons. */
+						esc_html__( "You're on the free Basic plan: %s try-ons a month.", 'clothsy-ai' ),
+						esc_html( number_format_i18n( (int) ( $status['monthlyCredits'] ?? 0 ) ) )
+					);
+					?>
+				</p>
+			<?php elseif ( ! empty( $current['cancelAtCycleEnd'] ) ) : ?>
+				<p>
+					<?php
+					printf(
+						/* translators: 1: plan name, 2: date. */
+						esc_html__( 'Your %1$s plan is cancelled and ends on %2$s. After that, your store moves to the free Basic plan.', 'clothsy-ai' ),
+						'<strong>' . esc_html( (string) $current['label'] ) . '</strong>',
+						esc_html( self::date( $current['renewsOrEndsAt'] ?? null ) )
+					);
+					?>
+				</p>
+			<?php else : ?>
+				<p>
+					<?php
+					printf(
+						/* translators: 1: plan name, 2: price, 3: date. */
+						esc_html__( "You're on the %1\$s plan (%2\$s a month). It renews on %3\$s.", 'clothsy-ai' ),
+						'<strong>' . esc_html( (string) $current['label'] ) . '</strong>',
+						esc_html( self::price( $current_price, $currency ) ),
+						esc_html( self::date( $current['renewsOrEndsAt'] ?? null ) )
+					);
+					?>
+				</p>
+			<?php endif; ?>
+
+			<?php if ( $current && ! empty( $current['paymentIssue'] ) ) : ?>
+				<p class="clothsy-ai-warning"><?php esc_html_e( "Your last payment didn't go through. It will be retried automatically over the next few days. Check your email for a message from our payment partner to update your card.", 'clothsy-ai' ); ?></p>
+			<?php endif; ?>
+
+			<?php if ( $scheduled ) : ?>
+				<p class="clothsy-ai-warning">
+					<?php
+					printf(
+						/* translators: 1: plan name, 2: date. */
+						esc_html__( 'Your plan changes to %1$s on %2$s.', 'clothsy-ai' ),
+						'<strong>' . esc_html( (string) $scheduled['label'] ) . '</strong>',
+						esc_html( self::date( $scheduled['startsAt'] ?? null ) )
+					);
+					?>
+				</p>
+			<?php endif; ?>
+
+			<?php if ( empty( $billing['enabled'] ) || ! $plans ) : ?>
+				<p class="description"><?php esc_html_e( 'Paid plans with more try-ons are coming soon.', 'clothsy-ai' ); ?></p>
+			<?php else : ?>
+				<div class="clothsy-ai-plans">
+					<?php foreach ( $plans as $plan ) : ?>
+						<?php
+						$name       = (string) ( $plan['name'] ?? '' );
+						$price      = (float) ( $plan['price'] ?? 0 );
+						$is_current = $current && $current['plan'] === $name;
+						$is_next    = $scheduled && $scheduled['plan'] === $name;
+						$classes    = 'clothsy-ai-plan' . ( ! empty( $plan['featured'] ) ? ' is-featured' : '' ) . ( $is_current ? ' is-current' : '' );
+						?>
+						<div class="<?php echo esc_attr( $classes ); ?>">
+							<h3><?php echo esc_html( (string) ( $plan['label'] ?? '' ) ); ?></h3>
+							<div class="clothsy-ai-plan-price"><?php echo esc_html( self::price( $price, $currency ) ); ?> <small><?php esc_html_e( '/ month', 'clothsy-ai' ); ?></small></div>
+							<div>
+								<?php
+								printf(
+									/* translators: %s: number of try-ons. */
+									esc_html__( '%s try-ons a month', 'clothsy-ai' ),
+									esc_html( number_format_i18n( (int) ( $plan['credits'] ?? 0 ) ) )
+								);
+								?>
+							</div>
+							<?php
+							if ( $is_next ) {
+								echo '<button type="button" class="button" disabled>' . esc_html__( 'Scheduled', 'clothsy-ai' ) . '</button>';
+							} elseif ( $is_current && empty( $current['cancelAtCycleEnd'] ) ) {
+								echo '<button type="button" class="button" disabled>' . esc_html__( 'Current plan', 'clothsy-ai' ) . '</button>';
+							} else {
+								if ( $is_current ) {
+									/* translators: %s: plan name. */
+									$label = sprintf( __( 'Keep %s', 'clothsy-ai' ), (string) $plan['label'] );
+								} elseif ( ! $current ) {
+									$label = __( 'Choose', 'clothsy-ai' );
+								} else {
+									$label = $price > $current_price ? __( 'Upgrade', 'clothsy-ai' ) : __( 'Downgrade', 'clothsy-ai' );
+								}
+								self::action_button( 'choose_plan', $label, ! empty( $plan['featured'] ) ? 'button button-primary' : 'button', array( 'plan' => $name ) );
+							}
+							?>
+						</div>
+					<?php endforeach; ?>
+				</div>
+				<p class="description">
+					<?php
+					printf(
+						/* translators: %s: currency code, e.g. USD. */
+						esc_html__( 'Prices in %s, billed monthly. Upgrades start right away with a full allowance; downgrades take effect when your current billing period ends. You pay on a secure Clothsy AI checkout page.', 'clothsy-ai' ),
+						esc_html( $currency )
+					);
+					?>
+				</p>
+				<?php if ( $current && empty( $current['cancelAtCycleEnd'] ) ) : ?>
+					<?php self::action_button( 'cancel_plan', __( 'Cancel plan', 'clothsy-ai' ), 'button button-link-delete', array(), __( 'Cancel your plan? It stays active until the end of the period you paid for, then your store moves to the free Basic plan.', 'clothsy-ai' ) ); ?>
+				<?php endif; ?>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * @param float  $amount   Price.
+	 * @param string $currency ISO currency code.
+	 */
+	private static function price( float $amount, string $currency ): string {
+		$formatted = number_format_i18n( $amount, floor( $amount ) === $amount ? 0 : 2 );
+		return 'USD' === $currency ? '$' . $formatted : $formatted . ' ' . $currency;
+	}
+
+	/**
+	 * @param mixed $iso ISO 8601 date from Clothsy AI.
+	 */
+	private static function date( $iso ): string {
+		$time = is_string( $iso ) ? strtotime( $iso ) : false;
+		return $time ? date_i18n( get_option( 'date_format' ), $time ) : __( 'the end of the billing period', 'clothsy-ai' );
 	}
 
 	private static function render_settings(): void {

@@ -12,6 +12,7 @@
  * Text Domain:          clothsy-ai
  * Domain Path:          /languages
  * WC requires at least: 8.5
+ * WC tested up to:      11.1
  *
  * @package ClothsyAI
  */
@@ -36,6 +37,7 @@ require_once CLOTHSY_AI_DIR . 'includes/class-clothsy-ai-rest.php';
 require_once CLOTHSY_AI_DIR . 'includes/class-clothsy-ai-frontend.php';
 require_once CLOTHSY_AI_DIR . 'includes/class-clothsy-ai-product-meta.php';
 require_once CLOTHSY_AI_DIR . 'includes/class-clothsy-ai-admin.php';
+require_once CLOTHSY_AI_DIR . 'includes/class-clothsy-ai-privacy.php';
 
 /*
  * This plugin never reads or writes orders, and adds nothing to cart or
@@ -64,6 +66,7 @@ add_action(
 		Clothsy_AI_Frontend::init();
 		Clothsy_AI_Product_Meta::init();
 		Clothsy_AI_Admin::init();
+		Clothsy_AI_Privacy::init();
 	}
 );
 

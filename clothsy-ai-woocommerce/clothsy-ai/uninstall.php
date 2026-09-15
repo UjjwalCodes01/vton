@@ -4,7 +4,8 @@
  *
  * Tells Clothsy AI to destroy this store's secret (best effort — deletion
  * still completes if the service can't be reached), then removes everything
- * the plugin stored in this site.
+ * the plugin stored in this site. Clothsy AI keeps the store's leads for 30
+ * days in case the plugin is reinstalled, then deletes them.
  *
  * @package ClothsyAI
  */
@@ -21,8 +22,12 @@ if ( ! defined( 'CLOTHSY_AI_API_BASE' ) ) {
 require_once __DIR__ . '/includes/class-clothsy-ai-settings.php';
 require_once __DIR__ . '/includes/class-clothsy-ai-api-client.php';
 
-if ( Clothsy_AI_Settings::connection() ) {
-	Clothsy_AI_Api_Client::post_signed( '/api/woo/disconnect' );
+// Deleting the plugin from a staging copy must not disconnect the live store
+// whose credentials the copy carries, so only the connected site itself tells
+// Clothsy AI (which also refuses a disconnect from any other URL).
+$clothsy_ai_connection = Clothsy_AI_Settings::connection();
+if ( $clothsy_ai_connection && untrailingslashit( $clothsy_ai_connection['site_url'] ) === untrailingslashit( home_url() ) ) {
+	Clothsy_AI_Api_Client::post_signed( '/api/woo/disconnect', array( 'siteUrl' => home_url() ) );
 }
 
 delete_option( Clothsy_AI_Settings::CONNECTION_OPTION );
