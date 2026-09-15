@@ -1,0 +1,15 @@
+/* WooCommerce → Clothsy AI admin screen. Builds on core WordPress admin styles. */
+.clothsy-ai-title { display: flex; align-items: center; gap: 10px; }
+.clothsy-ai-title img { border-radius: 8px; }
+.clothsy-ai-subtitle { margin-top: 0; color: #50575e; }
+.clothsy-ai-card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 4px 20px 16px; margin: 16px 0; max-width: 820px; }
+.clothsy-ai-card h2 { font-size: 1.2em; }
+.clothsy-ai-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.clothsy-ai-inline-form { display: inline-block; margin-right: 8px; }
+.clothsy-ai-badge { display: inline-block; padding: 2px 10px; border-radius: 10px; background: #f0f0f1; font-weight: 600; margin-right: 6px; }
+.clothsy-ai-badge-success { background: #d7f0dd; color: #0a5c26; }
+.clothsy-ai-warning { background: #fcf9e8; border-left: 4px solid #dba617; padding: 8px 12px; }
+.clothsy-ai-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 12px 0; }
+.clothsy-ai-metric { border: 1px solid #dcdcde; border-radius: 4px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+.clothsy-ai-metric span { color: #50575e; }
+.clothsy-ai-metric strong { font-size: 1.4em; }

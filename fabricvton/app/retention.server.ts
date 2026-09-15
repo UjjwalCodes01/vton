@@ -54,6 +54,8 @@ export interface PurgeSummary {
   analyticsDeleted: number;
   privacyPayloadsCleared: number;
   privacyRequestsDeleted: number;
+  wooNoncesDeleted: number;
+  wooPendingStoresDeleted: number;
 }
 
 function cutoff(days: number) {
@@ -74,6 +76,8 @@ export async function purgeExpiredData(): Promise<PurgeSummary> {
     analyticsDeleted: 0,
     privacyPayloadsCleared: 0,
     privacyRequestsDeleted: 0,
+    wooNoncesDeleted: 0,
+    wooPendingStoresDeleted: 0,
   };
 
   // Drop the identifier from older try-on rows but keep the row, so analytics
@@ -115,6 +119,26 @@ export async function purgeExpiredData(): Promise<PurgeSummary> {
   summary.privacyRequestsDeleted = (
     await db.privacyRequest.deleteMany({
       where: { requestedAt: { lt: cutoff(RETENTION.privacyRequestDays) } },
+    })
+  ).count;
+
+  // Replay protection only needs a nonce for as long as its request's
+  // timestamp is still accepted (5 minutes); 15 leaves margin for clock skew.
+  summary.wooNoncesDeleted = (
+    await db.wooRequestNonce.deleteMany({
+      where: { createdAt: { lt: new Date(Date.now() - 15 * 60 * 1000) } },
+    })
+  ).count;
+
+  // WooCommerce registrations that never proved control of their URL.
+  // Connecting takes seconds, so a day-old pending store is abandoned or bogus.
+  summary.wooPendingStoresDeleted = (
+    await db.shopConfig.deleteMany({
+      where: {
+        platform: "woocommerce",
+        connectionStatus: "pending",
+        createdAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      },
     })
   ).count;
 

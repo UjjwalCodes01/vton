@@ -74,10 +74,35 @@ model ShopConfig {
   modelProvider       String   @default("youcam") // youcam | custom
   modelVersion        String   @default("cloth-v4")
 
+  // ── Platform ──
+  // Which storefront platform this tenant is. Shopify rows keep their
+  // myshopify domain as `shop`; WooCommerce rows use an opaque `woo_<id>` key,
+  // because a WordPress site's URL can change (domain moves, staging clones)
+  // and must never be the identity.
+  platform            String   @default("shopify") // shopify | woocommerce
+
+  // ── WooCommerce connection (null for Shopify) ──
+  // Public URL of the store, as reported by the plugin and verified by calling
+  // it back. Used as the allowed CORS origin for shopper requests.
+  siteUrl             String?
+  // Per-store HMAC secret, AES-256-GCM encrypted with WOO_SECRET_ENCRYPTION_KEY.
+  // Stored reversibly on purpose: verifying an HMAC needs the secret itself,
+  // so a one-way hash would make every signature unverifiable.
+  siteSecretEnc       String?
+  // pending (registered, domain not yet proven) | connected | disconnected
+  connectionStatus    String?
+  siteVerifiedAt      DateTime?
+  pluginVersion       String?
+  lastHeartbeatAt     DateTime?
+  adminEmail          String?
+  storeName           String?
+
   // Timestamps
   installedAt         DateTime @default(now())
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+
+  @@index([platform])
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -212,4 +237,14 @@ model PrivacyRequest {
   @@index([shop])
   @@index([shop, status])
   @@index([requestedAt])
+}
+
+// Nonces of signed WooCommerce plugin requests, kept briefly so a captured
+// request can't be replayed inside its timestamp window. The id is
+// "<store>:<nonce>", so a second insert of the same pair fails on the key.
+model WooRequestNonce {
+  id        String   @id
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }

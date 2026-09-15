@@ -44,16 +44,18 @@ import {
 
 // ─── CORS ───────────────────────────────────────────────
 
-function corsHeaders(origin: string) {
+export function corsHeaders(origin: string) {
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    // X-Clothsy-Token carries the WooCommerce shopper token (see app/woo/auth.server.ts).
+    "Access-Control-Allow-Headers": "Content-Type, X-Clothsy-Token",
     "Access-Control-Max-Age": "86400",
+    Vary: "Origin",
   };
 }
 
-function jsonResponse(
+export function jsonResponse(
   data: unknown,
   status: number,
   origin: string,
@@ -78,7 +80,7 @@ function jsonResponse(
  * that used to travel in a `debug` field now only exists server-side — see
  * app/requestid.server.ts.
  */
-function errorResponse(
+export function errorResponse(
   message: string,
   status: number,
   origin: string,
@@ -241,6 +243,82 @@ export async function handleTryOnLoader(request: Request, verifiedShop: string) 
 
 // ─── POST /api/tryon — Start async try-on (returns generationId fast) ─
 
+export interface ParsedTryOnBody {
+  email: string | null;
+  productId: string | null;
+  productTitle: string | null;
+  rawProductImageUrl: string | null;
+  sessionId: string | null;
+  personImage: Blob | null;
+}
+
+/**
+ * Reads the shopper's submission (JSON with a data-URL photo, or multipart).
+ * Throws the image errors from tryon-input.server; map them with
+ * parseErrorResponse.
+ */
+export async function parseTryOnBody(request: Request): Promise<ParsedTryOnBody> {
+  const contentType = request.headers.get("Content-Type") || "";
+
+  let email: string | null = null;
+  let productId: string | null = null;
+  let productTitle: string | null = null;
+  let rawProductImageUrl: string | null = null;
+  let sessionId: string | null = null;
+  let personImage: Blob | null = null;
+
+    if (contentType.includes("application/json")) {
+      const body = (await request.json()) as Record<string, unknown>;
+
+      email = sanitizeEmail(body.email);
+      productId = clampText(body.productId, 64);
+      productTitle = clampText(body.productTitle, 255);
+      rawProductImageUrl = clampText(body.productImageUrl, 2048);
+      sessionId = sanitizeSessionId(body.sessionId);
+
+      if (typeof body.personImageDataUrl === "string") {
+        personImage = dataUrlToBlob(
+          body.personImageDataUrl,
+          clampText(body.personImageMimeType, 64) ?? undefined
+        );
+      }
+    } else {
+      const formData = await request.formData();
+      email = sanitizeEmail(formData.get("email"));
+      productId = clampText(formData.get("productId"), 64);
+      productTitle = clampText(formData.get("productTitle"), 255);
+      rawProductImageUrl = clampText(formData.get("productImageUrl"), 2048);
+      sessionId = sanitizeSessionId(formData.get("sessionId"));
+
+      const customerImage = formData.get("personImage");
+      if (customerImage instanceof Blob) {
+        personImage = customerImage;
+      }
+    }
+
+  return { email, productId, productTitle, rawProductImageUrl, sessionId, personImage };
+}
+
+/** Shopper-facing response for a submission parseTryOnBody couldn't read. */
+export function parseErrorResponse(parseError: unknown, origin: string, requestId: string) {
+  if (parseError instanceof ImageTooLargeError) {
+    return errorResponse(
+      `Image too large. Max ${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))}MB.`,
+      413,
+      origin,
+      requestId
+    );
+  }
+  if (parseError instanceof UnsupportedImageTypeError) {
+    return errorResponse("Unsupported image format. Please upload a JPG or PNG.", 415, origin, requestId);
+  }
+  if (parseError instanceof InvalidImageError) {
+    return errorResponse("That photo could not be read. Please try another image.", 400, origin, requestId);
+  }
+  logInternalError(requestId, "request parse", parseError);
+  return errorResponse("Malformed request.", 400, origin, requestId);
+}
+
 export async function handleTryOnAction(request: Request, verifiedShop: string) {
   const requestId = newRequestId();
   const origin = request.headers.get("Origin") || "*";
@@ -270,123 +348,104 @@ export async function handleTryOnAction(request: Request, verifiedShop: string) 
 
   console.log(`[TryOn API][${requestId}] Generation requested for ${shop}`);
 
+  let body: ParsedTryOnBody;
+  try {
+    body = await parseTryOnBody(request);
+  } catch (parseError) {
+    return parseErrorResponse(parseError, origin, requestId);
+  }
+
+  if (!body.productId) {
+    return errorResponse("Missing product information.", 422, origin, requestId);
+  }
+
+  const garment = validateGarmentImageUrl(body.rawProductImageUrl, shop);
+  if (!garment.ok) {
+    // The reason names the rejected host, which is useful in a log and useless
+    // (at best) to a shopper — so it stays server-side.
+    console.warn(
+      `[TryOn API][${requestId}] Rejected garment image URL for ${shop}: ${garment.reason}`
+    );
+    return errorResponse(
+      "This product's image can't be used for try-on. Please contact the store.",
+      422,
+      origin,
+      requestId
+    );
+  }
+
+  return runTryOn({
+    shop,
+    origin,
+    requestId,
+    clientIp: clientIpFrom(request),
+    sessionId: body.sessionId,
+    email: body.email,
+    personImage: body.personImage,
+    product: {
+      id: body.productId,
+      title: body.productTitle,
+      imageUrl: garment.url,
+      category: null,
+    },
+  });
+}
+
+export interface TryOnRequest {
+  /** Tenant key, already authenticated by the caller (app proxy or shopper token). */
+  shop: string;
+  origin: string;
+  requestId: string;
+  clientIp: string | null;
+  sessionId: string | null;
+  email: string | null;
+  personImage: Blob | null;
+  product: {
+    id: string;
+    title: string | null;
+    /** Garment image, already validated/trusted by the caller. */
+    imageUrl: string;
+    /** Merchant-chosen garment category, or null to infer it from the title. */
+    category: string | null;
+  };
+}
+
+/**
+ * Everything after authentication and parsing, shared by every platform:
+ * rate limits, the store's on/off and suspension state, the atomic credit
+ * reservation, lead capture, and the provider call — with the reservation
+ * released on any failure.
+ */
+export async function runTryOn(input: TryOnRequest): Promise<Response> {
+  const { shop, origin, requestId, clientIp, sessionId, email, personImage, product } = input;
+  const productId = product.id;
+  const productTitle = product.title;
+  const productImageUrl = product.imageUrl;
+
+  if (!personImage || personImage.size === 0) {
+    return errorResponse("Please choose a photo to try on.", 400, origin, requestId);
+  }
+  if (personImage.size > MAX_IMAGE_BYTES) {
+    return errorResponse(
+      `Image too large. Max ${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))}MB.`,
+      413,
+      origin,
+      requestId
+    );
+  }
+  if (personImage.type && !ALLOWED_IMAGE_MIME_TYPES.has(personImage.type.toLowerCase())) {
+    return errorResponse("Unsupported image format. Please upload a JPG or PNG.", 415, origin, requestId);
+  }
+
   // Reservation state, so the catch-all can release a hold if anything after
   // reservation throws.
   let reservedOverage: number | null = null;
   let pendingEventId: string | null = null;
 
   try {
-    const contentType = request.headers.get("Content-Type") || "";
-
-    let email: string | null = null;
-    let productId: string | null = null;
-    let productTitle: string | null = null;
-    let rawProductImageUrl: string | null = null;
-    let sessionId: string | null = null;
-    let personImage: Blob | null = null;
-
-    try {
-      if (contentType.includes("application/json")) {
-        const body = (await request.json()) as Record<string, unknown>;
-
-        email = sanitizeEmail(body.email);
-        productId = clampText(body.productId, 64);
-        productTitle = clampText(body.productTitle, 255);
-        rawProductImageUrl = clampText(body.productImageUrl, 2048);
-        sessionId = sanitizeSessionId(body.sessionId);
-
-        if (typeof body.personImageDataUrl === "string") {
-          personImage = dataUrlToBlob(
-            body.personImageDataUrl,
-            clampText(body.personImageMimeType, 64) ?? undefined
-          );
-        }
-      } else {
-        const formData = await request.formData();
-        email = sanitizeEmail(formData.get("email"));
-        productId = clampText(formData.get("productId"), 64);
-        productTitle = clampText(formData.get("productTitle"), 255);
-        rawProductImageUrl = clampText(formData.get("productImageUrl"), 2048);
-        sessionId = sanitizeSessionId(formData.get("sessionId"));
-
-        const customerImage = formData.get("personImage");
-        if (customerImage instanceof Blob) {
-          personImage = customerImage;
-        }
-      }
-    } catch (parseError) {
-      if (parseError instanceof ImageTooLargeError) {
-        return errorResponse(
-          `Image too large. Max ${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))}MB.`,
-          413,
-          origin,
-          requestId
-        );
-      }
-      if (parseError instanceof UnsupportedImageTypeError) {
-        return errorResponse(
-          "Unsupported image format. Please upload a JPG or PNG.",
-          415,
-          origin,
-          requestId
-        );
-      }
-      if (parseError instanceof InvalidImageError) {
-        return errorResponse(
-          "That photo could not be read. Please try another image.",
-          400,
-          origin,
-          requestId
-        );
-      }
-      logInternalError(requestId, "request parse", parseError);
-      return errorResponse("Malformed request.", 400, origin, requestId);
-    }
-
-    // ── Validate required fields ──
-    if (!personImage || personImage.size === 0) {
-      return errorResponse("Please choose a photo to try on.", 400, origin, requestId);
-    }
-    if (personImage.size > MAX_IMAGE_BYTES) {
-      return errorResponse(
-        `Image too large. Max ${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))}MB.`,
-        413,
-        origin,
-        requestId
-      );
-    }
-    if (personImage.type && !ALLOWED_IMAGE_MIME_TYPES.has(personImage.type.toLowerCase())) {
-      return errorResponse(
-        "Unsupported image format. Please upload a JPG or PNG.",
-        415,
-        origin,
-        requestId
-      );
-    }
-    if (!productId) {
-      return errorResponse("Missing product information.", 422, origin, requestId);
-    }
-
-    const garment = validateGarmentImageUrl(rawProductImageUrl, shop);
-    if (!garment.ok) {
-      // The reason names the rejected host, which is useful in a log and useless
-      // (at best) to a shopper — so it stays server-side.
-      console.warn(
-        `[TryOn API][${requestId}] Rejected garment image URL for ${shop}: ${garment.reason}`
-      );
-      return errorResponse(
-        "This product's image can't be used for try-on. Please contact the store.",
-        422,
-        origin,
-        requestId
-      );
-    }
-    const productImageUrl = garment.url;
-
     // ── Rate limits ──
     // Applied before any DB write or provider call, so a flood costs one indexed
     // upsert per request and nothing else.
-    const clientIp = clientIpFrom(request);
     const rateLimit = await checkRateLimits(
       tryOnGenerationRules({ shop, sessionId, clientIp })
     );
@@ -559,7 +618,9 @@ export async function handleTryOnAction(request: Request, verifiedShop: string) 
 
     // ── Start Try-On generation (ASYNC — returns generationId immediately) ──
     let generationId: string;
-    const garmentCategory = mapGarmentCategory(productTitle);
+    // A category chosen by the merchant (WooCommerce product setting) beats
+    // guessing from the title.
+    const garmentCategory = product.category ?? mapGarmentCategory(productTitle);
     try {
       const tryOnResult = await createTryOn({
         customerFileId,
@@ -599,7 +660,8 @@ export async function handleTryOnAction(request: Request, verifiedShop: string) 
     void runHousekeeping();
 
     // ── Return generationId for client-side polling ──
-    // The frontend polls GET /apps/fabricvton/api/tryon?generationId=xxx
+    // The widget then polls for the result: Shopify via the app proxy
+    // (/apps/fabricvton/api/tryon), WooCommerce via /api/woo/tryon.
     return jsonResponse({ generationId, status: "PENDING", requestId }, 202, origin);
   } catch (err: unknown) {
     logInternalError(requestId, "unhandled route", err);
