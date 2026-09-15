@@ -31,6 +31,10 @@ function PolaroidCard({ item }: { item: PolaroidItem }) {
       className="polaroid-card-wrapper"
       onMouseEnter={() => setFlipped(true)}
       onMouseLeave={() => setFlipped(false)}
+      onClick={() => setFlipped((f) => !f)}
+      role="button"
+      tabIndex={0}
+      aria-label={`Flip ${item.label} try-on preview`}
     >
       <motion.div
         className="polaroid-card-inner"
@@ -42,11 +46,11 @@ function PolaroidCard({ item }: { item: PolaroidItem }) {
         <div className="polaroid-face polaroid-front" style={{ background: "#f1f5f9" }}>
           <div className="polaroid-image-area">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={item.originalImage} alt={item.label} className="polaroid-real-img" />
+            <img src={item.originalImage} alt={item.label} className="polaroid-real-img" loading="lazy" />
             <div className="polaroid-before-badge">Before</div>
           </div>
           <div className="polaroid-caption" style={{ alignItems: "center", padding: "16px 14px" }}>
-            <p className="polaroid-label">Hover to try on →</p>
+            <p className="polaroid-label">Tap / Hover to try on →</p>
           </div>
         </div>
 
@@ -54,7 +58,7 @@ function PolaroidCard({ item }: { item: PolaroidItem }) {
         <div className="polaroid-face polaroid-back" style={{ background: "#ccfbf1" }}>
           <div className="polaroid-image-area">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={item.generatedImage} alt="AI Generation" className="polaroid-real-img" />
+            <img src={item.generatedImage} alt="AI Generation" className="polaroid-real-img" loading="lazy" />
             <div className="polaroid-after-badge">AI Try-On ✓</div>
           </div>
           <div className="polaroid-caption" style={{ alignItems: "center", padding: "16px 14px" }}>
@@ -74,6 +78,8 @@ export function PolaroidMarquee() {
       className="marquee-outer"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
+      onTouchStart={() => setPaused(true)}
+      onTouchEnd={() => setTimeout(() => setPaused(false), 2000)}
     >
       {/* Fade edges */}
       <div className="marquee-fade marquee-fade-left" />

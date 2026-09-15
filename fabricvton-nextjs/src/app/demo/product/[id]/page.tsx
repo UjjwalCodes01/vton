@@ -14,6 +14,8 @@ import {
   Share2,
   Ruler,
   LoaderCircle,
+  Wand2,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PRODUCTS, type ProductTryOnGarment } from "../../../lib/demo-data";
@@ -32,32 +34,40 @@ export default function ProductDetailPage() {
   const [selectedGarmentId, setSelectedGarmentId] = useState<number | null>(null);
   const [generatedGarmentId, setGeneratedGarmentId] = useState<number | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationStep, setGenerationStep] = useState(0);
+  const [isLiked, setIsLiked] = useState(false);
   const generationTimeoutRef = useRef<number | null>(null);
+  const stepIntervalRef = useRef<number | null>(null);
 
-  const garments: ProductTryOnGarment[] = product?.tryOnExperience?.garments ?? PRODUCTS.slice(0, 6).map((item) => ({
-    id: item.id,
-    label: item.name,
-    garmentImage: item.image,
-    resultImage: item.demoTryOn.resultPhoto,
-  }));
+  const garments: ProductTryOnGarment[] =
+    product?.tryOnExperience?.garments ??
+    PRODUCTS.slice(0, 6).map((item) => ({
+      id: item.id,
+      label: item.name,
+      garmentImage: item.image,
+      resultImage: item.demoTryOn.resultPhoto,
+    }));
 
   const addToCart = () => {
-    if (!product) {
-      return;
-    }
+    if (!product) return;
 
     if (!selectedSize) {
       toast.error("Please select a size first");
       return;
     }
     setCartCount((c) => c + 1);
-    toast.success(`${product.name} added to cart!`, { description: `Size: ${selectedSize}` });
+    toast.success(`${product.name} added to cart!`, {
+      description: `Size: ${selectedSize}`,
+    });
   };
 
   useEffect(() => {
     return () => {
       if (generationTimeoutRef.current) {
         window.clearTimeout(generationTimeoutRef.current);
+      }
+      if (stepIntervalRef.current) {
+        window.clearInterval(stepIntervalRef.current);
       }
     };
   }, []);
@@ -81,6 +91,10 @@ export default function ProductDetailPage() {
       window.clearTimeout(generationTimeoutRef.current);
       generationTimeoutRef.current = null;
     }
+    if (stepIntervalRef.current) {
+      window.clearInterval(stepIntervalRef.current);
+      stepIntervalRef.current = null;
+    }
 
     setTryOnPreview(product?.tryOnExperience?.initialPersonImage ?? activeImage);
     setSelectedGarmentId(null);
@@ -94,6 +108,10 @@ export default function ProductDetailPage() {
       window.clearTimeout(generationTimeoutRef.current);
       generationTimeoutRef.current = null;
     }
+    if (stepIntervalRef.current) {
+      window.clearInterval(stepIntervalRef.current);
+      stepIntervalRef.current = null;
+    }
 
     setIsGenerating(false);
     setSelectedGarmentId(null);
@@ -102,33 +120,84 @@ export default function ProductDetailPage() {
     setIsTryOnOpen(false);
   };
 
+  const generationSteps = [
+    "Aligning model posture...",
+    "Draping garment fabric...",
+    "Rendering lighting & shadows...",
+  ];
+
   const handleGarmentSelect = (garmentId: number) => {
     const garment = garments.find((item) => item.id === garmentId);
-    if (!garment || isGenerating) {
-      return;
-    }
+    if (!garment || isGenerating) return;
 
     setSelectedGarmentId(garmentId);
     setGeneratedGarmentId(null);
     setIsGenerating(true);
+    setGenerationStep(0);
 
     if (generationTimeoutRef.current) {
       window.clearTimeout(generationTimeoutRef.current);
     }
+    if (stepIntervalRef.current) {
+      window.clearInterval(stepIntervalRef.current);
+    }
+
+    stepIntervalRef.current = window.setInterval(() => {
+      setGenerationStep((s) => (s + 1) % generationSteps.length);
+    }, 900);
 
     generationTimeoutRef.current = window.setTimeout(() => {
+      if (stepIntervalRef.current) {
+        window.clearInterval(stepIntervalRef.current);
+      }
       setTryOnPreview(garment.resultImage);
       setGeneratedGarmentId(garmentId);
       setIsGenerating(false);
       generationTimeoutRef.current = null;
-    }, 3000);
+    }, 2800);
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: product?.name,
+          text: `Check out ${product?.name} with Virtual Try-On!`,
+          url: window.location.href,
+        });
+      } catch {}
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast.success("Product link copied!");
+    }
   };
 
   if (!product) {
     return (
-      <div className="demo-shell" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}>
+      <div
+        className="demo-shell"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100vh",
+          padding: "24px",
+          textAlign: "center",
+        }}
+      >
         <h2>Product not found.</h2>
-        <Link href="/demo" style={{ marginLeft: 16, color: "#0d9488", textDecoration: "underline" }}>Back to Store</Link>
+        <Link
+          href="/demo"
+          style={{
+            marginTop: 16,
+            color: "#0d9488",
+            fontWeight: 700,
+            textDecoration: "underline",
+          }}
+        >
+          ← Back to Store
+        </Link>
       </div>
     );
   }
@@ -140,18 +209,22 @@ export default function ProductDetailPage() {
         <div className="demo-header-inner">
           <Link href="/demo" className="demo-back-link">
             <ArrowLeft size={15} />
-            <span>Back to Store</span>
+            <span>Store</span>
           </Link>
           <div className="demo-brand">
             <span className="demo-brand-name">Thread & Co.</span>
           </div>
           <div className="demo-header-right">
+            <Link href="/studio" className="demo-studio-pill-btn" aria-label="Try-On Studio">
+              <Wand2 size={13} />
+              <span>Studio</span>
+            </Link>
             <button
               className="demo-cart-btn"
               onClick={() => toast.info(`${cartCount} items in cart`)}
               aria-label="Cart"
             >
-              <ShoppingCart size={20} />
+              <ShoppingCart size={19} />
               {cartCount > 0 && <span className="demo-cart-badge">{cartCount}</span>}
             </button>
           </div>
@@ -160,25 +233,31 @@ export default function ProductDetailPage() {
 
       <main className="demo-pdp-container">
         <div className="demo-pdp-layout">
-          
           {/* ── Left: Image Gallery ── */}
           <div className="demo-pdp-gallery">
             <div className="demo-pdp-main-image-wrap">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={activeImage} alt={product.name} className="demo-pdp-main-image" />
+              {product.badge && <span className="demo-product-badge">{product.badge}</span>}
             </div>
-            <div className="demo-pdp-thumbnails">
-              {product.galleryImages.map((img, idx) => (
-                <button
-                  key={idx}
-                  className={`demo-pdp-thumb-btn ${activeImage === img ? "active" : ""}`}
-                  onClick={() => setActiveImage(img)}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img} alt={`Thumbnail ${idx + 1}`} className="demo-pdp-thumb-img" />
-                </button>
-              ))}
-            </div>
+
+            {/* Thumbnails strip */}
+            {product.galleryImages.length > 1 && (
+              <div className="demo-pdp-thumbnails">
+                {product.galleryImages.map((img, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    className={`demo-pdp-thumb-btn ${activeImage === img ? "active" : ""}`}
+                    onClick={() => setActiveImage(img)}
+                    aria-label={`Thumbnail ${idx + 1}`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={img} alt="" className="demo-pdp-thumb-img" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* ── Right: Product Details ── */}
@@ -188,13 +267,20 @@ export default function ProductDetailPage() {
               <h1 className="demo-pdp-title">{product.name}</h1>
               <div className="demo-pdp-price-row">
                 <span className="demo-pdp-price">${product.price}</span>
-                {product.originalPrice && <span className="demo-pdp-original-price">${product.originalPrice}</span>}
+                {product.originalPrice && (
+                  <span className="demo-pdp-original-price">${product.originalPrice}</span>
+                )}
               </div>
             </div>
 
             <div className="demo-product-rating" style={{ marginBottom: 0 }}>
               {[...Array(5)].map((_, i) => (
-                <Star key={i} size={14} fill={i < Math.floor(product.rating) ? "#f59e0b" : "none"} stroke="#f59e0b" />
+                <Star
+                  key={i}
+                  size={14}
+                  fill={i < Math.floor(product.rating) ? "#f59e0b" : "none"}
+                  stroke="#f59e0b"
+                />
               ))}
               <span style={{ fontSize: "0.85rem", color: "#64748b", marginLeft: "8px" }}>
                 {product.rating} ({product.reviews.toLocaleString()} reviews)
@@ -206,8 +292,21 @@ export default function ProductDetailPage() {
             {/* Size Selector */}
             <div className="demo-pdp-section">
               <div className="demo-pdp-section-title">
-                Select Size
-                <button style={{ background: "none", border: "none", color: "#64748b", display: "flex", alignItems: "center", gap: "4px", fontSize: "0.75rem", cursor: "pointer" }}>
+                <span>Select Size</span>
+                <button
+                  type="button"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#64748b",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    fontSize: "0.75rem",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => toast.info("Standard True-to-Size fit")}
+                >
                   <Ruler size={14} /> Size Guide
                 </button>
               </div>
@@ -215,6 +314,7 @@ export default function ProductDetailPage() {
                 {product.sizes.map((s) => (
                   <button
                     key={s}
+                    type="button"
                     className={`demo-pdp-size-btn ${selectedSize === s ? "selected" : ""}`}
                     onClick={() => setSelectedSize(s)}
                   >
@@ -226,21 +326,39 @@ export default function ProductDetailPage() {
 
             {/* Actions */}
             <div className="demo-pdp-actions">
-              <button className="demo-pdp-add-btn" onClick={addToCart}>
-                Add to Cart
-              </button>
-              <button className="demo-pdp-tryon-btn" onClick={() => {
-                openTryOn();
-              }}>
+              <button
+                type="button"
+                className="demo-pdp-tryon-btn"
+                onClick={openTryOn}
+              >
                 <Sparkles size={18} />
-                Virtual Try-On
+                <span>Virtual Try-On (Try It On)</span>
               </button>
-              <div style={{ display: "flex", gap: "12px", marginTop: "12px" }}>
-                <button style={{ flex: 1, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "10px", padding: "12px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#374151", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>
-                  <Heart size={16} /> Wishlist
+
+              <button type="button" className="demo-pdp-add-btn" onClick={addToCart}>
+                <ShoppingCart size={18} />
+                <span>Add to Cart</span>
+              </button>
+
+              <div className="demo-pdp-secondary-actions">
+                <button
+                  type="button"
+                  className={`demo-pdp-sub-btn ${isLiked ? "liked" : ""}`}
+                  onClick={() => {
+                    setIsLiked((l) => !l);
+                    toast.success(isLiked ? "Removed from Wishlist" : "Saved to Wishlist!");
+                  }}
+                >
+                  <Heart size={16} fill={isLiked ? "#ef4444" : "none"} color={isLiked ? "#ef4444" : "currentColor"} />
+                  <span>Wishlist</span>
                 </button>
-                <button style={{ flex: 1, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "10px", padding: "12px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "#374151", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>
-                  <Share2 size={16} /> Share
+                <button
+                  type="button"
+                  className="demo-pdp-sub-btn"
+                  onClick={handleShare}
+                >
+                  <Share2 size={16} />
+                  <span>Share</span>
                 </button>
               </div>
             </div>
@@ -249,13 +367,39 @@ export default function ProductDetailPage() {
             <div className="demo-pdp-specs">
               <p><span>Material:</span> {product.material}</p>
               <p><span>Fit:</span> {product.fit}</p>
-              <p><span>Shipping:</span> Free 2-day delivery</p>
+              <p><span>Delivery:</span> Free express delivery & 30-day returns</p>
             </div>
           </div>
         </div>
       </main>
 
-      {/* ── Virtual Try-On Modal (Simulation) ── */}
+      {/* ── Mobile Sticky Bottom Action Bar ── */}
+      <div className="demo-pdp-sticky-bar">
+        <div className="demo-pdp-sticky-bar-inner">
+          <div className="demo-pdp-sticky-price">
+            <strong>${product.price}</strong>
+            <span>{selectedSize ? `Size: ${selectedSize}` : "Choose size"}</span>
+          </div>
+          <button
+            type="button"
+            className="demo-pdp-sticky-tryon-btn"
+            onClick={openTryOn}
+          >
+            <Sparkles size={16} />
+            <span>Try On</span>
+          </button>
+          <button
+            type="button"
+            className="demo-pdp-sticky-add-btn"
+            onClick={addToCart}
+          >
+            <ShoppingCart size={16} />
+            <span>Add</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ── Virtual Try-On Modal (Mobile Bottom-Sheet / Desktop Modal) ── */}
       <AnimatePresence>
         {isTryOnOpen && (
           <motion.div
@@ -264,39 +408,42 @@ export default function ProductDetailPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={(e) => { if (e.target === e.currentTarget) closeTryOn(); }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) closeTryOn();
+            }}
           >
             <motion.div
               className="tryon-modal"
               data-lenis-prevent="true"
-              initial={{ scale: 0.93, opacity: 0, y: 30 }}
+              initial={{ scale: 0.94, opacity: 0, y: 40 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.93, opacity: 0, y: 20 }}
-              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              exit={{ scale: 0.94, opacity: 0, y: 40 }}
+              transition={{ type: "spring", damping: 28, stiffness: 320 }}
             >
-              <button className="tryon-close" onClick={closeTryOn} aria-label="Close">
+              {/* Mobile drag handle */}
+              <div className="tryon-sheet-handle" />
+
+              <button
+                type="button"
+                className="tryon-close"
+                onClick={closeTryOn}
+                aria-label="Close"
+              >
                 <X size={18} />
               </button>
 
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                <div className="tryon-powered" style={{ marginBottom: "16px" }}>
+              <div className="tryon-modal-header-area">
+                <div className="tryon-powered">
                   <Sparkles size={12} />
-                  <span>Powered by FabricVTON AI</span>
+                  <span>Powered by Clothsy AI</span>
                 </div>
-                <h2 className="tryon-title" style={{ textAlign: "center", marginBottom: "8px" }}>
-                  Virtual Try-On
-                </h2>
-                <p className="tryon-subtitle" style={{ textAlign: "center", marginBottom: "28px" }}>
-                  Choose a garment below to generate the try-on preview.
+                <h2 className="tryon-title">Virtual Try-On Fitting Room</h2>
+                <p className="tryon-subtitle">
+                  Tap any garment in the strip below to see how it fits on the model.
                 </p>
               </div>
 
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="tryon-step-container"
-                style={{ display: "flex", flexDirection: "column", gap: "16px" }}
-              >
+              <div className="tryon-step-container">
                 <div className="tryon-demo-stage">
                   <div className="tryon-demo-image-wrap">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -306,11 +453,11 @@ export default function ProductDetailPage() {
                       className={`tryon-demo-image ${isGenerating ? "is-generating" : ""}`}
                     />
 
-                    {generatedGarmentId ? (
+                    {generatedGarmentId && !isGenerating && (
                       <div className="tryon-result-badge">
-                        <Sparkles size={10} /> AI Generated
+                        <Sparkles size={11} /> AI Try-On Rendered
                       </div>
-                    ) : null}
+                    )}
 
                     <AnimatePresence>
                       {isGenerating && (
@@ -320,68 +467,65 @@ export default function ProductDetailPage() {
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
                         >
-                          <LoaderCircle size={28} className="tryon-demo-loader-icon" />
+                          <LoaderCircle size={32} className="tryon-demo-loader-icon" />
                           <p>Generating virtual try-on...</p>
-                          <span>This takes about 3 seconds</span>
+                          <span>{generationSteps[generationStep]}</span>
                         </motion.div>
                       )}
                     </AnimatePresence>
                   </div>
 
-                  <div className="tryon-garment-strip">
-                    {garments.map((garment) => {
-                      const isSelected = selectedGarmentId === garment.id;
-                      const isGenerated = generatedGarmentId === garment.id;
+                  {/* Horizontal Scrollable Garment Selector Strip */}
+                  <div className="tryon-garment-scroll-container">
+                    <div className="tryon-garment-strip">
+                      {garments.map((garment) => {
+                        const isSelected = selectedGarmentId === garment.id;
+                        const isGenerated = generatedGarmentId === garment.id;
 
-                      return (
-                        <button
-                          key={garment.id}
-                          type="button"
-                          className={`tryon-garment-thumb ${isSelected ? "selected" : ""} ${isGenerated ? "generated" : ""}`}
-                          onClick={() => handleGarmentSelect(garment.id)}
-                          disabled={isGenerating}
-                          aria-label={`Try on ${garment.label}`}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={garment.garmentImage}
-                            alt={garment.label}
-                            className="tryon-garment-thumb-img"
-                          />
-                        </button>
-                      );
-                    })}
+                        return (
+                          <button
+                            key={garment.id}
+                            type="button"
+                            className={`tryon-garment-thumb ${isSelected ? "selected" : ""} ${
+                              isGenerated ? "generated" : ""
+                            }`}
+                            onClick={() => handleGarmentSelect(garment.id)}
+                            disabled={isGenerating}
+                            aria-label={`Try on ${garment.label}`}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={garment.garmentImage}
+                              alt={garment.label}
+                              className="tryon-garment-thumb-img"
+                            />
+                            {isGenerated && (
+                              <div className="tryon-garment-check">
+                                <Check size={10} />
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 
-                <div style={{ display: "flex", gap: "12px" }}>
+                <div className="tryon-modal-footer-actions">
                   <button
+                    type="button"
+                    className="tryon-modal-add-btn"
                     onClick={() => {
                       closeTryOn();
                       addToCart();
                     }}
-                    style={{
-                      width: "100%",
-                      padding: "14px",
-                      background: "#0d9488",
-                      color: "white",
-                      borderRadius: "12px",
-                      fontWeight: 600,
-                      border: "none",
-                      cursor: "pointer",
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
                     disabled={isGenerating}
                   >
                     <ShoppingCart size={18} />
-                    Add to Cart
+                    <span>Add this Look to Cart</span>
                   </button>
                 </div>
-              </motion.div>
-
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -392,7 +536,9 @@ export default function ProductDetailPage() {
           <p className="demo-footer-brand">Thread & Co.</p>
           <p className="demo-footer-powered">
             Virtual Try-On powered by{" "}
-            <Link href="/" className="demo-footer-link">FabricVTON</Link>
+            <Link href="/" className="demo-footer-link">
+              Clothsy AI / FabricVTON
+            </Link>
           </p>
         </div>
       </footer>

@@ -137,7 +137,7 @@
       '    <p>Tap to upload, or drag a photo here</p>',
       '    <p>JPG or PNG &bull; Max 10MB</p>',
       '  </div>',
-      '  <input type="file" accept="image/jpeg,image/png" hidden data-role="file" />',
+      '  <input type="file" accept="image/jpeg,image/png,image/webp,image/*" hidden data-role="file" />',
       '  <img class="fabricvton-preview" alt="" data-role="preview" />',
       '  <button type="button" class="fabricvton-primary fabricvton-generate" data-action="generate">Generate Try-On</button>',
       '</div>',

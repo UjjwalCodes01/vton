@@ -27,7 +27,8 @@ const PAIRS = [
   },
 ];
 
-const RADIUS = 140;
+const RADIUS_DESKTOP = 140;
+const RADIUS_MOBILE = 100;
 
 export function XRayCompare() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -35,6 +36,8 @@ export function XRayCompare() {
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [isActive, setIsActive] = useState(false);
   const [clipR, setClipR] = useState(0);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const touchTimeoutRef = useRef<number | null>(null);
 
   /* spring for the radius only */
   const rawR = useMotionValue(0);
@@ -42,13 +45,26 @@ export function XRayCompare() {
 
   useEffect(() => {
     const unsub = springR.on("change", (v) => setClipR(v));
+    setIsTouchDevice("ontouchstart" in window || navigator.maxTouchPoints > 0);
     return unsub;
   }, [springR]);
 
-  const open = () => {
-    setIsActive(true);
-    rawR.set(RADIUS);
+  const getRadius = () => {
+    if (typeof window !== "undefined" && window.innerWidth < 640) {
+      return RADIUS_MOBILE;
+    }
+    return RADIUS_DESKTOP;
   };
+
+  const open = () => {
+    if (touchTimeoutRef.current) {
+      window.clearTimeout(touchTimeoutRef.current);
+      touchTimeoutRef.current = null;
+    }
+    setIsActive(true);
+    rawR.set(getRadius());
+  };
+
   const close = () => {
     rawR.set(0);
     setTimeout(() => setIsActive(false), 350);
@@ -63,15 +79,31 @@ export function XRayCompare() {
   const trackTouch = (e: React.TouchEvent<HTMLDivElement>) => {
     if (!containerRef.current) return;
     const t = e.touches[0];
+    if (!t) return;
     const r = containerRef.current.getBoundingClientRect();
     setPos({ x: t.clientX - r.left, y: t.clientY - r.top });
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    open();
+    trackTouch(e);
+  };
+
+  const handleTouchEnd = () => {
+    // On mobile, keep spotlight visible for 1.8s after touch release so user can view result
+    if (touchTimeoutRef.current) {
+      window.clearTimeout(touchTimeoutRef.current);
+    }
+    touchTimeoutRef.current = window.setTimeout(() => {
+      close();
+    }, 1800);
   };
 
   /* Switch pair without losing hover state */
   const switchPair = (idx: number) => {
     setActivePair(idx);
     rawR.set(0);
-    setTimeout(() => rawR.set(isActive ? RADIUS : 0), 60);
+    setTimeout(() => rawR.set(isActive ? getRadius() : 0), 60);
   };
 
   const pair = PAIRS[activePair];
@@ -85,9 +117,9 @@ export function XRayCompare() {
         onMouseEnter={open}
         onMouseLeave={close}
         onMouseMove={trackMouse}
-        onTouchStart={(e) => { open(); trackTouch(e); }}
+        onTouchStart={handleTouchStart}
         onTouchMove={trackTouch}
-        onTouchEnd={close}
+        onTouchEnd={handleTouchEnd}
       >
         {/* Bottom layer — Before */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -139,7 +171,7 @@ export function XRayCompare() {
         >
           <div className="xray-hint-inner">
             <span className="xray-hint-cursor">⬡</span>
-            <span>Move cursor to reveal AI try-on</span>
+            <span>{isTouchDevice ? "Tap & drag to reveal AI try-on" : "Move cursor to reveal AI try-on"}</span>
           </div>
         </motion.div>
 

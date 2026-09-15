@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -14,37 +14,60 @@ const geistMono = Geist_Mono({
 });
 
 import Footer from "./components/Footer";
+import SmoothScroll from "./components/SmoothScroll";
+import PwaManager from "./components/pwa/PwaManager";
+import MobileBottomNav from "./components/pwa/MobileBottomNav";
+import { Toaster } from "sonner";
 import { SHOPIFY_APP_STORE_URL, SITE_NAME, SITE_URL } from "./lib/site";
 
-const TITLE = "FabricVTON - AI-Powered Virtual Try-On for Shopify";
+const TITLE = "Clothsy AI (FabricVTON) - AI-Powered Virtual Try-On";
 const DESCRIPTION =
-  "AI-powered virtual try-on for Shopify fashion stores. Boost conversions, cut returns.";
+  "AI-powered virtual try-on for fashion stores and shoppers. Boost conversions, cut returns, and experience realistic digital fitting.";
+
+export const viewport: Viewport = {
+  themeColor: "#0d9488",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: { default: TITLE, template: `%s | ${SITE_NAME}` },
   description: DESCRIPTION,
-  applicationName: SITE_NAME,
+  applicationName: "Clothsy AI",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Clothsy AI",
+  },
+  icons: {
+    icon: [
+      { url: "/icons/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
   alternates: { canonical: "/" },
   openGraph: { type: "website", url: "/", siteName: SITE_NAME, title: TITLE, description: DESCRIPTION },
   twitter: { card: "summary", title: TITLE, description: DESCRIPTION },
 };
 
-// Structured data naming the product, so search engines can match it by name.
 const JSON_LD = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: SITE_NAME,
+  name: "Clothsy AI",
   url: SITE_URL,
   description: DESCRIPTION,
   applicationCategory: "BusinessApplication",
-  operatingSystem: "Shopify",
+  operatingSystem: "Shopify, iOS, Android, Web",
   installUrl: SHOPIFY_APP_STORE_URL,
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
 };
-
-import SmoothScroll from "./components/SmoothScroll";
-import { Toaster } from "sonner";
 
 export default function RootLayout({
   children,
@@ -55,16 +78,23 @@ export default function RootLayout({
 
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <head>
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-touch-fullscreen" content="yes" />
+      </head>
       <body className="antialiased">
         <script
           type="application/ld+json"
-          // Static, build-time JSON with no user input.
           dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
         />
         <SmoothScroll>
-          {children}
-          <Footer />
+          <div className="app-content-wrapper">
+            {children}
+            <Footer />
+          </div>
         </SmoothScroll>
+        <MobileBottomNav />
+        <PwaManager />
         <Toaster position="bottom-right" richColors />
       </body>
       {gaId ? <GoogleAnalytics gaId={gaId} /> : null}
