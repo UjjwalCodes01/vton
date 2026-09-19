@@ -32,15 +32,15 @@ export default function Home() {
 
         <div className="hero shell">
           <div className="hero-copy">
-            <p className="eyebrow">YOUR PRODUCTS. REAL PEOPLE.</p>
-            <h1>Try it on<br />before you <em>buy.</em></h1>
-            <p className="hero-description">A virtual try-on for modern<br className="desktop-only" /> fashion brands.</p>
-            <div className="hero-ctas"><a className="button" href="#install">Install free <Arrow /></a><a className="demo-button" href="#how-it-works"><span className="play-icon">&#9654;</span> Watch demo</a></div>
-            <div className="built-for"><span>Built for</span><span className="platform"><ShopifyMark /> Shopify</span><span className="platform"><WooMark /> WooCommerce</span></div>
+            <p className="eyebrow">YOUR WARDROBE<br />JUST SMARTER</p>
+            <h1>TRY ON<br />ANY OUTFIT<br /><em>WITH AI.</em></h1>
+            <p className="hero-description">Upload your photo, try any outfit, and see<br className="desktop-only" /> yourself instantly. No guesswork. No fitting<br className="desktop-only" /> rooms. Just you, in every look.</p>
+            <div className="hero-ctas"><a className="button" href="#install">Try free <Arrow /></a><a className="demo-button" href="#how-it-works"><span className="play-icon">&#9654;</span> Watch demo</a></div>
+            <div className="hero-stats"><div><b>10M+</b><span>OUTFITS TRIED</span></div><div><b>500K+</b><span>HAPPY USERS</span></div><div><b>200+</b><span>BRANDS ONBOARD</span></div></div>
           </div>
           <div className="hero-art" aria-label="A Clothsy AI virtual fitting room preview">
-            <p className="hero-art-label">SAME OUTFIT.<br />A CLEARER YOU.</p>
-            <Image src="/topportion.png" alt="Lilac dress with Clothsy AI virtual try-on preview" width={1401} height={1123} priority />
+            <p className="hero-art-label"><strong>AI VIRTUAL<br />TRY ON.</strong><span>REAL FITS.<br />REAL YOU.</span></p>
+            <Image src="/newtopportion.png" alt="Clothsy AI selfie-to-outfit virtual try-on preview" width={1465} height={1074} priority />
           </div>
         </div>
       </section>
@@ -52,8 +52,14 @@ export default function Home() {
       </div></section>
 
       <section className="product-section" id="product">
-        <div className="product-photo"><Image src="/clothsy.png" alt="Clothsy AI technology that understands fabric" width={1338} height={1175} /></div>
-        <div className="product-copy"><p className="eyebrow">THE PRODUCT</p><h2>A virtual<br />fitting room,<br /><em>right on your<br />product page.</em></h2><p>Clothsy AI maps your products onto real people with realistic fabric drape and lighting — no app downloads, no photoshoots, no dev work.</p><a className="button button-small" href="#how-it-works">See how it works <Arrow /></a></div>
+        <div className="product-copy">
+          <p className="eyebrow">/ ABOUT CLOTHSY</p>
+          <h2>SHOP FASHION<br />WITH CONFIDENCE.</h2>
+          <p>Clothsy AI helps you visualize how clothes look on you before you buy. Powered by advanced AI, integrated directly into your Shopify store, and designed to increase conversions while reducing returns.</p>
+          <a className="button button-small" href="#install">Get started <Arrow /></a>
+          <div className="product-stats"><div><b>50K+</b><span>TRY-ONS</span></div><div><b>500+</b><span>STORES</span></div><div><b>99%</b><span>ACCURACY</span></div></div>
+        </div>
+        <div className="product-visual"><Image src="/mantryon-cutout.png" alt="Clothsy AI before-and-after fashion try-on preview" width={1536} height={1024} /></div>
       </section>
 
       <section className="how-section shell" id="how-it-works">
