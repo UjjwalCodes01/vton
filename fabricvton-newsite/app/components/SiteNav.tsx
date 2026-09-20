@@ -31,9 +31,7 @@ export default function SiteNav() {
         <div className="nav-inner">
           <Link className="brand" href="/" aria-label="Clothsy AI home">
             <Image className="brand-mark" src="/clothsy-mark.png" alt="" width={72} height={72} priority />
-            <span className="brand-word">
-              Clothsy<sup>AI</sup>
-            </span>
+            <Image className="brand-word" src="/clothsy-wordmark.png" alt="" width={600} height={149} priority />
           </Link>
 
           <nav className="nav-links" aria-label="Main">

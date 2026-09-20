@@ -39,9 +39,7 @@ export default function SiteFooter() {
           <div className="footer-intro">
             <Link className="brand" href="/" aria-label="Clothsy AI home">
               <Image className="brand-mark" src="/clothsy-mark.png" alt="" width={72} height={72} />
-              <span className="brand-word">
-                Clothsy<sup>AI</sup>
-              </span>
+              <Image className="brand-word" src="/clothsy-wordmark.png" alt="" width={600} height={149} />
             </Link>
             <p>
               A realistic virtual fitting room for fashion brands — so shoppers buy with confidence and

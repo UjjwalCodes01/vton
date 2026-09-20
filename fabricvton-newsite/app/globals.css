@@ -333,21 +333,9 @@ main [id] {
 }
 
 .brand-word {
-  font-size: 23px;
-  font-weight: 700;
-  letter-spacing: -0.045em;
-  color: var(--ink);
-  line-height: 1;
-}
-
-.brand-word sup {
-  font-size: 0.42em;
-  font-weight: 700;
-  color: var(--violet);
-  letter-spacing: 0;
-  margin-left: 2px;
-  top: -0.85em;
-  position: relative;
+  display: block;
+  width: auto;
+  height: 25px;
 }
 
 .nav-links {
@@ -593,10 +581,12 @@ main [id] {
 }
 
 .hero-art img {
-  width: 124%;
-  max-width: none;
-  height: auto;
-  margin: 0 -7% -96px auto;
+  width: auto;
+  height: min(78svh, 1050px);
+  max-width: calc(100% + var(--gutter) + 6vw);
+  margin: 0 calc(var(--gutter) * -1) -96px auto;
+  object-fit: contain;
+  object-position: bottom right;
   filter: drop-shadow(-24px 26px 44px rgba(46, 26, 107, 0.26));
 }
 
@@ -1066,13 +1056,12 @@ main [id] {
 }
 
 .price-visual img {
-  width: 124%;
-  max-width: none;
-  height: auto;
-  max-height: 92%;
+  width: auto;
+  height: min(88svh, 1020px);
+  max-width: 62vw;
   object-fit: contain;
   object-position: bottom right;
-  margin-right: max(0px, calc(var(--gutter) - 40px));
+  margin-right: clamp(0px, 2.5vw, 70px);
 }
 
 .price-assurances-section {
@@ -1990,6 +1979,8 @@ main [id] {
 
   .hero-art img {
     width: 100%;
+    height: auto;
+    max-width: 100%;
     margin-right: 0;
   }
 
@@ -2008,7 +1999,8 @@ main [id] {
 
   .price-visual img {
     width: 92%;
-    max-height: none;
+    height: auto;
+    max-width: 92%;
     margin-right: 0;
     object-position: bottom center;
   }
@@ -2047,6 +2039,37 @@ main [id] {
 
   .footer-top {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-mark {
+    width: 30px;
+    height: 30px;
+  }
+
+  .brand-word {
+    height: 21px;
+  }
+
+  .nav-actions {
+    gap: 10px;
+  }
+
+  .nav-actions .btn {
+    min-height: 40px;
+    padding: 0 14px;
+    font-size: 13px;
+    gap: 7px;
+  }
+
+  .nav-actions .btn .btn-arrow {
+    display: none;
+  }
+
+  .nav-burger {
+    width: 40px;
+    height: 40px;
   }
 }
 
