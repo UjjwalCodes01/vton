@@ -19,6 +19,10 @@
 
   var MAX_POLL_ATTEMPTS = 60; // 60 x 3s = 3 minutes
   var POLL_INTERVAL_MS = 3000;
+  // Wording of the consent shown to the shopper. Bump this whenever the text
+  // changes, so a stored consent record always points at what was agreed to.
+  var CONSENT_VERSION = "2026-09-20.v1";
+  var PRIVACY_URL = "https://www.fabricvton.com/widget-privacy";
   var MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
   var MAX_IMAGE_EDGE = 1024;
 
@@ -203,7 +207,14 @@
       "  </div>",
       '  <input type="file" accept="image/jpeg,image/png" hidden data-role="file" />',
       '  <img class="clothsy-ai-preview" alt="" data-role="preview" />',
-      '  <button type="button" class="clothsy-ai-primary clothsy-ai-generate" data-action="generate">Generate Try-On</button>',
+      '  <div class="clothsy-ai-consent" data-role="consent-box">',
+      '    <label class="clothsy-ai-consent-row">',
+      '      <input type="checkbox" data-role="consent" />',
+      '      <span data-role="consent-text"></span>',
+      "    </label>",
+      '    <p class="clothsy-ai-consent-note">Your photo is used only to create this try-on and is not stored. You can withdraw consent or ask for your data to be deleted at any time &mdash; see the <a href="' + PRIVACY_URL + '" target="_blank" rel="noopener">privacy notice</a>.</p>',
+      "  </div>",
+      '  <button type="button" class="clothsy-ai-primary clothsy-ai-generate" data-action="generate" disabled>Generate Try-On</button>',
       "</div>",
 
       '<div class="clothsy-ai-step clothsy-ai-loading" data-step="loading">',
@@ -240,6 +251,9 @@
       file: dialog.querySelector('[data-role="file"]'),
       preview: dialog.querySelector('[data-role="preview"]'),
       generate: dialog.querySelector('[data-action="generate"]'),
+      consent: dialog.querySelector('[data-role="consent"]'),
+      consentBox: dialog.querySelector('[data-role="consent-box"]'),
+      consentText: dialog.querySelector('[data-role="consent-text"]'),
       dropzone: dialog.querySelector('[data-action="pick"]'),
       result: dialog.querySelector('[data-role="result"]'),
       errorMsg: dialog.querySelector('[data-role="error-msg"]')
@@ -248,6 +262,9 @@
     backdrop.addEventListener("click", close);
     dialog.addEventListener("click", onDialogClick);
     els.file.addEventListener("change", onFileSelected);
+    els.consent.addEventListener("change", function () {
+      els.generate.disabled = !els.consent.checked;
+    });
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape" && dialog.style.display === "block") close();
     });
@@ -285,9 +302,15 @@
     capturedEmail = "";
 
     els.uploadLead.textContent = "Upload a photo to see how " + config.productTitle + " looks on you.";
+    els.consentText.textContent = config.requireEmail
+      ? "I am 18 or older (or have my guardian\u2019s consent), and I agree that my photo and the email address I entered may be processed to create this try-on."
+      : "I am 18 or older (or have my guardian\u2019s consent), and I agree that my photo may be processed to create this try-on.";
+    els.consent.checked = false;
+    els.generate.disabled = true;
     els.file.value = "";
     els.preview.style.display = "none";
     els.generate.style.display = "none";
+    els.consentBox.style.display = "none";
     els.dropzone.style.display = "block";
     els.emailError.style.display = "none";
 
@@ -323,6 +346,9 @@
     els.file.value = "";
     els.preview.style.display = "none";
     els.generate.style.display = "none";
+    els.consentBox.style.display = "none";
+    els.consent.checked = false;
+    els.generate.disabled = true;
     els.dropzone.style.display = "block";
     showStep(ctx && ctx.requireEmail ? "email" : "upload");
   }
@@ -350,7 +376,9 @@
     reader.onload = function (event) {
       els.preview.src = event.target.result;
       els.preview.style.display = "block";
+      els.consentBox.style.display = "block";
       els.generate.style.display = "block";
+      els.generate.disabled = !els.consent.checked;
       els.dropzone.style.display = "none";
     };
     reader.readAsDataURL(file);
@@ -403,7 +431,9 @@
           sessionId: sessionId,
           personImageDataUrl: compressed,
           personImageMimeType: "image/jpeg",
-          email: capturedEmail || ""
+          email: capturedEmail || "",
+          consentVersion: CONSENT_VERSION,
+          consentAt: new Date().toISOString()
         })
       }).then(function (res) {
         return parseJsonSafely(res).then(function (data) {
@@ -426,6 +456,9 @@
 
   function generate() {
     if (!selectedFile) return;
+    // Belt and braces: the button is disabled without consent, but never send
+    // a photo unless the box is actually ticked.
+    if (!els.consent || !els.consent.checked) return;
     showStep("loading");
     var reader = new FileReader();
     reader.onerror = function () {
