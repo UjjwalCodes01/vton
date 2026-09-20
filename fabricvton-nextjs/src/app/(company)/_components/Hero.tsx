@@ -20,7 +20,7 @@ function MarkLayer({ tone, kx, ky }: { tone: Tone; kx: number; ky: number }) {
           alt=""
           width={738}
           height={875}
-          sizes="(max-width: 899px) 78vw, 580px"
+          sizes="(max-width: 899px) 78vw, 560px"
           loading="eager"
           fetchPriority="high"
           unoptimized
@@ -37,13 +37,15 @@ export default function Hero() {
     <section className="fv-hero" id="top" data-progress="hero" aria-labelledby="hero-title">
       <div className="fv-wrap fv-hero-grid">
         <div className="fv-hero-copy">
-          <p className="fv-eyebrow">AI RESEARCH + TECHNOLOGY</p>
+          <p className="fv-eyebrow">
+            AI RESEARCH <span className="fv-x">×</span> REAL-WORLD IMPACT
+          </p>
           <h1 className="fv-h1" id="hero-title">
-            Building intelligence for the visual world.
+            Building intelligence for the <span className="fv-h1-soft">visual world.</span>
           </h1>
           <p className="fv-lead">
-            FabricVTON researches and develops AI systems that understand, generate and transform visual
-            information — from people and products to materials and environments.
+            FabricVTON researches and develops AI systems that understand, generate and transform visual reality —
+            from people and products to materials and environments.
           </p>
           <div className="fv-actions">
             <a className="fv-btn fv-btn--dark" href="#research" data-magnet>
@@ -53,30 +55,35 @@ export default function Hero() {
               Meet Clothsy AI <Arrow dir="up" />
             </a>
           </div>
-          <p className="fv-hero-meta" aria-hidden="true">
-            <span>Research</span>
-            <span>×</span>
-            <span>Products</span>
-            <span>×</span>
-            <span>Real-world impact</span>
-          </p>
         </div>
 
         <div className="fv-hero-visual" data-parallax>
+          <span className="fv-ring" aria-hidden="true" />
           <div className="fv-mark">
             <MarkLayer tone="cream" kx={-7} ky={-5} />
             <MarkLayer tone="graphite" kx={9} ky={6} />
           </div>
           <p className="fv-hero-caption fv-hero-caption--a" aria-hidden="true">
-            Understanding materials.
+            Materials,
             <br />
-            Generating possibilities.
+            People,
+            <br />
+            Generative AI,
+            <br />
+            Real possibilities.
           </p>
           <p className="fv-hero-caption fv-hero-caption--b" aria-hidden="true">
-            From research to a more visual world.
+            From research
+            <br />
+            to a more visual world.
           </p>
         </div>
       </div>
+
+      <a className="fv-scrollcue" href="#research" aria-label="Scroll to research">
+        <span>Scroll</span>
+        <i aria-hidden="true" />
+      </a>
     </section>
   );
 }

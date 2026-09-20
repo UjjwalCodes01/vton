@@ -47,7 +47,7 @@ export default function Journal() {
           </div>
           <div data-reveal style={delay(80)}>
             <p className="fv-lead">
-              A behind-the-scenes look at our research, engineering and the problems we’re trying to understand.
+              A behind-the-scenes look at our research, engineering and journey building visual AI.
             </p>
             {anyPublished ? (
               <a className="fv-link" href="/journal" data-magnet>

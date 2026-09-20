@@ -29,41 +29,44 @@ export const RESEARCH_FIELDS: ResearchField[] = [
     no: "01",
     title: "Visual Understanding",
     description: "Models that understand people, objects, garments and environments.",
-    image: { src: "/brand/fabric-cream-1.webp", width: 360, height: 222 },
+    image: { src: "/brand/ui/research-1.webp", width: 324, height: 248 },
     href: "#approach",
   },
   {
     no: "02",
     title: "Generative Vision",
-    description: "Systems that transform visual inputs while preserving structure, identity and detail.",
-    image: { src: "/brand/fabric-cream-2.webp", width: 216, height: 132 },
+    description: "Systems that can transform visual inputs while preserving structure and identity.",
+    image: { src: "/brand/ui/research-2.webp", width: 324, height: 248 },
     href: "#approach",
   },
   {
     no: "03",
     title: "Material Intelligence",
-    description: "Understanding appearance, texture, geometry and the visual characteristics of physical materials.",
-    image: { src: "/brand/fabric-graphite-1.webp", width: 240, height: 147 },
+    description: "Understanding appearance, texture, geometry and physical characteristics.",
+    image: { src: "/brand/ui/research-3.webp", width: 324, height: 248 },
     href: "#approach",
   },
   {
     no: "04",
     title: "Human–Object Interaction",
-    description: "Modeling how objects change when interacting with people and environments.",
-    image: { src: "/brand/fabric-relation.webp", width: 320, height: 200 },
+    description: "Modeling how objects change when interacting with people and in the real world.",
+    image: { src: "/brand/ui/research-4.webp", width: 324, height: 248 },
     href: "#approach",
   },
 ];
 
 /* ---- Approach pipeline -------------------------------------------------- */
 
-/** `from` is the scroll progress (0..1) at which the stage starts to appear; the dot reaches it ~0.1 later. */
+/**
+ * Five stages shown as garments. `from` is the scroll progress (0..1) at which a stage starts to
+ * appear. The garment renders are illustrations of the idea, not outputs of a running model.
+ */
 export const PIPELINE = [
-  { label: "Input", name: "Image", from: -0.3 },
-  { label: "Geometry", name: "Structure", from: 0.145 },
-  { label: "Material", name: "Texture & Fabric", from: 0.35 },
-  { label: "Model", name: "Generative AI", from: 0.555 },
-  { label: "Output", name: "Realistic Result", from: 0.76 },
+  { label: "Input", name: "Image", from: -0.3, image: { src: "/brand/ui/garment-1.webp", width: 230, height: 220 } },
+  { label: "Geometry", name: "Structure", from: 0.1, image: { src: "/brand/ui/garment-2.webp", width: 230, height: 220 } },
+  { label: "Material", name: "Texture & Fabric", from: 0.24, image: { src: "/brand/ui/garment-3.webp", width: 230, height: 220 } },
+  { label: "Model", name: "Generative AI", from: 0.38, image: { src: "/brand/ui/garment-4.webp", width: 230, height: 220 } },
+  { label: "Output", name: "Realistic Result", from: 0.52, image: { src: "/brand/ui/garment-5.webp", width: 230, height: 220 } },
 ] as const;
 
 /* ---- Clothsy try-on composite ------------------------------------------ */
@@ -92,23 +95,23 @@ export const JOURNAL_POSTS: JournalPost[] = [
   {
     slug: "why-fabric-is-harder-than-pixels",
     title: "Why fabric is harder than pixels",
-    excerpt: "Exploring the challenges of modeling texture, drape and material properties in generative AI.",
+    excerpt: "Exploring the unique challenges of modeling texture, drape and material properties in generative AI.",
     status: "draft",
-    image: { src: "/brand/fabric-graphite-1.webp", width: 240, height: 147 },
+    image: { src: "/brand/ui/journal-1.webp", width: 122, height: 176 },
   },
   {
-    slug: "evaluating-texture-fidelity-in-virtual-try-on",
-    title: "Evaluating texture fidelity in virtual try-on",
-    excerpt: "Thinking about how visual AI preserves print, weave and material identity.",
+    slug: "evaluating-texture-fidelity-in-vto",
+    title: "Evaluating texture fidelity in VTO",
+    excerpt: "A framework for measuring how well AI preserves print, weave and material identity.",
     status: "draft",
-    image: { src: "/brand/fabric-cream-1.webp", width: 360, height: 222 },
+    image: { src: "/brand/ui/journal-2.webp", width: 122, height: 176 },
   },
   {
     slug: "pose-consistency-in-garment-generation",
     title: "Pose consistency in garment generation",
-    excerpt: "Why realistic generation is not enough — and how systems maintain identity across different views.",
+    excerpt: "Why one good frame isn’t enough, and how we maintain identity across views and poses.",
     status: "draft",
-    image: { src: "/brand/fabric-relation.webp", width: 320, height: 200 },
+    image: { src: "/brand/ui/journal-3.webp", width: 122, height: 176 },
   },
 ];
 

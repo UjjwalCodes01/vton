@@ -2,7 +2,7 @@
  * FabricVTON company site: motion engine.
  *
  * Plain DOM, no dependencies. It does four small jobs and nothing else:
- *   1. reveals      [data-reveal]      add `.is-in` once, via one IntersectionObserver
+ *   1. reveals      [data-reveal]      add `.is-in` once, swept from the same scroll pass
  *   2. scroll state [data-progress]    write `--p` (0..1) on a section, from ONE rAF-throttled scroll listener
  *   3. parallax     [data-parallax]    pointer -> `--px`/`--py` (-1..1), fine pointers only, rAF loop that sleeps when settled
  *   4. magnets      [data-magnet]      nudge the arrow inside a control by <= 4px toward the cursor
@@ -30,24 +30,25 @@ export function initMotion(root: ParentNode = document): () => void {
   const disposers: Array<() => void> = [];
 
   /* ---- 1. reveals ------------------------------------------------------ */
+  // Swept from the same rAF scroll pass as everything else rather than an IntersectionObserver. An
+  // observer only reports what it happens to notice; this checks every remaining element on each
+  // frame, so nothing can stay stuck hidden after an anchor jump, a fast scroll, a restored scroll
+  // position or a prerender. The pending list shrinks as elements reveal.
   const revealEls = Array.from(root.querySelectorAll<HTMLElement>("[data-reveal]"));
-  if (reduce.matches || !("IntersectionObserver" in win)) {
-    revealEls.forEach((el) => el.classList.add("is-in"));
-  } else {
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("is-in");
-            io.unobserve(entry.target);
-          }
-        }
-      },
-      { rootMargin: "0px 0px -8% 0px", threshold: 0.12 },
-    );
-    revealEls.forEach((el) => io.observe(el));
-    disposers.push(() => io.disconnect());
-  }
+  let pending: HTMLElement[] = reduce.matches ? [] : revealEls;
+  if (reduce.matches) revealEls.forEach((el) => el.classList.add("is-in"));
+
+  const sweepReveals = () => {
+    if (pending.length === 0) return;
+    // At the very bottom of the page nothing more can scroll into view, so reveal whatever is left.
+    const atEnd = win.scrollY + win.innerHeight >= document.documentElement.scrollHeight - 2;
+    const limit = atEnd ? Infinity : win.innerHeight * 0.92;
+    pending = pending.filter((el) => {
+      if (el.getBoundingClientRect().top >= limit) return true;
+      el.classList.add("is-in");
+      return false;
+    });
+  };
 
   /* ---- 2. scroll state ------------------------------------------------- */
   const nav = root.querySelector<HTMLElement>(".fv-nav");
@@ -78,6 +79,7 @@ export function initMotion(root: ParentNode = document): () => void {
     scheduled = false;
     const vh = win.innerHeight;
     if (nav) nav.setAttribute("data-scrolled", win.scrollY > 24 ? "true" : "false");
+    sweepReveals();
     if (reduce.matches) return;
 
     for (const t of tracks) {

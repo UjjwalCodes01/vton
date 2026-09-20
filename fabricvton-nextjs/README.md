@@ -60,4 +60,6 @@ Nothing on the page may be an invented claim: no metrics, customers, testimonial
 python3 brand/fabricvton/prepare_assets.py
 ```
 
+`brand/fabricvton/make_backdrops.py` generates the soft silk-fold backdrops (`drape-light`, `drape-dark`) used behind the hero, approach banner and closing CTA. They are procedural, purely atmospheric, and meant to be replaced by real photography when it is exported. `public/brand/ui/` holds the fabric, garment and journal photographs cropped at native resolution from the design PDF.
+
 `public/brand/clothsy/` holds optimised copies of the existing Clothsy demo images (`public/demo_tryon/product_1`).

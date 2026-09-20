@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { GoogleAnalytics } from "@next/third-parties/google";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Caveat, Geist, Geist_Mono } from "next/font/google";
 import { CONTACT_EMAIL, SITE_NAME, SITE_TAGLINE, SITE_URL, SOCIALS } from "./_lib/site";
 import "./company.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"], display: "swap" });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"], display: "swap" });
+const hand = Caveat({ variable: "--font-hand", subsets: ["latin"], weight: "500", display: "swap" });
 
 export const viewport: Viewport = {
   themeColor: "#faf9f6",
@@ -48,9 +49,13 @@ export default function CompanyRootLayout({ children }: Readonly<{ children: Rea
   const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${hand.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: MOTION_BOOT }} />
+        {/* Without JS the reveal classes never arrive, so the hidden state must not apply. */}
+        <noscript>
+          <style>{`[data-reveal]{opacity:1!important;transform:none!important}`}</style>
+        </noscript>
       </head>
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ORGANIZATION_JSON_LD) }} />

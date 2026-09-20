@@ -1,3 +1,4 @@
 .reference_repo/
 .codex
 clothsy-ai-woocommerce/dist/
+__pycache__/

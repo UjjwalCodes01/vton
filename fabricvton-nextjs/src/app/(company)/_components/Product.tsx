@@ -18,18 +18,20 @@ export default function Product() {
             OUR PRODUCT
           </p>
           <h2 className="fv-h2" id="product-title" data-reveal style={delay(60)}>
-            Research in the real world.
+            Research
+            <br />
+            in the real world.
           </h2>
           <p className="fv-body" data-reveal style={delay(120)}>
-            Clothsy AI is our AI-powered virtual try-on product for fashion commerce, built using FabricVTON’s work in
-            visual understanding, material modeling and generative vision.
+            Clothsy AI is our first product — an AI-powered virtual try-on platform for fashion commerce, built on top
+            of FabricVTON’s research in visual understanding, material modeling and generative AI.
           </p>
           <div className="fv-actions" data-reveal style={delay(180)}>
             <a className="fv-btn fv-btn--dark" href={CLOTHSY_URL} data-magnet>
               Visit Clothsy AI <Arrow dir="up" />
             </a>
-            <a className="fv-btn fv-btn--ghost" href={CLOTHSY_LEARN_MORE_URL} data-magnet>
-              Learn more <Arrow />
+            <a className="fv-btn fv-btn--soft" href={CLOTHSY_LEARN_MORE_URL} data-magnet>
+              Learn more
             </a>
           </div>
         </div>
@@ -95,6 +97,24 @@ export default function Product() {
               ))}
             </div>
           </div>
+
+          {/* Handwritten margin notes, as in the design. Decorative. */}
+          <p className="fv-hand fv-hand--a" aria-hidden="true">
+            Try on
+            <br />
+            any outfit
+            <br />
+            anywhere.
+          </p>
+          <p className="fv-hand fv-hand--b" aria-hidden="true">
+            Fashion
+            <br />
+            without limits.
+          </p>
+          <svg className="fv-hand-arrow" viewBox="0 0 64 44" aria-hidden="true" focusable="false">
+            <path d="M62 38 C 44 40, 22 34, 6 10" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+            <path d="M5 20 L5 9 L15 12" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </div>
       </div>
     </section>

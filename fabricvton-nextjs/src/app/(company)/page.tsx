@@ -46,10 +46,7 @@ export default function CompanyHome() {
       <main id="main">
         <Hero />
         <Research />
-        {/* Soft handoffs into and out of the graphite section: never a hard edge. */}
-        <div className="fv-blend fv-blend--dark" aria-hidden="true" />
         <Approach />
-        <div className="fv-blend fv-blend--light" aria-hidden="true" />
         <Product />
         <Journal />
         <Company />

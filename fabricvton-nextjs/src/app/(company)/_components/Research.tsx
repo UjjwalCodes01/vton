@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { RESEARCH_FIELDS } from "../_lib/content";
 import { delay } from "../_lib/style";
+import { Arrow } from "./Arrow";
 
 export default function Research() {
   return (
@@ -13,23 +14,28 @@ export default function Research() {
               We work on problems where vision meets reality.
             </h2>
           </div>
-          <p className="fv-lead" data-reveal style={delay(80)}>
-            We build models and systems that help machines see deeper — understanding people, objects, materials and
-            the environments they exist in.
-          </p>
+          <div data-reveal style={delay(80)}>
+            <p className="fv-lead">
+              From fabric and humans to objects and environments, we build models that see deeper, understand better and
+              generate with greater control.
+            </p>
+            <a className="fv-textlink" href="#approach" data-magnet>
+              Explore research <Arrow />
+            </a>
+          </div>
         </div>
 
         <ul className="fv-fields">
           {RESEARCH_FIELDS.map((field, i) => (
             <li key={field.no} data-reveal style={delay(i * 80)}>
-              <a className="fv-field" href={field.href} data-magnet>
+              <a className="fv-field" href={field.href} data-magnet aria-label={`${field.title}: ${field.description}`}>
                 <span className="fv-field-media">
                   <Image
                     src={field.image.src}
                     alt=""
                     width={field.image.width}
                     height={field.image.height}
-                    sizes="(max-width: 599px) 100vw, (max-width: 1099px) 50vw, 300px"
+                    sizes="(max-width: 599px) 100vw, (max-width: 1099px) 50vw, 290px"
                     unoptimized
                   />
                 </span>
@@ -37,9 +43,9 @@ export default function Research() {
                   <span className="fv-field-no">{field.no}</span>
                   <span className="fv-field-title">{field.title}</span>
                   <span className="fv-field-desc">{field.description}</span>
-                </span>
-                <span className="fv-field-arrow" aria-hidden="true">
-                  →
+                  <span className="fv-field-arrow" aria-hidden="true">
+                    →
+                  </span>
                 </span>
               </a>
             </li>
