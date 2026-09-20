@@ -1,21 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
-import {
-  ArrowRight,
-  ArrowUpRight,
-  Bag,
-  Eye,
-  Hanger,
-  Play,
-  Upload,
-  Wand,
-} from "./components/icons";
-
-const stats = [
-  { value: "50K+", label: "Try-Ons" },
-  { value: "500+", label: "Stores" },
-  { value: "99%", label: "Accuracy" },
-];
+import HowFlow from "./components/HowFlow";
+import { ArrowRight, ArrowUpRight, Bag, Eye, Play, Wand } from "./components/icons";
+import StoreDemo from "./components/StoreDemo";
+import { BOOK_DEMO_URL, SHOPIFY_URL, WOO_URL } from "./lib/site";
 
 const points = [
   { icon: <Wand />, label: "AI Powered" },
@@ -23,51 +11,9 @@ const points = [
   { icon: <Bag />, label: "Shop Smarter" },
 ];
 
-const steps = [
-  {
-    num: "01",
-    icon: <Upload />,
-    title: "Upload Your Photo",
-    copy: "Take a selfie or choose an existing image.",
-  },
-  {
-    num: "02",
-    icon: <Hanger />,
-    title: "Choose a Product",
-    copy: "Browse and select from thousands of styles.",
-  },
-  {
-    num: "03",
-    icon: <Wand />,
-    title: "See the Magic",
-    copy: "Get instant, high-fidelity try-on results.",
-  },
-];
-
-const quotes = [
-  {
-    initials: "AM",
-    name: "A. Mehta",
-    role: "D2C Fashion Brand",
-    quote: "Our customers love how easy it is to try on. It’s changed the way we sell online.",
-  },
-  {
-    initials: "RK",
-    name: "R. Kapoor",
-    role: "Jewellery Brand",
-    quote: "Setup was seamless and the support team was amazing. Highly recommend.",
-  },
-  {
-    initials: "SV",
-    name: "S. Verma",
-    role: "Lifestyle Brand",
-    quote: "We saw an immediate lift in engagement and add-to-cart rates.",
-  },
-];
-
 export default function Home() {
   return (
-    <main>
+    <main id="main" tabIndex={-1}>
       {/* ---------------- hero ---------------- */}
       <section className="hero" id="top">
         <div className="hero-bg" />
@@ -85,7 +31,7 @@ export default function Home() {
             </p>
 
             <div className="hero-ctas">
-              <Link className="btn btn-dark" href="#try">
+              <Link className="btn btn-dark" href="#demo">
                 Try Now <ArrowRight className="btn-arrow" />
               </Link>
               <Link className="play-btn" href="#how">
@@ -94,15 +40,6 @@ export default function Home() {
                 </span>
                 Watch Demo
               </Link>
-            </div>
-
-            <div className="stats">
-              {stats.map((stat) => (
-                <div key={stat.label}>
-                  <b>{stat.value}</b>
-                  <span>{stat.label}</span>
-                </div>
-              ))}
             </div>
           </div>
 
@@ -147,13 +84,13 @@ export default function Home() {
               advanced AI, it brings the fitting room to every product page — anytime, anywhere.
             </p>
             <p className="lede">
-              One photo is all it takes. Our models map the garment to a shopper’s own body, keeping
-              the drape of the fabric, the fall of the light and the fit at the shoulders — so what
-              they see on screen is what arrives in the parcel.
+              One photo is all it takes. Clothsy places the garment on the shopper’s own photo, so
+              they can see how a piece could look on them. Results can vary depending on the photo
+              and the garment.
             </p>
             <p className="lede">
-              It works on every product you already sell. No new photoshoots, no 3D scans, no apps to
-              download — just a button on the page your shoppers are already looking at.
+              It works with the product photos you already have. No new photoshoots, no 3D scans, no
+              apps to download — just a button on the page your shoppers are already looking at.
             </p>
             <Link className="btn btn-dark" href="#try">
               Get Started <ArrowRight className="btn-arrow" />
@@ -171,133 +108,27 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ---------------- how it works ---------------- */}
-      <section className="section how" id="how">
+      {/* ---------------- how it works (interactive) ---------------- */}
+      <HowFlow />
+
+      {/* ---------------- for stores: the button, in your colours ---------------- */}
+      <section className="section store" id="stores" aria-labelledby="stores-title">
         <div className="shell">
-          <div className="how-top">
-            <div>
-              <p className="eyebrow">How it works</p>
-              <h2 className="display">
-                Get Your Virtual
-                <br />
-                Try-On in 3 Simple Steps
-              </h2>
-            </div>
-
-            <div className="step-cards">
-              {steps.map((step) => (
-                <article className="step-card" key={step.num}>
-                  <span className="num">{step.num}</span>
-                  <span className="icon-chip">{step.icon}</span>
-                  <h3>{step.title}</h3>
-                  <p>{step.copy}</p>
-                </article>
-              ))}
-            </div>
+          <div className="store-head" data-reveal>
+            <p className="eyebrow eyebrow-violet">For stores</p>
+            <h2 className="display" id="stores-title">
+              It lives on
+              <br />
+              your product page.
+            </h2>
+            <p className="lede">
+              The Try it on button sits beside Add to cart, in your colours. Change it below to see
+              how it takes on your store.
+            </p>
           </div>
 
-          <div className="how-bottom">
-            <div className="how-editorial">
-              <Image
-                src="/how-editorial.jpg"
-                alt="Editorial portrait with the line: 3 steps to a new you"
-                width={824}
-                height={900}
-                sizes="(max-width: 1100px) 100vw, 30vw"
-              />
-            </div>
-
-            <div className="how-flow">
-              <div className="flow-step">
-                <figure>
-                  <Image
-                    src="/step-photo.jpg"
-                    alt="A shopper's original photo in an olive trench coat"
-                    width={700}
-                    height={967}
-                    sizes="(max-width: 680px) 100vw, 22vw"
-                  />
-                </figure>
-                <figcaption>Step 1: Your Photo</figcaption>
-              </div>
-
-              <div className="flow-arrow" aria-hidden="true">
-                <ArrowRight />
-              </div>
-
-              <div className="flow-step">
-                <figure>
-                  <Image
-                    src="/step-photo.jpg"
-                    alt="Choosing a coat from the store's catalogue"
-                    width={700}
-                    height={967}
-                    sizes="(max-width: 680px) 100vw, 22vw"
-                  />
-                  <div className="pick-overlay">
-                    <header>
-                      <span>Choose a style</span>
-                      <span aria-hidden="true">✦</span>
-                    </header>
-                    <div className="pick-row">
-                      <Image className="is-active" src="/garment-a.jpg" alt="Tan leather trench coat" width={240} height={320} />
-                      <Image src="/garment-b.jpg" alt="Cream double-breasted coat" width={240} height={336} />
-                      <Image src="/garment-c.jpg" alt="Camel wool coat" width={240} height={320} />
-                    </div>
-                    <span className="pick-cta">Try this look</span>
-                  </div>
-                </figure>
-                <figcaption>Step 2: Selection</figcaption>
-              </div>
-
-              <div className="flow-arrow" aria-hidden="true">
-                <ArrowRight />
-              </div>
-
-              <div className="flow-step">
-                <figure>
-                  <Image
-                    src="/step-result.jpg"
-                    alt="The same shopper wearing the tan leather trench coat, generated by Clothsy AI"
-                    width={700}
-                    height={967}
-                    sizes="(max-width: 680px) 100vw, 22vw"
-                  />
-                </figure>
-                <figcaption>Step 3: Final Try-On</figcaption>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ---------------- testimonials ---------------- */}
-      <section className="section" id="stories">
-        <div className="shell">
-          <div className="section-head">
-            <div>
-              <p className="eyebrow">What brands say</p>
-              <h2 className="display">Real brands. Real results.</h2>
-            </div>
-            <Link className="btn btn-ghost btn-sm" href="/resources#stories">
-              View all stories <ArrowRight className="btn-arrow" />
-            </Link>
-          </div>
-
-          <div className="quote-grid">
-            {quotes.map((quote) => (
-              <article className="quote-card" key={quote.name}>
-                <header>
-                  <span className="avatar">{quote.initials}</span>
-                  <div>
-                    <b>{quote.name}</b>
-                    <span>{quote.role}</span>
-                  </div>
-                  <span className="chip">BRAND</span>
-                </header>
-                <blockquote>{quote.quote}</blockquote>
-              </article>
-            ))}
+          <div data-reveal>
+            <StoreDemo />
           </div>
         </div>
       </section>
@@ -317,14 +148,20 @@ export default function Home() {
                 Empowering brands and creators with seamless, beautiful virtual fitting technology.
               </p>
               <div className="cta-actions">
-                <Link className="btn btn-violet" href="#install">
+                <a className="btn btn-violet" href={SHOPIFY_URL} target="_blank" rel="noopener noreferrer">
                   Install on Shopify <ArrowRight className="btn-arrow" />
-                </Link>
-                <Link className="btn btn-ghost" href="#demo">
+                </a>
+                <a className="btn btn-ghost" href={BOOK_DEMO_URL} target="_blank" rel="noopener noreferrer">
                   Book a demo <ArrowUpRight className="btn-arrow" />
-                </Link>
+                </a>
               </div>
-              <p className="cta-note">Free to install. No credit card required.</p>
+              <p className="cta-note">
+                Free to install. Every store starts with 10 try-ons a month.{" "}
+                <a href={WOO_URL} target="_blank" rel="noopener noreferrer" className="cta-link">
+                  Also on WooCommerce
+                </a>
+                .
+              </p>
             </div>
 
             <div className="cta-visual">

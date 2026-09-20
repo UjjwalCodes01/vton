@@ -50,7 +50,7 @@ export default function SiteNav() {
             <button className="nav-icon" type="button" aria-label="Search">
               <Search />
             </button>
-            <Link className="btn btn-dark btn-sm" href="/#try">
+            <Link className="btn btn-dark btn-sm" href="/#demo">
               Try Now <ArrowRight className="btn-arrow" />
             </Link>
             <button
@@ -73,7 +73,7 @@ export default function SiteNav() {
               {link.label}
             </Link>
           ))}
-          <Link className="btn btn-dark" href="/#try" onClick={() => setOpen(false)}>
+          <Link className="btn btn-dark" href="/#demo" onClick={() => setOpen(false)}>
             Try Now <ArrowRight className="btn-arrow" />
           </Link>
         </div>

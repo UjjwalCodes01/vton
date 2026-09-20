@@ -111,3 +111,81 @@ export const Bag = ({ className }: IconProps) => (
     <path d="M9 8V6.5a3 3 0 0 1 6 0V8" />
   </svg>
 );
+
+export const Share = ({ className }: IconProps) => (
+  <svg {...base} className={className} width="18" height="18">
+    <path d="M12 15V4m0 0L8.5 7.5M12 4l3.5 3.5" />
+    <path d="M6 11.5v6A1.5 1.5 0 0 0 7.5 19h9a1.5 1.5 0 0 0 1.5-1.5v-6" />
+  </svg>
+);
+
+export const Swap = ({ className }: IconProps) => (
+  <svg {...base} className={className} width="18" height="18">
+    <path d="M4 8h13m0 0-3-3m3 3-3 3" />
+    <path d="M20 16H7m0 0 3-3m-3 3 3 3" />
+  </svg>
+);
+
+export const Close = ({ className }: IconProps) => (
+  <svg {...base} className={className} width="18" height="18">
+    <path d="m6 6 12 12M18 6 6 18" />
+  </svg>
+);
+
+export const Photo = ({ className }: IconProps) => (
+  <svg {...base} className={className} width="18" height="18">
+    <rect x="3.5" y="5" width="17" height="14" rx="2.5" />
+    <circle cx="9" cy="10" r="1.6" />
+    <path d="m4 17 5-4.5 3.5 3 2.5-2 5 4" />
+  </svg>
+);
+
+export const Lock = ({ className }: IconProps) => (
+  <svg {...base} className={className} width="18" height="18">
+    <rect x="5" y="10.5" width="14" height="9.5" rx="2.2" />
+    <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" />
+  </svg>
+);
+
+export const LinkIcon = ({ className }: IconProps) => (
+  <svg {...base} className={className} width="18" height="18">
+    <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" />
+    <path d="M14 10a4 4 0 0 0-5.7 0l-3 3A4 4 0 0 0 11 18.7l1-1" />
+  </svg>
+);
+
+export const Download = ({ className }: IconProps) => (
+  <svg {...base} className={className} width="18" height="18">
+    <path d="M12 4v11m0 0-3.5-3.5M12 15l3.5-3.5" />
+    <path d="M5 19h14" />
+  </svg>
+);
+
+export const Cart = ({ className }: IconProps) => (
+  <svg {...base} className={className} width="18" height="18">
+    <path d="M3.5 5h2.2l1.6 9.2a1.5 1.5 0 0 0 1.5 1.3h7.6a1.5 1.5 0 0 0 1.5-1.2L19 8H6.2" />
+    <circle cx="9.5" cy="19" r="1.2" />
+    <circle cx="16" cy="19" r="1.2" />
+  </svg>
+);
+
+export const Mail = ({ className }: IconProps) => (
+  <svg {...base} className={className} width="18" height="18">
+    <rect x="3.5" y="5.5" width="17" height="13" rx="2.5" />
+    <path d="m4.5 8 7.5 5.5L19.5 8" />
+  </svg>
+);
+
+export const Instagram = ({ className }: IconProps) => (
+  <svg {...base} className={className} width="18" height="18">
+    <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
+    <circle cx="12" cy="12" r="4" />
+    <circle cx="17.2" cy="6.8" r="0.6" fill="currentColor" />
+  </svg>
+);
+
+export const XLogo = ({ className }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className={className} width="16" height="16">
+    <path d="M17.75 3h3.1l-6.77 7.74L22 21h-6.2l-4.86-6.36L5.4 21H2.3l7.24-8.27L2 3h6.36l4.4 5.82L17.75 3Zm-1.09 16.15h1.72L7.4 4.75H5.55l11.11 14.4Z" />
+  </svg>
+);
