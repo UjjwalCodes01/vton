@@ -378,15 +378,6 @@ main [id] {
   color: var(--violet);
 }
 
-.nav-signin {
-  font-size: 14.5px;
-  color: var(--ink-2);
-}
-
-.nav-signin:hover {
-  color: var(--violet);
-}
-
 .nav-burger {
   display: none;
   width: 44px;
@@ -1877,7 +1868,6 @@ main [id] {
     display: inline-grid;
   }
 
-  .nav-signin,
   .nav-icon {
     display: none;
   }
