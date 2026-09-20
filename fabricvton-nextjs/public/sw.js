@@ -1,8 +1,8 @@
 // Clothsy AI Service Worker for PWA Offline Caching and Speed
-const CACHE_NAME = "clothsy-vton-v1";
+const CACHE_NAME = "clothsy-vton-v2";
 
 const STATIC_ASSETS = [
-  "/",
+  "/clothsy",
   "/demo",
   "/studio",
   "/about",
@@ -64,7 +64,7 @@ self.addEventListener("fetch", (event) => {
         .catch(async () => {
           const cached = await caches.match(request);
           if (cached) return cached;
-          const fallback = await caches.match("/");
+          const fallback = await caches.match("/clothsy");
           if (fallback) return fallback;
           return new Response(
             `<!DOCTYPE html><html><head><title>Clothsy AI - Offline</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body{font-family:system-ui,sans-serif;background:#0f172a;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;padding:24px;text-align:center}h1{color:#0d9488}p{color:#94a3b8;max-width:400px}button{background:#0d9488;color:#fff;border:none;border-radius:10px;padding:12px 24px;font-weight:700;font-size:16px;cursor:pointer;margin-top:16px}</style></head><body><h1>Clothsy AI</h1><p>You appear to be offline. Reconnect to the internet to use online AI Try-On features.</p><button onclick="window.location.reload()">Retry</button></body></html>`,
