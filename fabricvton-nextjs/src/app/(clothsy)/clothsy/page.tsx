@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, type Variants } from "framer-motion";
+import { motion } from "framer-motion";
 import CalDemoButton from "../components/CalDemoButton";
 import StickyHeader from "../components/StickyHeader";
 import Link from "next/link";
@@ -14,6 +14,7 @@ import { BentoGrid } from "../components/ui/BentoGrid";
 import { ROICalculator } from "../components/ui/ROICalculator";
 import { PolaroidMarquee } from "../components/ui/PolaroidMarquee";
 import { TiltCard } from "../components/ui/TiltCard";
+import { TapToDress } from "../components/ui/TapToDress";
 import { SHOPIFY_APP_STORE_URL } from "../lib/site";
 
 /* ── Data ── */
@@ -157,17 +158,68 @@ const steps = [
   },
 ];
 
+const features = [
+  {
+    title: "Lead Capture & Integrations",
+    text: "Don't just sell, build your audience. Collect emails during the try-on process and sync them instantly to Shopify Segments or Klaviyo. Retarget users who tried but didn't buy with personalized automated flows.",
+    footer: (
+      <div className="feature-integrations">
+        <span className="works-with">Works with:</span>
+        <div className="integration-pills">
+          <div className="integration-pill">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20.5 2h-17A1.5 1.5 0 0 0 2 3.5v17A1.5 1.5 0 0 0 3.5 22h17a1.5 1.5 0 0 0 1.5-1.5v-17A1.5 1.5 0 0 0 20.5 2" fill="#96bf48"/><path d="M14.5 7.5c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5.67 1.5 1.5 1.5 1.5-.67 1.5-1.5" fill="#fff"/><path d="M16 10H8l1 7h6z" fill="#fff"/></svg>
+            Shopify
+          </div>
+          <div className="integration-pill">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect width="24" height="24" rx="4" fill="#222"/><path d="M7 8h10M7 12h6M7 16h8" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/></svg>
+            Klaviyo
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    title: "Virtual Try-On Widget",
+    text: "The core experience. Let customers see themselves in your products instantly. Includes smart auto-cropping for perfect framing, privacy-first data handling (auto-delete after 7 days), and multi-language support for global reach.",
+    footer: (
+      <div className="feature-tags">
+        <span>Auto-Crop</span>
+        <span>Privacy First</span>
+        <span>Multi-language</span>
+      </div>
+    ),
+  },
+  {
+    title: "FabricVTON Studio",
+    text: "Generate professional product photos without the photoshoot. Use AI models to create stunning UGC-style content for your social media, ads, and product pages directly from your dashboard. Uses the same credits as your plan.",
+    footer: (
+      <a className="feature-link" href="/studio">Explore Studio capabilities →</a>
+    ),
+  },
+  {
+    title: "Actionable Analytics",
+    text: "Stop guessing. Track the full customer journey from widget open to 'Add to Cart'. Visualize your funnel and measure the exact conversion lift provided by the try-on experience to prove ROI.",
+    footer: (
+      <div className="feature-tags">
+        <span>Funnel Tracking</span>
+        <span>ROI Measurement</span>
+        <span>Conversion Lift</span>
+      </div>
+    ),
+  },
+];
+
 const INSTALL_URL = SHOPIFY_APP_STORE_URL;
 
 /* ── Hero entrance animation variants ── */
-const heroVariants: Variants = {
+const heroVariants: any = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.12 } },
 };
 
-const heroChild: Variants = {
+const heroChild: any = {
   hidden: { opacity: 0, y: 24 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.21, 0.47, 0.32, 0.98] as [number, number, number, number] } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.21, 0.47, 0.32, 0.98] } },
 };
 
 /* ── Page ── */

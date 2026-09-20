@@ -3,11 +3,12 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { NAV_LINKS } from "../_lib/content";
+import { CLOTHSY_URL, CONTACT_HREF } from "../_lib/site";
 import { Arrow } from "./Arrow";
 
 /**
- * Solid header. The motion engine flips `data-theme` to "dark" while the header sits over the
- * graphite Evidence section, so the bar inverts instead of going translucent.
+ * Transparent over the hero; the motion engine flips `data-scrolled` to get the frosted bar.
+ * The only state here is the mobile menu.
  */
 export default function Nav() {
   const [open, setOpen] = useState(false);
@@ -30,7 +31,7 @@ export default function Nav() {
 
   return (
     <>
-      <header className="fv-nav" data-theme="light">
+      <header className="fv-nav" data-scrolled="false">
         <div className="fv-wrap fv-nav-inner">
           <a className="fv-logo" href="#top" aria-label="FabricVTON home" onClick={close}>
             <Image
@@ -38,8 +39,8 @@ export default function Nav() {
               alt="FabricVTON"
               width={900}
               height={253}
-              sizes="160px"
-              priority
+              loading="eager"
+              fetchPriority="high"
               unoptimized
             />
           </a>
@@ -53,8 +54,11 @@ export default function Nav() {
           </nav>
 
           <div className="fv-nav-actions">
-            <a className="fv-btn fv-btn--sm" href="#collaborate">
-              Contact
+            <a className="fv-btn fv-btn--soft fv-btn--sm" href={CLOTHSY_URL} data-magnet>
+              Clothsy AI <Arrow dir="up" />
+            </a>
+            <a className="fv-btn fv-btn--dark fv-btn--sm" href={CONTACT_HREF}>
+              Talk to us
             </a>
             <button
               className="fv-burger"
@@ -79,8 +83,11 @@ export default function Nav() {
           ))}
         </nav>
         <div className="fv-menu-cta">
-          <a className="fv-btn" href="#collaborate" onClick={close}>
-            Contact <Arrow />
+          <a className="fv-btn fv-btn--soft" href={CLOTHSY_URL} onClick={close}>
+            Clothsy AI <Arrow dir="up" />
+          </a>
+          <a className="fv-btn fv-btn--dark" href={CONTACT_HREF} onClick={close}>
+            Talk to us
           </a>
         </div>
       </div>

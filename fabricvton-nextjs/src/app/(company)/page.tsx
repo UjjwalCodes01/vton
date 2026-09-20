@@ -1,19 +1,20 @@
 import type { Metadata } from "next";
-import Clothsy from "./_components/Clothsy";
-import Collaborate from "./_components/Collaborate";
-import Evidence from "./_components/Evidence";
+import Approach from "./_components/Approach";
+import Careers from "./_components/Careers";
+import Company from "./_components/Company";
+import FinalCta from "./_components/FinalCta";
 import Footer from "./_components/Footer";
 import Hero from "./_components/Hero";
 import Journal from "./_components/Journal";
 import Motion from "./_components/Motion";
 import Nav from "./_components/Nav";
+import Product from "./_components/Product";
 import Research from "./_components/Research";
-import Team from "./_components/Team";
-import { SHOW_JOURNAL, SITE_NAME } from "./_lib/site";
+import { SITE_NAME, SITE_TAGLINE } from "./_lib/site";
 
-const TITLE = "FabricVTON — AI that understands fabric";
+const TITLE = `${SITE_NAME} — building intelligence for the visual world`;
 const DESCRIPTION =
-  "FabricVTON researches how fabric drapes, stretches and holds its detail, and builds visual AI that gets it right. Clothsy AI is our virtual try-on product for fashion stores.";
+  "FabricVTON researches and develops AI systems that understand, generate and transform visual information — from people and products to materials and environments.";
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -24,14 +25,13 @@ export const metadata: Metadata = {
     url: "/",
     siteName: SITE_NAME,
     title: TITLE,
-    description: DESCRIPTION,
-    // [OG_IMAGE] — replace with artwork made for sharing; this is the logo lockup on the page background.
+    description: SITE_TAGLINE,
     images: [{ url: "/brand/og.png", width: 1200, height: 630, alt: SITE_NAME }],
   },
   twitter: {
     card: "summary_large_image",
     title: TITLE,
-    description: DESCRIPTION,
+    description: SITE_TAGLINE,
     images: ["/brand/og.png"],
   },
 };
@@ -46,11 +46,15 @@ export default function CompanyHome() {
       <main id="main">
         <Hero />
         <Research />
-        <Evidence />
-        <Clothsy />
-        {SHOW_JOURNAL ? <Journal /> : null}
-        <Team />
-        <Collaborate />
+        {/* Soft handoffs into and out of the graphite section: never a hard edge. */}
+        <div className="fv-blend fv-blend--dark" aria-hidden="true" />
+        <Approach />
+        <div className="fv-blend fv-blend--light" aria-hidden="true" />
+        <Product />
+        <Journal />
+        <Company />
+        <Careers />
+        <FinalCta />
       </main>
       <Footer />
       <Motion />

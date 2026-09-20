@@ -2,32 +2,22 @@
 
 export const SITE_NAME = "FabricVTON";
 export const SITE_URL = "https://www.fabricvton.com";
-export const SITE_TAGLINE = "AI research on fabric, garments and how they behave on people.";
+export const SITE_TAGLINE = "AI research and technology for the visual world.";
 
 /**
- * Clothsy AI is a product built by FabricVTON. This is the single place the product URL is
- * defined: every "Visit Clothsy AI" link on the site reads it from here.
+ * Clothsy AI is a product built by FabricVTON. Its marketing site moves to its own subdomain;
+ * until that host is live, `CLOTHSY_LEARN_MORE_URL` points at the product landing page that
+ * still lives on this domain.
  */
 export const CLOTHSY_URL = "https://clothsyai.fabricvton.com";
+export const CLOTHSY_LEARN_MORE_URL = "/clothsy";
 
-/** The Clothsy AI landing page still served from this domain (noindex) until the subdomain is live. */
-export const CLOTHSY_LEGACY_PATH = "/clothsy";
+/** One public contact address for the whole site. Swap here to change every "Talk to us" / "Get in touch". */
+export const CONTACT_EMAIL = "fabricvton@gmail.com";
+export const CONTACT_HREF = `mailto:${CONTACT_EMAIL}`;
 
-/** The journal section is hidden until a real post exists. Flip to true once one is published. */
-export const SHOW_JOURNAL = false;
-
-/**
- * Placeholder values are written as [TOKEN] and listed in CONTENT_TODO.md. `isPlaceholder` lets
- * components render them as plain text instead of producing a broken mailto:/href.
- */
-export const isPlaceholder = (value: string): boolean => value.startsWith("[") && value.endsWith("]");
-
-export const CONTACT_EMAIL = "[CONTACT_EMAIL]";
-export const COMPANY_ADDRESS = "[COMPANY_ADDRESS]";
-
+/** Only channels that exist. Add LinkedIn / GitHub / YouTube here once the handles are confirmed. */
 export const SOCIALS = [
-  { name: "Email", href: "[CONTACT_EMAIL]" },
-  { name: "LinkedIn", href: "[COMPANY_LINKEDIN_URL]" },
-  { name: "GitHub", href: "[COMPANY_GITHUB_URL]" },
-  { name: "Google Scholar", href: "[COMPANY_SCHOLAR_URL]" },
+  { name: "X", href: "https://x.com/fabricvton93490" },
+  { name: "Instagram", href: "https://www.instagram.com/fabricvton/" },
 ] as const;

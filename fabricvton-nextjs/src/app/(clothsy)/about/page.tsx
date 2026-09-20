@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, type Variants } from "framer-motion";
+import { motion } from "framer-motion";
 import StickyHeader from "../components/StickyHeader";
 import Link from "next/link";
 import { FadeUp, StaggerContainer, StaggerItem } from "../components/ui/Animations";
@@ -76,13 +76,13 @@ const milestones = [
 ];
 
 /* ── Animation variants ── */
-const heroVariants: Variants = {
+const heroVariants: any = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.1 } },
 };
-const heroChild: Variants = {
+const heroChild: any = {
   hidden: { opacity: 0, y: 24 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.65, ease: [0.21, 0.47, 0.32, 0.98] as [number, number, number, number] } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.65, ease: [0.21, 0.47, 0.32, 0.98] } },
 };
 
 export default function AboutPage() {
@@ -164,7 +164,7 @@ export default function AboutPage() {
               <div className="about-mission-glow" />
               <p className="faq-subtitle">Our Mission</p>
               <blockquote className="about-mission-quote">
-                &ldquo;Make virtual try-on so accessible and so good that every fashion shopper buys with confidence — and every merchant stops dreading returns day.&rdquo;
+                "Make virtual try-on so accessible and so good that every fashion shopper buys with confidence — and every merchant stops dreading returns day."
               </blockquote>
               <p className="about-mission-sub">
                 We believe the gap between online browsing and confident buying is a problem AI can solve right now — and we have built our company around proving it.

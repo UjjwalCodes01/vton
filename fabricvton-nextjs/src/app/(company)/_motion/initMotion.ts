@@ -1,16 +1,21 @@
 /**
  * FabricVTON company site: motion engine.
  *
- * Plain DOM, no dependencies. It does three small jobs:
- *   1. reveals      [data-reveal]      add `.is-in` once, swept from the same scroll pass
- *   2. scroll state [data-progress]    write `--p` (0..1) on a section, from ONE rAF-throttled
- *                                      scroll listener; the same pass flips the nav to its dark
- *                                      variant while the header sits over a [data-nav-theme] section
- *   3. parallax     [data-parallax]    pointer -> `--px`/`--py` (-1..1), fine pointers only
+ * Plain DOM, no dependencies. It does four small jobs and nothing else:
+ *   1. reveals      [data-reveal]      add `.is-in` once, via one IntersectionObserver
+ *   2. scroll state [data-progress]    write `--p` (0..1) on a section, from ONE rAF-throttled scroll listener
+ *   3. parallax     [data-parallax]    pointer -> `--px`/`--py` (-1..1), fine pointers only, rAF loop that sleeps when settled
+ *   4. magnets      [data-magnet]      nudge the arrow inside a control by <= 4px toward the cursor
+ * plus the nav's `data-scrolled` flag.
  *
- * The CSS does all the visual work from those numbers, using transform, opacity and clip-path only.
+ * The CSS does all the visual work from those numbers, using transform / opacity / clip-path only.
  * When the visitor prefers reduced motion nothing is animated and no `--p` is written, so every
- * section keeps the finished state the stylesheet defaults to.
+ * section keeps the finished state that the stylesheet defaults to.
+ *
+ * `data-progress` modes
+ *   hero     0 -> 1 over the first ~90% of the section's height
+ *   pin      0 -> 1 while a tall section scrolls past its sticky child (falls back to `through` when not pinned)
+ *   through  0 -> 1 as the section travels from entering the viewport to sitting fully inside it
  */
 
 type Track = { el: HTMLElement; mode: string; visible: boolean; last: number };
@@ -21,30 +26,31 @@ export function initMotion(root: ParentNode = document): () => void {
   const win = window;
   const reduce = win.matchMedia("(prefers-reduced-motion: reduce)");
   const fine = win.matchMedia("(hover: hover) and (pointer: fine)");
+  const pinned = win.matchMedia("(min-width: 900px) and (min-height: 560px)");
   const disposers: Array<() => void> = [];
 
   /* ---- 1. reveals ------------------------------------------------------ */
-  // Driven by the same rAF scroll pass as everything else rather than an IntersectionObserver.
-  // An observer only reports what it happens to notice; this sweeps every remaining element on
-  // each frame, so nothing can stay stuck in its hidden state after an anchor jump, a fast
-  // scroll, a restored scroll position or a prerender. The list shrinks as elements reveal.
   const revealEls = Array.from(root.querySelectorAll<HTMLElement>("[data-reveal]"));
-  let pending: HTMLElement[] = reduce.matches ? [] : revealEls;
-  if (reduce.matches) revealEls.forEach((el) => el.classList.add("is-in"));
+  if (reduce.matches || !("IntersectionObserver" in win)) {
+    revealEls.forEach((el) => el.classList.add("is-in"));
+  } else {
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-in");
+            io.unobserve(entry.target);
+          }
+        }
+      },
+      { rootMargin: "0px 0px -8% 0px", threshold: 0.12 },
+    );
+    revealEls.forEach((el) => io.observe(el));
+    disposers.push(() => io.disconnect());
+  }
 
-  const sweepReveals = () => {
-    if (pending.length === 0) return;
-    const limit = win.innerHeight * 0.92;
-    pending = pending.filter((el) => {
-      if (el.getBoundingClientRect().top >= limit) return true;
-      el.classList.add("is-in");
-      return false;
-    });
-  };
-
-  /* ---- 2. scroll state + nav theme ------------------------------------- */
+  /* ---- 2. scroll state ------------------------------------------------- */
   const nav = root.querySelector<HTMLElement>(".fv-nav");
-  const darkSections = Array.from(root.querySelectorAll<HTMLElement>('[data-nav-theme="dark"]'));
   const tracks: Track[] = Array.from(root.querySelectorAll<HTMLElement>("[data-progress]")).map((el) => ({
     el,
     mode: el.getAttribute("data-progress") || "through",
@@ -70,36 +76,28 @@ export function initMotion(root: ParentNode = document): () => void {
   let scheduled = false;
   const frame = () => {
     scheduled = false;
-
-    if (nav) {
-      // The header inverts while its midline is inside a dark section.
-      const mid = nav.getBoundingClientRect().height / 2;
-      const overDark = darkSections.some((el) => {
-        const r = el.getBoundingClientRect();
-        return r.top <= mid && r.bottom >= mid;
-      });
-      nav.setAttribute("data-theme", overDark ? "dark" : "light");
-    }
-
-    sweepReveals();
+    const vh = win.innerHeight;
+    if (nav) nav.setAttribute("data-scrolled", win.scrollY > 24 ? "true" : "false");
     if (reduce.matches) return;
 
-    const vh = win.innerHeight;
     for (const t of tracks) {
       if (!t.visible) continue;
       const rect = t.el.getBoundingClientRect();
-      const p =
-        t.mode === "hero"
-          ? clamp(-rect.top / Math.max(1, rect.height * 0.9))
-          : clamp((vh * 0.85 - rect.top) / Math.max(1, rect.height * 0.9));
-      const rounded = Math.round(p * 1000) / 1000;
-      if (rounded !== t.last) {
-        t.last = rounded;
-        t.el.style.setProperty("--p", String(rounded));
+      let p: number;
+      if (t.mode === "hero") {
+        p = clamp(-rect.top / Math.max(1, rect.height * 0.9));
+      } else if (t.mode === "pin" && pinned.matches) {
+        p = clamp(-rect.top / Math.max(1, rect.height - vh));
+      } else {
+        p = clamp((vh * 0.85 - rect.top) / Math.max(1, rect.height * 0.9));
+      }
+      p = Math.round(p * 1000) / 1000;
+      if (p !== t.last) {
+        t.last = p;
+        t.el.style.setProperty("--p", String(p));
       }
     }
   };
-
   const schedule = () => {
     if (!scheduled) {
       scheduled = true;
@@ -116,7 +114,7 @@ export function initMotion(root: ParentNode = document): () => void {
   });
   frame();
 
-  /* ---- 3. pointer parallax (fine pointers only) ------------------------ */
+  /* ---- 3. pointer parallax (fine pointers only) ------------------------- */
   if (!reduce.matches && fine.matches) {
     root.querySelectorAll<HTMLElement>("[data-parallax]").forEach((el) => {
       const host: HTMLElement = el.closest("section") || el;
@@ -152,6 +150,31 @@ export function initMotion(root: ParentNode = document): () => void {
         host.removeEventListener("pointermove", onMove);
         host.removeEventListener("pointerleave", onLeave);
         if (raf) win.cancelAnimationFrame(raf);
+      });
+    });
+  }
+
+  /* ---- 4. magnetic arrows (fine pointers only) -------------------------- */
+  if (!reduce.matches && fine.matches) {
+    root.querySelectorAll<HTMLElement>("[data-magnet]").forEach((el) => {
+      const arrow = el.querySelector<HTMLElement>(".fv-arrow, .fv-post-arrow, .fv-field-arrow");
+      if (!arrow) return;
+      const onMove = (e: PointerEvent) => {
+        const r = el.getBoundingClientRect();
+        const dx = clamp((e.clientX - (r.left + r.width / 2)) / (r.width / 2), -1, 1);
+        const dy = clamp((e.clientY - (r.top + r.height / 2)) / (r.height / 2), -1, 1);
+        arrow.style.setProperty("--mx", (dx * 4).toFixed(2) + "px");
+        arrow.style.setProperty("--my", (dy * 3).toFixed(2) + "px");
+      };
+      const onLeave = () => {
+        arrow.style.removeProperty("--mx");
+        arrow.style.removeProperty("--my");
+      };
+      el.addEventListener("pointermove", onMove);
+      el.addEventListener("pointerleave", onLeave);
+      disposers.push(() => {
+        el.removeEventListener("pointermove", onMove);
+        el.removeEventListener("pointerleave", onLeave);
       });
     });
   }
