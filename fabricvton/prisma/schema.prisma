@@ -179,6 +179,10 @@ model Lead {
   productTitle String?
   source       String   @default("tryon_widget")
   synced       Boolean  @default(false) // synced to Klaviyo?
+  // What the shopper agreed to in the widget before any data was sent, and when.
+  // DPDP Act 2023 s.6(10) puts the burden of proving consent on the fiduciary.
+  consentVersion String?
+  consentAt      DateTime?
   createdAt    DateTime @default(now())
 
   @@index([shop])
@@ -206,6 +210,9 @@ model TryOnEvent {
   // of reserved overage (0 when the try-on fits inside the monthly allowance).
   // Settling the event either bills it or releases it — never both.
   overageAmount   Float    @default(0)
+  // Consent the shopper gave before this photo was submitted (see Lead above).
+  consentVersion  String?
+  consentAt       DateTime?
   createdAt       DateTime @default(now())
 
   @@index([shop])

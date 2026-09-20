@@ -250,6 +250,24 @@ export interface ParsedTryOnBody {
   rawProductImageUrl: string | null;
   sessionId: string | null;
   personImage: Blob | null;
+  /** Wording the shopper agreed to before the photo was sent, if the widget sent one. */
+  consentVersion: string | null;
+  consentAt: Date | null;
+}
+
+/**
+ * The widget ticks a consent box before any photo leaves the browser (DPDP Act
+ * 2023, ss. 5-6). We store what was agreed to and when, because s. 6(10) puts
+ * the burden of proving consent on us, not on the shopper.
+ */
+function parseConsentAt(value: unknown): Date | null {
+  if (typeof value !== "string") return null;
+  const when = new Date(value);
+  if (Number.isNaN(when.getTime())) return null;
+  // A clock-skewed or replayed client timestamp is not evidence; keep it only
+  // when it is close to now, otherwise fall back to server time.
+  const skewMs = Math.abs(Date.now() - when.getTime());
+  return skewMs > 24 * 60 * 60 * 1000 ? new Date() : when;
 }
 
 /**
@@ -266,6 +284,8 @@ export async function parseTryOnBody(request: Request): Promise<ParsedTryOnBody>
   let rawProductImageUrl: string | null = null;
   let sessionId: string | null = null;
   let personImage: Blob | null = null;
+  let consentVersion: string | null = null;
+  let consentAt: Date | null = null;
 
     if (contentType.includes("application/json")) {
       const body = (await request.json()) as Record<string, unknown>;
@@ -275,6 +295,8 @@ export async function parseTryOnBody(request: Request): Promise<ParsedTryOnBody>
       productTitle = clampText(body.productTitle, 255);
       rawProductImageUrl = clampText(body.productImageUrl, 2048);
       sessionId = sanitizeSessionId(body.sessionId);
+      consentVersion = clampText(body.consentVersion, 40);
+      consentAt = consentVersion ? parseConsentAt(body.consentAt) ?? new Date() : null;
 
       if (typeof body.personImageDataUrl === "string") {
         personImage = dataUrlToBlob(
@@ -289,6 +311,8 @@ export async function parseTryOnBody(request: Request): Promise<ParsedTryOnBody>
       productTitle = clampText(formData.get("productTitle"), 255);
       rawProductImageUrl = clampText(formData.get("productImageUrl"), 2048);
       sessionId = sanitizeSessionId(formData.get("sessionId"));
+      consentVersion = clampText(formData.get("consentVersion"), 40);
+      consentAt = consentVersion ? parseConsentAt(formData.get("consentAt")) ?? new Date() : null;
 
       const customerImage = formData.get("personImage");
       if (customerImage instanceof Blob) {
@@ -296,7 +320,16 @@ export async function parseTryOnBody(request: Request): Promise<ParsedTryOnBody>
       }
     }
 
-  return { email, productId, productTitle, rawProductImageUrl, sessionId, personImage };
+  return {
+    email,
+    productId,
+    productTitle,
+    rawProductImageUrl,
+    sessionId,
+    personImage,
+    consentVersion,
+    consentAt,
+  };
 }
 
 /** Shopper-facing response for a submission parseTryOnBody couldn't read. */
@@ -382,6 +415,8 @@ export async function handleTryOnAction(request: Request, verifiedShop: string) 
     sessionId: body.sessionId,
     email: body.email,
     personImage: body.personImage,
+    consentVersion: body.consentVersion,
+    consentAt: body.consentAt,
     product: {
       id: body.productId,
       title: body.productTitle,
@@ -400,6 +435,9 @@ export interface TryOnRequest {
   sessionId: string | null;
   email: string | null;
   personImage: Blob | null;
+  /** Consent the shopper gave in the widget before the photo was sent. */
+  consentVersion?: string | null;
+  consentAt?: Date | null;
   product: {
     id: string;
     title: string | null;
@@ -418,6 +456,8 @@ export interface TryOnRequest {
  */
 export async function runTryOn(input: TryOnRequest): Promise<Response> {
   const { shop, origin, requestId, clientIp, sessionId, email, personImage, product } = input;
+  const consentVersion = input.consentVersion ?? null;
+  const consentAt = input.consentAt ?? null;
   const productId = product.id;
   const productTitle = product.title;
   const productImageUrl = product.imageUrl;
@@ -574,9 +614,14 @@ export async function runTryOn(input: TryOnRequest): Promise<Response> {
           email,
           productId,
           productTitle: productTitle ?? undefined,
+          consentVersion: consentVersion ?? undefined,
+          consentAt: consentAt ?? undefined,
         },
         update: {
           productTitle: productTitle ?? undefined,
+          // Refresh on every try-on: the newest consent is the one that counts.
+          consentVersion: consentVersion ?? undefined,
+          consentAt: consentAt ?? undefined,
         },
       });
       await upsertDailyAnalytics(shop, { emailsCaptured: 1 });
@@ -597,6 +642,8 @@ export async function runTryOn(input: TryOnRequest): Promise<Response> {
         status: "pending",
         modelUsed: `youcam/${config.modelVersion}`,
         overageAmount: reservation.overageAmount,
+        consentVersion,
+        consentAt,
       },
       select: { id: true },
     });

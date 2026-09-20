@@ -13,7 +13,7 @@ export default function WidgetPrivacyPolicy() {
             <div className="legal-header">
               <h1>Privacy Policy for Shoppers</h1>
               <p className="effective-date">Applicable to users of the FabricVTON Virtual Try-On Widget</p>
-              <p className="effective-date">Last Updated: 14th September, 2026</p>
+              <p className="effective-date">Last Updated: 20th September, 2026</p>
             </div>
           </FadeUp>
 
@@ -24,9 +24,12 @@ export default function WidgetPrivacyPolicy() {
               </p>
 
               <h2>1. What Information We Collect</h2>
-              <p>When you use the Virtual Try-On Widget, we collect and process the following, and only when you actively choose to:</p>
+              <p>
+                Nothing is sent anywhere until you tick the consent box in the try-on window. Choosing a photo only shows it to you, inside your own browser. When you tick the box and press Generate, we collect and process the following:
+              </p>
               <ul>
                 <li><strong>Your Photo:</strong> The image you upload to see the clothes on yourself.</li>
+                <li><strong>Your Consent:</strong> We record the date and time you ticked the box, and which wording you agreed to, so that we can show your consent was asked for and given.</li>
                 <li><strong>Email Address:</strong> Most stores require your email before the try-on runs. Where the store has enabled this, your email is saved and <strong>shared with the store owner as a marketing lead</strong>, together with the product you were viewing. If you would rather not share it, please do not use the try-on feature.</li>
                 <li><strong>Try-On History:</strong> For each try-on we record the product, the time, whether it succeeded, and &mdash; for up to 90 days &mdash; the email you entered. The store owner can see this history.</li>
                 <li><strong>Usage Data:</strong> Anonymous counts of how the widget is used (how often it is opened, how often a try-on succeeds), so the store owner can measure the feature and we can fix bugs.</li>
@@ -57,15 +60,28 @@ export default function WidgetPrivacyPolicy() {
               <p>We do not sell your data, and we do not share it with advertisers.</p>
 
               <h2>5. Your Rights</h2>
-              <p>Under laws like GDPR and CCPA, you have rights regarding your data:</p>
+              <p>Under laws like the GDPR, the CCPA and India&apos;s Digital Personal Data Protection Act, 2023, you have rights regarding your data:</p>
               <ul>
                 <li><strong>Right to Access:</strong> you can ask the store you used for a copy of everything held about you. When the store raises that request through Shopify, we compile every record we hold for your email address so the store can send it to you. You can also email us directly at fabricvton@gmail.com.</li>
                 <li><strong>Right to Deletion:</strong> your photos are never stored, so there is nothing to delete there. To have your email address and try-on history erased, contact the store you used, or email us at fabricvton@gmail.com and we will erase them.</li>
                 <li><strong>Response time:</strong> requests are answered within 30 days.</li>
               </ul>
 
-              <h2>6. Contact</h2>
-              <p>If you have concerns about your privacy, please reach out to us at fabricvton@gmail.com.</p>
+              <h2>6. If You Are in India</h2>
+              <p>
+                India&apos;s Digital Personal Data Protection Act, 2023 applies to your use of the try-on. Under that Act the store you are visiting is the <strong>Data Fiduciary</strong> and FabricVTON is its <strong>Data Processor</strong>. We process your photo, your email address and your try-on history only on the consent you give in the try-on window, and only for the purposes described above.
+              </p>
+              <ul>
+                <li><strong>Withdrawing your consent:</strong> you can withdraw it at any time, as easily as you gave it, by emailing fabricvton@gmail.com from the address you entered, or by telling the store you used. We stop processing your data and erase what we hold for you. Your photo was never stored, so there is nothing left of it to withdraw.</li>
+                <li><strong>What withdrawal means:</strong> past try-ons you already received are not undone, and you will need to give consent again the next time you want to use the try-on.</li>
+                <li><strong>Grievances:</strong> if something about your data has gone wrong, write to us at fabricvton@gmail.com. We acknowledge every grievance within 7 days and resolve it within 30 days.</li>
+                <li><strong>The Data Protection Board:</strong> if you raised a grievance with us and are not satisfied with how it was handled, you may complain to the Data Protection Board of India.</li>
+                <li><strong>Language:</strong> you can ask us for this notice in English or in any language listed in the Eighth Schedule to the Constitution of India.</li>
+                <li><strong>Children:</strong> the try-on is not for anyone under 18. Before any photo is sent you confirm that you are 18 or older, or that your parent or guardian has agreed on your behalf. If you believe a child&apos;s photo has been used, tell us and we will erase every record of it.</li>
+              </ul>
+
+              <h2>7. Contact</h2>
+              <p>If you have concerns about your privacy, or want to exercise any of the rights above, please reach out to us at fabricvton@gmail.com. This is also the address for data protection questions and grievances.</p>
             </div>
           </FadeUp>
         </section>

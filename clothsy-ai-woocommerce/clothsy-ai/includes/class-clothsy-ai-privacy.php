@@ -76,6 +76,7 @@ class Clothsy_AI_Privacy {
 					array( 'name' => __( 'Email', 'clothsy-ai' ), 'value' => (string) ( $lead['email'] ?? '' ) ),
 					array( 'name' => __( 'Product', 'clothsy-ai' ), 'value' => (string) ( $lead['productTitle'] ?? '' ) ),
 					array( 'name' => __( 'Date', 'clothsy-ai' ), 'value' => (string) ( $lead['capturedAt'] ?? '' ) ),
+					array( 'name' => __( 'Consent given', 'clothsy-ai' ), 'value' => (string) ( $lead['consentGivenAt'] ?? __( 'Not recorded', 'clothsy-ai' ) ) ),
 				),
 			);
 		}
@@ -148,8 +149,8 @@ class Clothsy_AI_Privacy {
 		}
 		$content  = '<p class="privacy-policy-tutorial">' . esc_html__( 'Suggested text for stores using the Clothsy AI virtual try-on. Adjust it to match your settings.', 'clothsy-ai' ) . '</p>';
 		$content .= '<strong class="privacy-policy-tutorial">' . esc_html__( 'Suggested text:', 'clothsy-ai' ) . ' </strong>';
-		$content .= '<p>' . esc_html__( 'Our product pages offer a virtual try-on, provided by Clothsy AI. If you use it, the photo you upload and the product you are trying on are sent to Clothsy AI to create the try-on image. Your photo is processed only to create that image; it is not stored and is not used to train AI models.', 'clothsy-ai' ) . '</p>';
-		$content .= '<p>' . esc_html__( 'If we ask for your email address before a try-on, it is stored by Clothsy AI on our behalf together with the products you tried on, and we may use it to contact you about those products. You can ask us to export or delete this data at any time.', 'clothsy-ai' ) . '</p>';
+		$content .= '<p>' . esc_html__( 'Our product pages offer a virtual try-on, provided by Clothsy AI. Before anything is sent, you are asked to tick a box agreeing to your photo being processed and confirming that you are 18 or older, or have your guardian\'s consent; the date of that agreement is recorded. If you use the try-on, the photo you upload and the product you are trying on are sent to Clothsy AI to create the try-on image. Your photo is processed only to create that image; it is not stored and is not used to train AI models.', 'clothsy-ai' ) . '</p>';
+		$content .= '<p>' . esc_html__( 'If we ask for your email address before a try-on, it is stored by Clothsy AI on our behalf together with the products you tried on, and we may use it to contact you about those products. You can withdraw your consent at any time, and ask us to export or delete this data, by contacting us.', 'clothsy-ai' ) . '</p>';
 		$content .= '<p>' . sprintf(
 			/* translators: %s: link to the Clothsy AI shopper privacy notice. */
 			esc_html__( 'Learn more in the %s.', 'clothsy-ai' ),

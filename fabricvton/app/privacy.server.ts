@@ -35,6 +35,9 @@ export interface CustomerDataExport {
     productTitle: string | null;
     source: string;
     capturedAt: string;
+    /** Which consent wording was agreed to in the widget, and when. */
+    consentGivenAt: string | null;
+    consentVersion: string | null;
   }>;
   tryOns: Array<{
     productId: string | null;
@@ -130,6 +133,8 @@ export async function compileCustomerDataExport(params: {
       productTitle: lead.productTitle,
       source: lead.source,
       capturedAt: lead.createdAt.toISOString(),
+      consentGivenAt: lead.consentAt?.toISOString() ?? null,
+      consentVersion: lead.consentVersion,
     })),
     tryOns: tryOns.map((event) => ({
       productId: event.productId,
