@@ -1,120 +1,144 @@
 /**
- * All homepage copy that is likely to change, kept out of the components.
- * Nothing here is a claim about results: no metrics, customers, dates or publications.
+ * Homepage content.
+ *
+ * Nothing here may be an invented claim: no metrics, customers, testimonials, publications,
+ * dates, authors or results. Anything real we do not have yet is a [TOKEN] placeholder and is
+ * listed in CONTENT_TODO.md.
  */
 
-export type Img = { src: string; width: number; height: number };
+/** An image we may not have yet. With no `src`, components render a labelled placeholder panel. */
+export type ImageSlot = {
+  /** The placeholder name shown until a real image is supplied, e.g. "[EVIDENCE_BEFORE]". */
+  token: string;
+  src?: string;
+  width?: number;
+  height?: number;
+  /** Required once `src` is set. */
+  alt?: string;
+};
 
 export const NAV_LINKS = [
   { label: "Research", href: "#research" },
-  { label: "Products", href: "#products" },
-  { label: "Journal", href: "#journal" },
-  { label: "Company", href: "#company" },
-  { label: "Careers", href: "#careers" },
+  { label: "Clothsy AI", href: "#clothsy" },
+  { label: "Team", href: "#team" },
+  { label: "Work with us", href: "#collaborate" },
 ] as const;
 
-/* ---- Research fields --------------------------------------------------- */
+/* ---- Research ----------------------------------------------------------- */
 
 export type ResearchField = {
   no: string;
   title: string;
   description: string;
-  image: Img;
-  /** Where the card goes. Point each at its own page (e.g. /research/<slug>) once those exist. */
-  href: string;
+  image: ImageSlot;
 };
 
 export const RESEARCH_FIELDS: ResearchField[] = [
   {
     no: "01",
     title: "Visual Understanding",
-    description: "Models that understand people, objects, garments and environments.",
-    image: { src: "/brand/fabric-cream-1.webp", width: 360, height: 222 },
-    href: "#approach",
+    description:
+      "Reading a garment from a single photo: its silhouette, seams, panels, and how it sits on a body.",
+    image: { token: "[RESEARCH_IMAGE_VISUAL_UNDERSTANDING]" },
   },
   {
     no: "02",
     title: "Generative Vision",
-    description: "Systems that transform visual inputs while preserving structure, identity and detail.",
-    image: { src: "/brand/fabric-cream-2.webp", width: 216, height: 132 },
-    href: "#approach",
+    description:
+      "Rendering a garment onto a different person while its print, weave and logo placement stay identical.",
+    image: { token: "[RESEARCH_IMAGE_GENERATIVE_VISION]" },
   },
   {
     no: "03",
     title: "Material Intelligence",
-    description: "Understanding appearance, texture, geometry and the visual characteristics of physical materials.",
-    image: { src: "/brand/fabric-graphite-1.webp", width: 240, height: 147 },
-    href: "#approach",
+    description:
+      "Telling denim from silk from knit, and predicting how each one folds, creases and catches light.",
+    image: { token: "[RESEARCH_IMAGE_MATERIAL_INTELLIGENCE]" },
   },
   {
     no: "04",
     title: "Human–Object Interaction",
-    description: "Modeling how objects change when interacting with people and environments.",
-    image: { src: "/brand/fabric-relation.webp", width: 320, height: 200 },
-    href: "#approach",
+    description:
+      "How a garment changes on a real body: where it stretches, bunches and hangs as someone moves.",
+    image: { token: "[RESEARCH_IMAGE_HUMAN_OBJECT_INTERACTION]" },
+  },
+  {
+    no: "05",
+    title: "Efficient Visual AI",
+    description:
+      "Running these models fast enough, and cheaply enough, to sit inside a live storefront.",
+    image: { token: "[RESEARCH_IMAGE_EFFICIENT_VISUAL_AI]" },
   },
 ];
 
-/* ---- Approach pipeline -------------------------------------------------- */
+/* ---- Evidence ----------------------------------------------------------- */
 
-/** `from` is the scroll progress (0..1) at which the stage starts to appear; the dot reaches it ~0.1 later. */
-export const PIPELINE = [
-  { label: "Input", name: "Image", from: -0.3 },
-  { label: "Geometry", name: "Structure", from: 0.145 },
-  { label: "Material", name: "Texture & Fabric", from: 0.35 },
-  { label: "Model", name: "Generative AI", from: 0.555 },
-  { label: "Output", name: "Realistic Result", from: 0.76 },
+export const EVIDENCE = {
+  before: { token: "[EVIDENCE_BEFORE]" } as ImageSlot,
+  after: { token: "[EVIDENCE_AFTER]" } as ImageSlot,
+  caption: "[EVIDENCE_CAPTION]",
+};
+
+/* ---- Clothsy AI --------------------------------------------------------- */
+
+/** The existing Clothsy demo set: a real person photo, a real garment, and the model's own output. */
+export const CLOTHSY_DEMO = {
+  person: { token: "[CLOTHSY_PERSON]", src: "/brand/clothsy/person.webp", width: 720, height: 995, alt: "The shopper's own photo, before try-on" },
+  garment: { token: "[CLOTHSY_GARMENT]", src: "/brand/clothsy/garment-flat.webp", width: 480, height: 639, alt: "The garment as listed in the store" },
+  result: { token: "[CLOTHSY_RESULT]", src: "/brand/clothsy/result.webp", width: 720, height: 995, alt: "The generated try-on: the same person wearing the garment" },
+} satisfies Record<string, ImageSlot>;
+
+/* ---- Team --------------------------------------------------------------- */
+
+export type Founder = {
+  name: string;
+  role: string;
+  background: string;
+  linkedin: string;
+};
+
+/** Five slots. Delete the ones you don't need; the grid reflows. */
+export const TEAM: Founder[] = [
+  { name: "[FOUNDER_1_NAME]", role: "[FOUNDER_1_ROLE]", background: "[FOUNDER_1_BACKGROUND]", linkedin: "[FOUNDER_1_LINKEDIN]" },
+  { name: "[FOUNDER_2_NAME]", role: "[FOUNDER_2_ROLE]", background: "[FOUNDER_2_BACKGROUND]", linkedin: "[FOUNDER_2_LINKEDIN]" },
+  { name: "[FOUNDER_3_NAME]", role: "[FOUNDER_3_ROLE]", background: "[FOUNDER_3_BACKGROUND]", linkedin: "[FOUNDER_3_LINKEDIN]" },
+  { name: "[FOUNDER_4_NAME]", role: "[FOUNDER_4_ROLE]", background: "[FOUNDER_4_BACKGROUND]", linkedin: "[FOUNDER_4_LINKEDIN]" },
+  { name: "[FOUNDER_5_NAME]", role: "[FOUNDER_5_ROLE]", background: "[FOUNDER_5_BACKGROUND]", linkedin: "[FOUNDER_5_LINKEDIN]" },
+];
+
+/* ---- Collaborate -------------------------------------------------------- */
+
+export const COMPANY_PROBLEM_STATEMENT = "[COMPANY_PROBLEM_STATEMENT]";
+
+export const COLLABORATION_DOORS = [
+  {
+    title: "Research collaboration",
+    description: "Joint work and co-authored papers on garment, material and human–object modelling.",
+  },
+  {
+    title: "Data partnerships",
+    description: "Garment and try-on datasets, shared under terms that work for both sides.",
+  },
+  {
+    title: "IP and patent licensing",
+    description: "License our methods for virtual try-on and material understanding.",
+  },
+  {
+    title: "Brand pilots",
+    description: "Run a try-on pilot on your own catalogue and measure what changes.",
+  },
 ] as const;
 
-/* ---- Clothsy try-on composite ------------------------------------------ */
-
-export const TRYON_STATUS = [
-  { label: "Garment", a: 0.06, b: 0.3 },
-  { label: "Person", a: 0.26, b: 0.52 },
-  { label: "Generating", a: 0.5, b: 0.84 },
-  { label: "Result", a: 0.82, b: 1 },
-] as const;
-
-/* ---- Journal ------------------------------------------------------------ */
+/* ---- Journal (hidden until a real post exists; see SHOW_JOURNAL) --------- */
 
 export type JournalPost = {
   slug: string;
   title: string;
   excerpt: string;
-  /** Drafts render as static, non-linking cards with no date. Only "published" posts link. */
   status: "draft" | "published";
   /** ISO date, shown only when published. Never invent one. */
   publishedAt?: string;
-  image: Img;
+  image: ImageSlot;
 };
 
-export const JOURNAL_POSTS: JournalPost[] = [
-  {
-    slug: "why-fabric-is-harder-than-pixels",
-    title: "Why fabric is harder than pixels",
-    excerpt: "Exploring the challenges of modeling texture, drape and material properties in generative AI.",
-    status: "draft",
-    image: { src: "/brand/fabric-graphite-1.webp", width: 240, height: 147 },
-  },
-  {
-    slug: "evaluating-texture-fidelity-in-virtual-try-on",
-    title: "Evaluating texture fidelity in virtual try-on",
-    excerpt: "Thinking about how visual AI preserves print, weave and material identity.",
-    status: "draft",
-    image: { src: "/brand/fabric-cream-1.webp", width: 360, height: 222 },
-  },
-  {
-    slug: "pose-consistency-in-garment-generation",
-    title: "Pose consistency in garment generation",
-    excerpt: "Why realistic generation is not enough — and how systems maintain identity across different views.",
-    status: "draft",
-    image: { src: "/brand/fabric-relation.webp", width: 320, height: 200 },
-  },
-];
-
-/* ---- Careers ------------------------------------------------------------ */
-
-export type Role = { title: string; href: string; meta?: string };
-
-/** Only list roles that are actually open. Empty = the "always interested" copy is shown on its own. */
-export const ROLES: Role[] = [];
+export const JOURNAL_POSTS: JournalPost[] = [];

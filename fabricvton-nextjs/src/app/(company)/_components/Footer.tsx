@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { CLOTHSY_URL, CONTACT_HREF, SITE_NAME, SITE_TAGLINE, SOCIALS } from "../_lib/site";
+import { CLOTHSY_URL, COMPANY_ADDRESS, SITE_NAME, SITE_TAGLINE, SOCIALS, isPlaceholder } from "../_lib/site";
 
 export default function Footer() {
   return (
@@ -7,7 +7,15 @@ export default function Footer() {
       <div className="fv-wrap">
         <div className="fv-footer-grid">
           <div className="fv-footer-brand">
-            <Image src="/brand/lockup-horizontal.webp" alt={SITE_NAME} width={900} height={253} sizes="160px" unoptimized />
+            <Image
+              src="/brand/lockup-horizontal.webp"
+              alt={SITE_NAME}
+              width={900}
+              height={253}
+              sizes="160px"
+              loading="lazy"
+              unoptimized
+            />
             <p>{SITE_TAGLINE}</p>
           </div>
 
@@ -18,7 +26,7 @@ export default function Footer() {
                 <a href="#research">Research areas</a>
               </li>
               <li>
-                <a href="#journal">Journal</a>
+                <a href="#evidence">Evidence</a>
               </li>
             </ul>
           </nav>
@@ -36,13 +44,10 @@ export default function Footer() {
             <h3>Company</h3>
             <ul>
               <li>
-                <a href="#company">About</a>
+                <a href="#team">Team</a>
               </li>
               <li>
-                <a href="#careers">Careers</a>
-              </li>
-              <li>
-                <a href={CONTACT_HREF}>Contact</a>
+                <a href="#collaborate">Contact</a>
               </li>
             </ul>
           </nav>
@@ -50,20 +55,30 @@ export default function Footer() {
           <nav aria-label="Connect">
             <h3>Connect</h3>
             <ul>
-              {SOCIALS.map((s) => (
-                <li key={s.name}>
-                  <a href={s.href} target="_blank" rel="noopener noreferrer">
-                    {s.name}
-                  </a>
-                </li>
-              ))}
+              {SOCIALS.map((social) =>
+                isPlaceholder(social.href) ? (
+                  <li key={social.name}>
+                    <span>{social.href}</span>
+                  </li>
+                ) : (
+                  <li key={social.name}>
+                    <a href={social.href} target="_blank" rel="noopener noreferrer">
+                      {social.name}
+                    </a>
+                  </li>
+                ),
+              )}
             </ul>
           </nav>
         </div>
 
         <div className="fv-footer-bottom">
-          <p>© {new Date().getFullYear()} FabricVTON. All rights reserved.</p>
-          <p>Clothsy AI is a product by FabricVTON.</p>
+          <p>© {new Date().getFullYear()} FabricVTON</p>
+          <nav aria-label="Legal">
+            <a href="/privacy">Privacy</a>
+            <a href="/tos">Terms</a>
+          </nav>
+          <p>{COMPANY_ADDRESS}</p>
         </div>
       </div>
     </footer>

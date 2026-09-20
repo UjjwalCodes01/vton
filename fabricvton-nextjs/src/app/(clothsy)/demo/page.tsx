@@ -9,7 +9,7 @@ import { PRODUCTS } from "../lib/demo-data";
 import { CLOTHSY_HOME } from "../lib/site";
 
 export default function DemoStore() {
-  const [cartCount, setCartCount] = useState(0);
+  const [cartCount] = useState(0);
   const [liked, setLiked] = useState<Set<number>>(new Set());
   const [activeCategory, setActiveCategory] = useState("All");
 
@@ -112,7 +112,11 @@ export default function DemoStore() {
                     e.preventDefault();
                     setLiked((l) => {
                       const n = new Set(l);
-                      n.has(p.id) ? n.delete(p.id) : n.add(p.id);
+                      if (n.has(p.id)) {
+                        n.delete(p.id);
+                      } else {
+                        n.add(p.id);
+                      }
                       return n;
                     });
                   }}

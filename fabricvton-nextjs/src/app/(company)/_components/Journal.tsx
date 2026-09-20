@@ -1,76 +1,50 @@
-import Image from "next/image";
-import { JOURNAL_POSTS, type JournalPost } from "../_lib/content";
+import { JOURNAL_POSTS } from "../_lib/content";
 import { delay } from "../_lib/style";
-import { Arrow } from "./Arrow";
+import { Slot } from "./Slot";
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 
-function PostBody({ post, linked }: { post: JournalPost; linked: boolean }) {
-  return (
-    <>
-      <div className="fv-post-media">
-        <Image src={post.image.src} alt="" width={post.image.width} height={post.image.height} sizes="124px" unoptimized />
-      </div>
-      <div>
-        <p className="fv-post-meta">
-          {linked && post.publishedAt ? formatDate(post.publishedAt) : "In progress"}
-        </p>
-        <h3 className="fv-post-title">{post.title}</h3>
-        <p className="fv-post-excerpt">{post.excerpt}</p>
-      </div>
-      {linked ? (
-        <span className="fv-post-arrow" aria-hidden="true">
-          →
-        </span>
-      ) : null}
-    </>
-  );
-}
-
 /**
- * Editorial cards. Drafts are static (no link, no date, no hover). A post only links, shows a date and
- * reacts to hover once its status is "published" in _lib/content.ts. Until then "View all posts" is hidden.
+ * Not rendered on the homepage yet: `SHOW_JOURNAL` in _lib/site.ts is false until a real post is
+ * published. Drafts render as static cards with no date and no link.
  */
 export default function Journal() {
-  const anyPublished = JOURNAL_POSTS.some((p) => p.status === "published");
+  if (JOURNAL_POSTS.length === 0) return null;
 
   return (
-    <section className="fv-section fv-journal" id="journal" aria-labelledby="journal-title">
+    <section className="fv-section" id="journal" aria-labelledby="journal-title">
       <div className="fv-wrap">
-        <div className="fv-split">
-          <div data-reveal>
-            <p className="fv-eyebrow">FROM OUR JOURNAL</p>
-            <h2 className="fv-h2" id="journal-title">
-              Ideas, experiments and what we’re learning.
-            </h2>
-          </div>
-          <div data-reveal style={delay(80)}>
-            <p className="fv-lead">
-              A behind-the-scenes look at our research, engineering and the problems we’re trying to understand.
-            </p>
-            {anyPublished ? (
-              <a className="fv-link" href="/journal" data-magnet>
-                View all posts <Arrow />
-              </a>
-            ) : null}
-          </div>
+        <div className="fv-research-head" data-reveal>
+          <p className="fv-eyebrow">JOURNAL</p>
+          <h2 className="fv-h2" id="journal-title">
+            What we are learning.
+          </h2>
         </div>
 
-        <ul className="fv-posts">
+        <ul className="fv-cards">
           {JOURNAL_POSTS.map((post, i) => {
-            const linked = post.status === "published";
+            const published = post.status === "published";
             return (
-              <li key={post.slug} data-reveal style={delay(i * 80)}>
-                {linked ? (
-                  <a className="fv-post is-link" href={`/journal/${post.slug}`} data-magnet>
-                    <PostBody post={post} linked />
-                  </a>
-                ) : (
-                  <article className="fv-post">
-                    <PostBody post={post} linked={false} />
-                  </article>
-                )}
+              <li key={post.slug} data-reveal style={delay(i * 60)}>
+                <article className="fv-card">
+                  <div className="fv-card-media">
+                    <Slot slot={post.image} sizes="(max-width: 639px) 100vw, 33vw" />
+                  </div>
+                  <div className="fv-card-body">
+                    <span className="fv-card-no">
+                      {published && post.publishedAt ? formatDate(post.publishedAt) : "In progress"}
+                    </span>
+                    {published ? (
+                      <a className="fv-h3" href={`/journal/${post.slug}`}>
+                        {post.title}
+                      </a>
+                    ) : (
+                      <h3 className="fv-h3">{post.title}</h3>
+                    )}
+                    <p className="fv-card-desc">{post.excerpt}</p>
+                  </div>
+                </article>
               </li>
             );
           })}

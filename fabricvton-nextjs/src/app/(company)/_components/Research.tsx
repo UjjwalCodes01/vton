@@ -1,47 +1,35 @@
-import Image from "next/image";
 import { RESEARCH_FIELDS } from "../_lib/content";
 import { delay } from "../_lib/style";
+import { Slot } from "./Slot";
 
 export default function Research() {
   return (
-    <section className="fv-section fv-research" id="research" aria-labelledby="research-title">
+    <section className="fv-section fv-section--surface" id="research" aria-labelledby="research-title">
       <div className="fv-wrap">
-        <div className="fv-split">
-          <div data-reveal>
-            <p className="fv-eyebrow">OUR RESEARCH</p>
-            <h2 className="fv-h2" id="research-title">
-              We work on problems where vision meets reality.
-            </h2>
-          </div>
-          <p className="fv-lead" data-reveal style={delay(80)}>
-            We build models and systems that help machines see deeper — understanding people, objects, materials and
-            the environments they exist in.
+        <div className="fv-research-head" data-reveal>
+          <p className="fv-eyebrow">RESEARCH</p>
+          <h2 className="fv-h2" id="research-title">
+            Five problems we work on.
+          </h2>
+          <p className="fv-lead">
+            Garments are hard for vision models: fabric moves, folds, stretches and reflects light differently on
+            every body.
           </p>
         </div>
 
-        <ul className="fv-fields">
+        <ul className="fv-cards">
           {RESEARCH_FIELDS.map((field, i) => (
-            <li key={field.no} data-reveal style={delay(i * 80)}>
-              <a className="fv-field" href={field.href} data-magnet>
-                <span className="fv-field-media">
-                  <Image
-                    src={field.image.src}
-                    alt=""
-                    width={field.image.width}
-                    height={field.image.height}
-                    sizes="(max-width: 599px) 100vw, (max-width: 1099px) 50vw, 300px"
-                    unoptimized
-                  />
-                </span>
-                <span className="fv-field-body">
-                  <span className="fv-field-no">{field.no}</span>
-                  <span className="fv-field-title">{field.title}</span>
-                  <span className="fv-field-desc">{field.description}</span>
-                </span>
-                <span className="fv-field-arrow" aria-hidden="true">
-                  →
-                </span>
-              </a>
+            <li key={field.no} data-reveal style={delay(i * 60)}>
+              <article className="fv-card">
+                <div className="fv-card-media">
+                  <Slot slot={field.image} sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw" />
+                </div>
+                <div className="fv-card-body">
+                  <span className="fv-card-no">{field.no}</span>
+                  <h3 className="fv-h3">{field.title}</h3>
+                  <p className="fv-card-desc">{field.description}</p>
+                </div>
+              </article>
             </li>
           ))}
         </ul>

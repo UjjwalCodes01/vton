@@ -1,32 +1,27 @@
 import Image from "next/image";
 import { cssVars } from "../_lib/style";
-import { CLOTHSY_URL } from "../_lib/site";
 import { Arrow } from "./Arrow";
 
-type Tone = "cream" | "graphite";
-
 /**
- * One fabric form of the FabricVTON mark. The two forms are separate pixel-exact layers cut from the
- * supplied logo, so they can shift independently. The mesh and node overlays are clipped to that same
- * layer's silhouette (via its own alpha), so they read as structure inside the fabric, not on top of it.
+ * One fabric form of the FabricVTON mark. The two forms are separate pixel-exact layers cut from
+ * the supplied logo, so they can drift independently under the cursor.
  */
-function MarkLayer({ tone, kx, ky }: { tone: Tone; kx: number; ky: number }) {
-  const mask = cssVars({ "--mask": `url(/brand/mark-${tone}.webp)` });
+function MarkLayer({ tone, kx, ky }: { tone: "cream" | "graphite"; kx: number; ky: number }) {
   return (
-    <div className={`fv-mark-layer fv-mark-layer--${tone === "cream" ? "a" : "b"}`} style={cssVars({ "--kx": kx, "--ky": ky })}>
+    <div
+      className={`fv-mark-layer fv-mark-layer--${tone === "cream" ? "a" : "b"}`}
+      style={cssVars({ "--kx": kx, "--ky": ky })}
+    >
       <div className="fv-mark-shift">
         <Image
           src={`/brand/mark-${tone}.webp`}
           alt=""
           width={738}
           height={875}
-          sizes="(max-width: 899px) 78vw, 580px"
-          loading="eager"
-          fetchPriority="high"
+          sizes="(max-width: 899px) 82vw, 520px"
+          priority
           unoptimized
         />
-        <span className="fv-mesh" style={mask} />
-        <span className="fv-nodes" style={mask} />
       </div>
     </div>
   );
@@ -37,44 +32,29 @@ export default function Hero() {
     <section className="fv-hero" id="top" data-progress="hero" aria-labelledby="hero-title">
       <div className="fv-wrap fv-hero-grid">
         <div className="fv-hero-copy">
-          <p className="fv-eyebrow">AI RESEARCH + TECHNOLOGY</p>
+          <p className="fv-eyebrow">AI RESEARCH</p>
           <h1 className="fv-h1" id="hero-title">
-            Building intelligence for the visual world.
+            AI that understands fabric.
           </h1>
           <p className="fv-lead">
-            FabricVTON researches and develops AI systems that understand, generate and transform visual
-            information — from people and products to materials and environments.
+            FabricVTON researches how fabric drapes, stretches and holds its detail — and builds visual AI that
+            gets it right.
           </p>
-          <div className="fv-actions">
-            <a className="fv-btn fv-btn--dark" href="#research" data-magnet>
-              Explore our research <Arrow />
+          <div className="fv-hero-actions">
+            <a className="fv-btn" href="#research">
+              Explore our research
             </a>
-            <a className="fv-btn fv-btn--soft" href={CLOTHSY_URL} data-magnet>
-              Meet Clothsy AI <Arrow dir="up" />
+            <a className="fv-link" href="#collaborate">
+              Work with us <Arrow />
             </a>
           </div>
-          <p className="fv-hero-meta" aria-hidden="true">
-            <span>Research</span>
-            <span>×</span>
-            <span>Products</span>
-            <span>×</span>
-            <span>Real-world impact</span>
-          </p>
         </div>
 
         <div className="fv-hero-visual" data-parallax>
           <div className="fv-mark">
-            <MarkLayer tone="cream" kx={-7} ky={-5} />
-            <MarkLayer tone="graphite" kx={9} ky={6} />
+            <MarkLayer tone="cream" kx={-6} ky={-4} />
+            <MarkLayer tone="graphite" kx={8} ky={5} />
           </div>
-          <p className="fv-hero-caption fv-hero-caption--a" aria-hidden="true">
-            Understanding materials.
-            <br />
-            Generating possibilities.
-          </p>
-          <p className="fv-hero-caption fv-hero-caption--b" aria-hidden="true">
-            From research to a more visual world.
-          </p>
         </div>
       </div>
     </section>
