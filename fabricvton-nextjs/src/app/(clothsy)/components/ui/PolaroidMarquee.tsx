@@ -12,12 +12,12 @@ interface PolaroidItem {
 }
 
 const polaroids: PolaroidItem[] = [
-  { id: 1, originalImage: "/model_images/original/1.png", generatedImage: "/model_images/generated/1_generated.jpg", label: "Linen Blazer", item: "Summer Collection" },
-  { id: 2, originalImage: "/model_images/original/2.jpeg", generatedImage: "/model_images/generated/2_generated.jpg", label: "Floral Dress", item: "Spring Edit" },
-  { id: 3, originalImage: "/model_images/original/3.jpg", generatedImage: "/model_images/generated/3_generated.jpg", label: "Graphic Tee", item: "Street Style" },
-  { id: 4, originalImage: "/model_images/original/4.jpg", generatedImage: "/model_images/generated/4_generated.jpg", label: "Denim Jacket", item: "Casual Wear" },
-  { id: 6, originalImage: "/model_images/original/6.jpg", generatedImage: "/model_images/generated/6_generated.jpg", label: "Knitwear Top", item: "Autumn Picks" },
-  { id: 7, originalImage: "/model_images/original/7.jpg", generatedImage: "/model_images/generated/7_generated.jpg", label: "Silk Blouse", item: "Work Wardrobe" },
+  { id: 1, originalImage: "/web/model_images/original/1.webp", generatedImage: "/web/model_images/generated/1_generated.webp", label: "Linen Blazer", item: "Summer Collection" },
+  { id: 2, originalImage: "/web/model_images/original/2.webp", generatedImage: "/web/model_images/generated/2_generated.webp", label: "Floral Dress", item: "Spring Edit" },
+  { id: 3, originalImage: "/web/model_images/original/3.webp", generatedImage: "/web/model_images/generated/3_generated.webp", label: "Graphic Tee", item: "Street Style" },
+  { id: 4, originalImage: "/web/model_images/original/4.webp", generatedImage: "/web/model_images/generated/4_generated.webp", label: "Denim Jacket", item: "Casual Wear" },
+  { id: 6, originalImage: "/web/model_images/original/6.webp", generatedImage: "/web/model_images/generated/6_generated.webp", label: "Knitwear Top", item: "Autumn Picks" },
+  { id: 7, originalImage: "/web/model_images/original/7.webp", generatedImage: "/web/model_images/generated/7_generated.webp", label: "Silk Blouse", item: "Work Wardrobe" },
 ];
 
 // Duplicate for infinite loop

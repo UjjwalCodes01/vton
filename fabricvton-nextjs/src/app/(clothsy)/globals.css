@@ -3963,3 +3963,43 @@ body {
   border-radius: 10px;
 }
 
+
+/* ── Phones and touch: 44px tap targets, readable small text, no double-tap delay ── */
+html { -webkit-tap-highlight-color: rgba(13, 148, 136, 0.15); }
+a, button, summary, input, select, [role="button"] { touch-action: manipulation; }
+
+@media (max-width: 900px) {
+  .brand { min-height: 44px; }
+  .header-mobile-quick-btn { min-height: 44px; }
+  .mobile-menu-toggle { width: 44px; height: 44px; }
+  .footer-social-link { width: 44px; height: 44px; }
+  .footer-bottom-social { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+  .cal-inline-trigger { min-height: 44px; }
+  .legal-link { display: inline-flex; align-items: center; min-height: 44px; }
+  .btn { min-height: 44px; }
+}
+
+@media (max-width: 680px) {
+  .eyebrow { font-size: 12px; }
+  .faq-subtitle { font-size: 12px; }
+  .polaroid-before-badge { font-size: 10.5px; }
+  .polaroid-label { font-size: 12px; }
+  .xray-label, .xray-powered-badge { font-size: 11px; }
+  .milestone-year, .about-team-role-badge { font-size: 11px; }
+}
+
+@media (max-width: 900px) {
+  .footer-legal a { display: inline-flex; align-items: center; min-height: 44px; padding-inline: 4px; }
+  .pwa-banner-install-btn { min-height: 44px; }
+  .pwa-banner-close-btn { width: 44px; height: 44px; }
+}
+
+@media (max-width: 680px) {
+  .polaroid-after-badge { font-size: 10.5px; }
+  .how-works-pill { font-size: 11px; }
+  .bento-card-label { font-size: 11px; }
+}
+
+@media (max-width: 900px) {
+  .mobile-drawer-close { width: 44px; height: 44px; }
+}

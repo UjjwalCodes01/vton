@@ -723,3 +723,93 @@
     width: 100%;
   }
 }
+
+/* ---------------- phones: a compact window, no floating button ---------------- */
+
+@media (max-width: 900px) {
+  /* the primary action follows its content instead of floating over the tiles */
+  .tv-cta {
+    position: static;
+    box-shadow: 0 14px 26px -16px rgba(91, 33, 232, 0.9);
+  }
+}
+
+@media (max-width: 680px) {
+  .tv-stage {
+    width: 100%;
+    min-width: 0;
+    aspect-ratio: 4 / 5;
+  }
+
+  .tv-choose,
+  .tv-result,
+  .tv-sheet {
+    flex: none;
+  }
+
+  /* six looks become one swipeable row instead of two tall rows */
+  .tv-tiles {
+    display: flex;
+    gap: 8px;
+    margin-inline: -16px;
+    padding: 3px 16px 8px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 16px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tv-tiles::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tv-tile {
+    flex: 0 0 76px;
+    scroll-snap-align: start;
+  }
+
+  .tv-link,
+  .tv-link-quiet {
+    min-height: 44px;
+  }
+
+  .tv-x {
+    width: 44px;
+    height: 44px;
+  }
+
+  .tv-compare button {
+    min-height: 40px;
+  }
+
+  .tv-mini {
+    width: 46px;
+    height: 60px;
+  }
+}
+
+@media (max-width: 680px) {
+  .tv-head {
+    padding: 10px 16px;
+    gap: 8px;
+  }
+
+  .tv-head-title {
+    white-space: nowrap;
+  }
+
+  .tv-head .preview-tag {
+    padding: 3px 8px;
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  .tv-eyebrow,
+  .tv-pick small,
+  .tv-session p,
+  .tv-veil-copy small {
+    font-size: 12px;
+  }
+}

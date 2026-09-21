@@ -69,6 +69,9 @@ export default function TryOnDemo({ onStage }: { onStage?: (step: number) => voi
 
   // Warm the cache for the current shopper's looks shortly after load, so the reveal never waits on a download.
   useEffect(() => {
+    // Respect Data Saver: skip the speculative downloads.
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+    if (connection?.saveData) return;
     const warm = () => {
       for (const look of SHOPPERS[shopper.id].looks) {
         const img = new window.Image();

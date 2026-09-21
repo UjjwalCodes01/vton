@@ -1130,3 +1130,28 @@
     position: static;
   }
 }
+
+/* ── Phones and touch (demo store) ── */
+@media (max-width: 900px) {
+  .demo-announcement-cta { display: inline-flex; align-items: center; min-height: 44px; }
+  .demo-back-link, .demo-studio-pill-btn { min-height: 44px; }
+  .demo-cart-btn { min-width: 44px; min-height: 44px; }
+  .demo-nav-item { min-height: 44px; }
+  .demo-pdp-size-btn { min-height: 44px; }
+}
+
+@media (max-width: 680px) {
+  .demo-hero-eyebrow { font-size: 12px; }
+  .demo-product-badge { font-size: 10.5px; }
+  .demo-product-brand { font-size: 11.5px; }
+}
+
+@media (max-width: 900px) {
+  .demo-custom-tryon-link { display: inline-flex; align-items: center; min-height: 44px; }
+  .demo-like-btn { width: 44px; height: 44px; }
+  .demo-mobile-tryon-btn { min-height: 44px; }
+}
+
+@media (max-width: 900px) {
+  .demo-footer-cta { display: inline-flex; align-items: center; min-height: 44px; }
+}

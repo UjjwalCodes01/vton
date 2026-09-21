@@ -9,21 +9,21 @@ const PAIRS = [
   {
     id: 2,
     label: "Look 1",
-    before: "/model_images/original/9.jpg",
-    after: "/model_images/generated/9_generated.jpg",
+    before: "/web/model_images/original/9.webp",
+    after: "/web/model_images/generated/9_generated.webp",
     afterTransform: "scale(1) translate(0px, 0px)",
   },
   {
     id: 10,
     label: "Look 2",
-    before: "/model_images/original/10.jpg",
-    after: "/model_images/generated/10_generated.jpg",
+    before: "/web/model_images/original/10.webp",
+    after: "/web/model_images/generated/10_generated.webp",
   },
   {
     id: 1,
     label: "Look 3",
-    before: "/model_images/original/7.jpg",
-    after: "/model_images/generated/7_generated_cropped.jpg",
+    before: "/web/model_images/original/7.webp",
+    after: "/web/model_images/generated/7_generated_cropped.webp",
   },
 ];
 

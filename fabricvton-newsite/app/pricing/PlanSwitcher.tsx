@@ -101,7 +101,8 @@ export default function PlanSwitcher() {
         })}
       </div>
 
-      <div className="plan-table-wrap">
+      <p className="plan-table-hint">Swipe sideways to compare every plan.</p>
+      <div className="plan-table-wrap" tabIndex={0} role="region" aria-label="Plan comparison, scrolls sideways">
         <table className="plan-table">
           <caption>Compare plans</caption>
           <thead>

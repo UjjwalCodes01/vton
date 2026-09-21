@@ -612,3 +612,24 @@ html.fv-lock { overflow: hidden; }
 .fv-social { display: flex !important; gap: 8px !important; }
 .fv-social a { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; color: var(--fv-ink) !important; transition: background-color 0.25s var(--fv-ease); }
 @media (hover: hover) { .fv-social a:hover { background: var(--fv-panel); } }
+
+/* ==========================================================================
+   Phones and touch: 44px tap targets, readable small labels, shorter cards.
+   ========================================================================== */
+html { -webkit-tap-highlight-color: rgba(24, 25, 27, 0.08); }
+a, button, summary, [role="button"] { touch-action: manipulation; }
+
+@media (max-width: 899px) {
+  .fv-logo { min-height: 44px; }
+  .fv-textlink { min-height: 44px; margin-top: 8px; }
+  .fv-social a { width: 44px; height: 44px; }
+  .fv-footer ul { gap: 0; }
+  .fv-footer li a { display: inline-flex; align-items: center; min-height: 44px; }
+  .fv-footer-bottom a { display: inline-flex; align-items: center; min-height: 44px; }
+}
+
+@media (max-width: 599px) {
+  /* four research cards stacked at 16:10 instead of near-square saves a full screen of scrolling */
+  .fv-field-media { aspect-ratio: 16 / 10; }
+  .fv-field-no, .fv-stage-label, .fv-post-meta { font-size: 11.5px; }
+}
