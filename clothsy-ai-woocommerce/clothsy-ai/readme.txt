@@ -20,6 +20,7 @@ Clothsy AI adds a "Try It On" button to your WooCommerce product pages. A shoppe
 * **Lead capture.** Optionally ask for an email before the try-on, and download your leads as a CSV.
 * **Usage at a glance.** See try-ons, emails captured and your remaining monthly allowance inside WordPress.
 * **Built for speed.** Nothing loads until a shopper reaches for the button, and photos go straight to Clothsy AI, never through your web server.
+* **A try-on window shoppers finish.** Upload or take a photo, confirm it, watch the progress, then compare the result side by side with the original and add the product to the cart without leaving the page.
 * **Consent before any photo is sent.** Shoppers tick a consent box, with a plain-language notice, before their photo leaves their browser — nothing is uploaded until they agree.
 * **Privacy tools built in.** Shopper data works with WordPress's Export and Erase Personal Data tools, and the plugin suggests text for your privacy policy.
 * **Safe on staging.** A copy of your site keeps try-on switched off, so it can't use your allowance or disconnect your live store.
@@ -27,12 +28,14 @@ Clothsy AI adds a "Try It On" button to your WooCommerce product pages. A shoppe
 
 = Plans =
 
-Every store starts on the free **Basic** plan with 10 try-ons a month. Paid plans add more, billed monthly in USD, and you can change or cancel them any time from **WooCommerce → Clothsy AI**:
+Every store starts on the free **Basic** plan with 15 try-ons a month. Paid plans add more, billed monthly in USD, and you can change or cancel them any time from **WooCommerce → Clothsy AI**:
 
-* **Starter** – 50 try-ons a month, $9/month
-* **Growth** – 400 try-ons a month, $49/month
-* **Pro** – 1,000 try-ons a month, $99/month
-* **Scale** – 2,500 try-ons a month, $219/month
+* **Starter** – 250 try-ons a month, $19.99/month
+* **Growth** – 750 try-ons a month, $49.99/month
+* **Pro** – 2,000 try-ons a month, $99.99/month
+* **Scale** – 4,250 try-ons a month, $199/month
+
+Need more than that? Ask us about a Custom plan.
 
 Upgrades start right away with a full allowance. Downgrades and cancellations take effect when your current billing period ends. When the month's allowance is used up, the try-on button tells shoppers to come back later; you are never charged extra.
 
@@ -97,6 +100,7 @@ The service is provided by Clothsy AI: [Terms of Service](https://www.fabricvton
 
 = 0.2.0 =
 * Shoppers now give explicit consent before any photo is sent, with a plain-language notice and an age confirmation. The consent is recorded and shown in personal data exports.
+* Redesigned try-on window: take a photo as well as upload one, confirm it before it is sent, follow the progress step by step, compare the result against the original, and add the product to the cart from the result screen.
 
 = 0.1.0 =
 * First release: connect, try-on button (automatic, block and shortcode), variable product support, per-product settings, usage and leads export, paid plans, and WordPress privacy tools.

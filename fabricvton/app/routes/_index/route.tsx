@@ -2,6 +2,7 @@ import type { LinksFunction, LoaderFunctionArgs, MetaFunction } from "react-rout
 import { Form, redirect, useLoaderData } from "react-router";
 
 import { login } from "../../shopify.server";
+import { getPlan, SELLABLE_PLANS } from "../../billing.server";
 
 import styles from "./styles.module.css";
 
@@ -84,37 +85,6 @@ const steps = [
   },
 ];
 
-const plans = [
-  {
-    name: "Starter",
-    price: "$9",
-    note: "Per month · $86/yr",
-    details: ["50 monthly try-ons", "+$0.18 per extra try-on", "Lead capture", "Analytics", "Standard support"],
-    highlight: false,
-  },
-  {
-    name: "Growth",
-    price: "$49",
-    note: "Per month · $470/yr",
-    details: ["400 monthly try-ons", "+$0.13 per extra try-on", "Lead capture", "Analytics", "Standard support"],
-    highlight: true,
-  },
-  {
-    name: "Pro",
-    price: "$99",
-    note: "Per month · $950/yr",
-    details: ["1,000 monthly try-ons", "+$0.10 per extra try-on", "Lead capture", "Analytics", "Standard support"],
-    highlight: false,
-  },
-  {
-    name: "Scale",
-    price: "$219",
-    note: "Per month · $2,102/yr",
-    details: ["2,500 monthly try-ons", "+$0.08 per extra try-on", "Lead capture", "Analytics", "✨ Dedicated priority support"],
-    highlight: false,
-  },
-];
-
 const faqs = [
   {
     q: "What does Clothsy AI replace?",
@@ -141,11 +111,57 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     throw redirect(`/app?${url.searchParams.toString()}`);
   }
 
-  return { showForm: Boolean(login) };
+  // Built from the billing catalog rather than restated here, so this page
+  // cannot quote a price the merchant will not actually be charged. Overage
+  // rates are deliberately not advertised: nothing levies them until
+  // OVERAGE_BILLING_ENABLED and a matching Shopify usage charge are both in
+  // place, and promising a charge we cannot collect failed App Store review
+  // once already.
+  const entry = getPlan("free");
+  const plans = [
+    {
+      name: entry.label,
+      price: "Free",
+      note: "No card required",
+      details: [
+        `${entry.credits} monthly try-ons`,
+        "Lead capture",
+        "Analytics",
+        "Standard support",
+      ],
+      highlight: false,
+    },
+    ...SELLABLE_PLANS.filter((plan) => plan.monthlyPrice > 0).map((plan) => ({
+      name: plan.label,
+      price: `$${plan.monthlyPrice.toFixed(2)}`,
+      note: `Per month · $${plan.annualPrice.toFixed(2)}/yr`,
+      details: [
+        `${plan.credits.toLocaleString("en-US")} monthly try-ons`,
+        "Lead capture",
+        "Analytics",
+        plan.name === "scale" ? "✨ Dedicated priority support" : "Standard support",
+      ],
+      highlight: plan.featured === true,
+    })),
+    {
+      name: "Custom",
+      price: "Custom",
+      note: "Talk to us",
+      details: [
+        "Higher volumes than Scale",
+        "Shopify, WooCommerce or direct API",
+        "Volume pricing",
+        "✨ Dedicated priority support",
+      ],
+      highlight: false,
+    },
+  ];
+
+  return { showForm: Boolean(login), plans };
 };
 
 export default function App() {
-  const { showForm } = useLoaderData<typeof loader>();
+  const { showForm, plans } = useLoaderData<typeof loader>();
 
   return (
     <div className={styles.page}>

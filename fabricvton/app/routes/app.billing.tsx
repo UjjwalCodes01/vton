@@ -9,7 +9,7 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import db from "../db.server";
 import {
-  PLANS,
+  SELLABLE_PLANS,
   OVERAGE_BILLING_ENABLED,
   getPlan,
   buildManagedPricingUrl,
@@ -37,11 +37,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   return {
     currentPlan,
-    plans: PLANS,
+    // A merchant on a withdrawn plan still sees it above as their current plan;
+    // it just isn't offered in the grid below.
+    plans: SELLABLE_PLANS,
+    entryPlan: getPlan("free"),
     activationMessage,
     overageEnabled: OVERAGE_BILLING_ENABLED,
   };
 };
+
+/** Plans are priced to the cent, so never let a price render as "$19.9". */
+const money = (amount: number) => amount.toFixed(2);
 
 // ─── Action: hand the merchant off to Shopify's plan picker ──────────────────
 // This app uses Managed Pricing, so Shopify owns accept / decline / change /
@@ -56,7 +62,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 // ─── Billing page UI ──────────────────────────────────────────────────────────
 export default function Billing() {
-  const { currentPlan, plans, activationMessage, overageEnabled } =
+  const { currentPlan, plans, entryPlan, activationMessage, overageEnabled } =
     useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const shopify = useAppBridge();
@@ -122,7 +128,7 @@ export default function Billing() {
               const isRecommended = plan.featured === true;
               const isUpgrade = plan.monthlyPrice > currentPlan.monthlyPrice;
               const monthlyEquivalent = annual
-                ? Math.round(plan.annualPrice / 12)
+                ? plan.annualPrice / 12
                 : plan.monthlyPrice;
               const savingsPercent = Math.round(
                 (1 - plan.annualPrice / (plan.monthlyPrice * 12)) * 100,
@@ -145,10 +151,10 @@ export default function Billing() {
                     </s-stack>
 
                     <s-stack gap="small-100">
-                      <s-text type="strong">${monthlyEquivalent}/month</s-text>
+                      <s-text type="strong">${money(monthlyEquivalent)}/month</s-text>
                       <s-text color="subdued">
                         {annual
-                          ? `$${plan.annualPrice} billed yearly, save ${savingsPercent}%`
+                          ? `$${money(plan.annualPrice)} billed yearly, save ${savingsPercent}%`
                           : "Billed monthly"}
                       </s-text>
                     </s-stack>
@@ -195,7 +201,7 @@ export default function Billing() {
                 loading={pendingPlan === "free"}
                 onClick={() => changePlan("free")}
               >
-                Downgrade to Basic (10 try-ons per month)
+                Downgrade to {entryPlan.label} ({entryPlan.credits} try-ons per month)
               </s-button>
             </s-stack>
           )}

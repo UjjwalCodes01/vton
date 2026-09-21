@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { Prisma, type BillingSubscription, type ShopConfig } from "@prisma/client";
 import db from "../db.server";
-import { BILLING_SUSPEND_PREFIX, getPlan, PLANS, type Plan } from "../billing.server";
+import { BILLING_SUSPEND_PREFIX, getPlan, SELLABLE_PLANS, type Plan } from "../billing.server";
 import { originMatchesStore, WooAuthError } from "./auth.server";
 import { hmacHex, safeEqual } from "./crypto.server";
 
@@ -34,7 +34,9 @@ const RENEWAL_TOLERANCE_MS = 5 * 24 * 60 * 60 * 1000;
 const ENDED = new Set(["halted", "cancelled", "completed", "expired", "paused"]);
 const CANCELLABLE = new Set(["created", "authenticated", "active", "pending"]);
 
-export const PAID_PLANS = PLANS.filter((plan) => plan.monthlyPrice > 0);
+// Withdrawn plans are excluded: a store already on one keeps it (getPlan still
+// resolves it), but it can never be picked or re-bought from the plugin.
+export const PAID_PLANS = SELLABLE_PLANS.filter((plan) => plan.monthlyPrice > 0);
 
 export function billingConfigured() {
   return Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET && process.env.RAZORPAY_WEBHOOK_SECRET);

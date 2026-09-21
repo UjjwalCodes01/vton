@@ -49,37 +49,39 @@ const revenueReasons = [
   },
 ];
 
+// Keep in step with PLANS in the app's billing.server.ts — that file is what
+// merchants are actually charged from.
 const pricing = [
   {
     name: "Starter",
-    price: "$9",
+    price: "$19.99",
     period: "/month",
-    items: ["50 try-ons / month", "Lead capture", "Analytics dashboard", "Standard support"],
+    items: ["250 try-ons / month", "Lead capture", "Analytics dashboard", "Standard support"],
   },
   {
     name: "Growth",
-    price: "$49",
+    price: "$49.99",
     period: "/month",
     featured: true,
-    items: ["400 try-ons / month", "Lead capture", "Analytics dashboard", "Standard support"],
+    items: ["750 try-ons / month", "Lead capture", "Analytics dashboard", "Standard support"],
   },
   {
     name: "Pro",
-    price: "$99",
+    price: "$99.99",
     period: "/month",
-    items: ["1,000 try-ons / month", "Lead capture", "Analytics dashboard", "Remove branding"],
+    items: ["2,000 try-ons / month", "Lead capture", "Analytics dashboard", "Priority support"],
   },
   {
     name: "Scale",
-    price: "$219",
+    price: "$199",
     period: "/month",
-    items: ["2,500 try-ons / month", "Lead capture", "Analytics dashboard", "Priority support"],
+    items: ["4,250 try-ons / month", "Lead capture", "Analytics dashboard", "Priority support"],
   },
   {
-    name: "Enterprise",
+    name: "Custom",
     price: "Custom",
     period: "",
-    items: ["High volume try-ons", "Custom API integration", "Dedicated account manager", "Volume discounts", "24/7 SLA support"],
+    items: ["More than 4,250 try-ons", "Shopify, WooCommerce or API", "Volume pricing", "Priority support"],
     isContact: true,
   },
 ];
@@ -91,7 +93,7 @@ const faqs = [
   },
   {
     question: "Can I try it before paying?",
-    answer: "Yes. Every store starts on the Basic plan with 10 try-ons a month at no cost, and no credit card is required. You can upgrade from inside the app whenever you need more.",
+    answer: "Yes. Every store starts on the Basic plan with 15 try-ons a month at no cost, and no credit card is required. You can upgrade from inside the app whenever you need more.",
   },
   {
     question: "How long does setup take?",

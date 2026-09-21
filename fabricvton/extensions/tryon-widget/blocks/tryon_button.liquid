@@ -21,6 +21,9 @@
       data-product-image="{{ product.featured_image | image_url: width: 1024 }}"
       data-require-email="{{ block.settings.require_email }}"
       data-version="{{ 'now' | date: '%s' }}"
+      data-cart-add-url="{{ routes.cart_add_url }}"
+      data-cart-url="{{ routes.cart_url }}"
+      data-variant-id="{{ product.selected_or_first_available_variant.id }}"
       data-css-url="{{ 'fabricvton.css' | asset_url }}"
       style="
         background-color: {{ block.settings.button_color }};
