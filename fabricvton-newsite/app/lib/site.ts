@@ -13,11 +13,15 @@ export const BOOK_DEMO_URL = "https://cal.com/fabricvton-hz9xbt/demo";
 export const CONTACT_EMAIL = "fabricvton@gmail.com";
 export const CONTACT_HREF = `mailto:${CONTACT_EMAIL}`;
 
-/** The legal pages live on the main FabricVTON site (the store integrations already link there). */
+/**
+ * Legal pages live on this site so shoppers and merchants can read them without leaving Clothsy AI.
+ * The installed Shopify app and WooCommerce plugin separately hard-code fabricvton.com/privacy,
+ * /tos and /widget-privacy — those stay put; this is just where this site links to for itself.
+ */
 export const LEGAL = {
-  privacy: `${PARENT_URL}/privacy`,
-  terms: `${PARENT_URL}/tos`,
-  shopperPrivacy: `${PARENT_URL}/widget-privacy`,
+  privacy: "/privacy",
+  terms: "/tos",
+  shopperPrivacy: "/widget-privacy",
 } as const;
 
 export const SOCIALS = [

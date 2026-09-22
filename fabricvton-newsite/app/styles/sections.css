@@ -522,6 +522,106 @@ main:focus {
   margin: 28px 0 0;
 }
 
+/* legal pages: /privacy, /widget-privacy, /tos — share the .guide article shell */
+
+.legal-tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px;
+  margin-bottom: 28px;
+  border-radius: 999px;
+  background: var(--paper);
+  border: 1px solid var(--line-2);
+  box-shadow: var(--shadow-card);
+}
+
+.legal-tabs a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.legal-tabs a:hover {
+  color: var(--violet);
+}
+
+.legal-tabs a[aria-current="page"] {
+  background: var(--lav-1);
+  color: var(--violet-deep);
+}
+
+.legal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 16px 0 0;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+.legal-callout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 20px;
+  margin: 32px 0 0;
+  padding: 18px 22px;
+  border-radius: var(--r-md);
+  background: var(--lav-1);
+  border: 1px solid var(--line-2);
+}
+
+.legal-callout p {
+  margin: 0;
+  font-size: 14.5px;
+  color: var(--ink-2);
+}
+
+.legal-callout a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--violet);
+  white-space: nowrap;
+}
+
+.legal-callout a:hover {
+  color: var(--violet-deep);
+}
+
+.legal-quote {
+  margin: 18px 0 20px;
+  padding: 20px 22px;
+  border-radius: var(--r-md);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+
+.legal-quote strong {
+  color: var(--ink);
+}
+
+@media (max-width: 680px) {
+  .legal-tabs a {
+    padding: 0 14px;
+    font-size: 13px;
+  }
+}
+
 .guide-next {
   display: flex;
   flex-direction: column;

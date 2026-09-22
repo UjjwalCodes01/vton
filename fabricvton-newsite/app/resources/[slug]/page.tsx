@@ -54,9 +54,9 @@ export default async function GuidePage({ params }: PageProps<"/resources/[slug]
 
           {guide.slug === "what-happens-to-your-photo" ? (
             <p className="guide-legal">
-              <a className="btn btn-ghost btn-sm" href={LEGAL.shopperPrivacy} target="_blank" rel="noopener noreferrer">
+              <Link className="btn btn-ghost btn-sm" href={LEGAL.shopperPrivacy}>
                 Read the full shopper privacy policy <ArrowUpRight className="btn-arrow" />
-              </a>
+              </Link>
             </p>
           ) : null}
 

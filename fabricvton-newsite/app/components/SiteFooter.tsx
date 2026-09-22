@@ -29,8 +29,8 @@ const columns: { title: string; links: FooterLink[] }[] = [
     links: [
       { href: "/#about", label: "About" },
       { href: CONTACT_HREF, label: "Contact" },
-      { href: LEGAL.privacy, label: "Privacy", external: true },
-      { href: LEGAL.terms, label: "Terms", external: true },
+      { href: LEGAL.privacy, label: "Privacy" },
+      { href: LEGAL.terms, label: "Terms" },
     ],
   },
 ];
@@ -86,15 +86,9 @@ export default function SiteFooter() {
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} Clothsy AI · A product by FabricVTON</span>
           <div>
-            <a href={LEGAL.privacy} target="_blank" rel="noopener noreferrer">
-              Privacy
-            </a>
-            <a href={LEGAL.shopperPrivacy} target="_blank" rel="noopener noreferrer">
-              Shopper privacy
-            </a>
-            <a href={LEGAL.terms} target="_blank" rel="noopener noreferrer">
-              Terms
-            </a>
+            <Link href={LEGAL.privacy}>Privacy</Link>
+            <Link href={LEGAL.shopperPrivacy}>Shopper privacy</Link>
+            <Link href={LEGAL.terms}>Terms</Link>
           </div>
         </div>
       </div>
