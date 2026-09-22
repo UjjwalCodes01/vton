@@ -1,503 +1,496 @@
 /* Clothsy AI try-on widget for WooCommerce.
-   Loaded once per product page; the modal markup itself is only built on first
-   click, so nothing here paints until a shopper actually opens the widget.
+   A docked panel in the bottom-right corner rather than a centred modal: the
+   shopper keeps the product page in view while they try the garment on.
+   Loaded once per product page; the markup is built on first click. */
 
-   Everything is scoped under .clothsy-ai-* and sets its own values rather than
-   inheriting, because this markup lands inside an unknown merchant theme. */
-
-.clothsy-ai-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(18, 16, 30, 0.55);
-  backdrop-filter: blur(6px);
-  z-index: 9998;
-}
-
-.clothsy-ai-modal {
-  --ca-ink: #14131a;
-  --ca-muted: #6b6a76;
-  --ca-line: #e9e7f1;
-  --ca-soft: #f7f6fb;
+.clothsy-ai-panel {
+  --ca-ink: #101014;
+  --ca-ink-2: #3a3a42;
+  --ca-muted: #74747e;
+  --ca-line: #e7e7ec;
+  --ca-soft: #f6f6f8;
   --ca-accent: #6c4fe0;
   --ca-accent-soft: #efecfd;
 
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  right: 20px;
+  bottom: 20px;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  max-height: min(80vh, 760px);
+  display: none;
+  flex-direction: column;
   background: #fff;
-  border-radius: 22px;
-  padding: 20px 24px 24px;
-  width: 92%;
-  max-width: 440px;
-  z-index: 9999;
-  box-shadow: 0 30px 70px rgba(20, 19, 26, 0.28);
+  border: 1px solid var(--ca-line);
+  border-radius: 20px;
+  box-shadow: 0 24px 64px rgba(16, 16, 20, 0.22);
+  z-index: 2147483000;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
   color: var(--ca-ink);
-  /* A tall result image on a short screen must not push the close button off
-     the viewport — scroll inside the dialog instead. */
-  max-height: 90vh;
-  overflow-y: auto;
-  box-sizing: border-box;
+  font-size: 14px;
   line-height: 1.45;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
-@media (max-width: 480px) {
-  .clothsy-ai-modal {
-    top: auto;
-    bottom: 0;
-    left: 0;
+.clothsy-ai-panel[data-open="true"] { display: flex; }
+.clothsy-ai-panel *, .clothsy-ai-panel *::before, .clothsy-ai-panel *::after { box-sizing: border-box; }
+
+@media (max-width: 560px) {
+  .clothsy-ai-panel {
     right: 0;
-    transform: none;
+    left: 0;
+    bottom: 0;
     width: 100%;
     max-width: 100%;
-    border-radius: 24px 24px 0 0;
-    padding: 16px 18px max(20px, env(safe-area-inset-bottom, 18px));
+    border-radius: 20px 20px 0 0;
     max-height: 92dvh;
   }
 }
 
 /* ── Header ─────────────────────────────────────────────── */
 
-.clothsy-ai-bar {
+.clothsy-ai-head {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 18px;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px 16px 12px 20px;
+  border-bottom: 1px solid transparent;
+  flex: none;
 }
 
-.clothsy-ai-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+.clothsy-ai-head-text { flex: 1; min-width: 0; }
+
+.clothsy-ai-head h2 {
+  margin: 0;
+  font-size: 16.5px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
   color: var(--ca-ink);
 }
 
-.clothsy-ai-brand i {
-  font-style: normal;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  padding: 2px 6px;
-  border-radius: 999px;
-  color: var(--ca-accent);
-  background: var(--ca-accent-soft);
-}
-
-.clothsy-ai-close {
-  background: none;
-  border: none;
-  padding: 4px;
-  font-size: 20px;
-  line-height: 1;
-  cursor: pointer;
+.clothsy-ai-head p {
+  margin: 2px 0 0;
+  font-size: 12.5px;
   color: var(--ca-muted);
-  border-radius: 8px;
 }
-.clothsy-ai-close:hover { background: var(--ca-soft); color: var(--ca-ink); }
 
-/* ── Steps ──────────────────────────────────────────────── */
+.clothsy-ai-icon-btn {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--ca-soft);
+  color: var(--ca-ink-2);
+  cursor: pointer;
+  padding: 0;
+}
+.clothsy-ai-icon-btn:hover { background: #ededf1; color: var(--ca-ink); }
+.clothsy-ai-icon-btn[hidden] { display: none; }
+
+/* ── Body ───────────────────────────────────────────────── */
+
+.clothsy-ai-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 20px 20px;
+  text-align: center;
+}
 
 .clothsy-ai-step { display: none; }
 .clothsy-ai-step[data-active="true"] { display: block; }
 
-.clothsy-ai-modal h2 {
+.clothsy-ai-title {
   margin: 0 0 6px;
-  font-size: 23px;
-  font-weight: 700;
+  font-size: 21px;
+  font-weight: 600;
   letter-spacing: -0.02em;
-  color: var(--ca-ink);
-  text-align: center;
 }
 
-.clothsy-ai-lead {
+.clothsy-ai-sub {
   margin: 0 0 18px;
-  color: var(--ca-muted);
-  font-size: 14px;
-  text-align: center;
-}
-
-/* ── Controls ───────────────────────────────────────────── */
-
-.clothsy-ai-field {
-  padding: 13px 16px;
-  border: 1.5px solid var(--ca-line);
-  border-radius: 12px;
-  font-size: 15px;
-  outline: none;
-  transition: border-color 0.15s;
-  width: 100%;
-  box-sizing: border-box;
-  font-family: inherit;
-  color: var(--ca-ink);
-  background: #fff;
-}
-.clothsy-ai-field:focus { border-color: var(--ca-accent); }
-
-.clothsy-ai-primary,
-.clothsy-ai-secondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  border: none;
-  border-radius: 12px;
-  padding: 14px;
-  font-size: 15px;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  box-sizing: border-box;
-}
-
-.clothsy-ai-primary { background: #17161d; color: #fff; }
-.clothsy-ai-primary:hover { background: #000; }
-.clothsy-ai-secondary { background: var(--ca-soft); color: var(--ca-ink); }
-.clothsy-ai-secondary:hover { background: #efedf6; }
-
-.clothsy-ai-primary[disabled],
-.clothsy-ai-secondary[disabled] { opacity: 0.45; cursor: not-allowed; }
-
-.clothsy-ai-primary svg,
-.clothsy-ai-secondary svg { flex: none; }
-
-.clothsy-ai-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-/* ── Upload step ────────────────────────────────────────── */
-
-.clothsy-ai-dropzone {
-  border: 1.5px dashed #d6d2e8;
-  border-radius: 16px;
-  background: var(--ca-soft);
-  padding: 30px 20px;
-  text-align: center;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-}
-.clothsy-ai-dropzone:hover,
-.clothsy-ai-dropzone.is-dragover {
-  border-color: var(--ca-accent);
-  background: var(--ca-accent-soft);
-}
-.clothsy-ai-dropzone svg { color: var(--ca-accent); margin-bottom: 8px; }
-.clothsy-ai-dropzone b {
-  display: block;
-  font-size: 15px;
-  font-weight: 600;
-}
-.clothsy-ai-dropzone span {
-  display: block;
-  margin-top: 3px;
-  font-size: 12.5px;
-  color: var(--ca-muted);
-}
-
-.clothsy-ai-or {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 14px 0;
-  font-size: 12.5px;
-  color: var(--ca-muted);
-}
-.clothsy-ai-or::before,
-.clothsy-ai-or::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--ca-line);
-}
-
-.clothsy-ai-private {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin: 16px 0 0;
-  font-size: 12.5px;
-  color: var(--ca-muted);
-}
-.clothsy-ai-private svg { flex: none; }
-
-/* ── Confirm step ───────────────────────────────────────── */
-
-.clothsy-ai-photo {
-  display: block;
-  width: 100%;
-  max-height: 46vh;
-  object-fit: contain;
-  border-radius: 16px;
-  background: var(--ca-soft);
-  margin-bottom: 14px;
-}
-
-.clothsy-ai-consent {
-  border: 1px solid var(--ca-line);
-  border-radius: 14px;
-  background: var(--ca-soft);
-  padding: 12px 14px;
-  margin-bottom: 12px;
-}
-
-.clothsy-ai-consent-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  font-size: 13px;
-  cursor: pointer;
-  color: var(--ca-ink);
-}
-
-.clothsy-ai-consent-row input {
-  flex: none;
-  width: 17px;
-  height: 17px;
-  margin: 1px 0 0;
-  accent-color: var(--ca-accent);
-  cursor: pointer;
-}
-
-.clothsy-ai-consent-note {
-  margin: 8px 0 0;
-  font-size: 11.5px;
-  line-height: 1.5;
-  color: var(--ca-muted);
-}
-.clothsy-ai-consent-note a { color: var(--ca-accent); }
-
-/* ── Generating step ────────────────────────────────────── */
-
-.clothsy-ai-loading { text-align: center; }
-
-.clothsy-ai-ring {
-  display: block;
-  margin: 18px auto 16px;
-  width: 104px;
-  height: 104px;
-}
-.clothsy-ai-ring circle { fill: none; stroke-width: 6; stroke-linecap: round; }
-.clothsy-ai-ring .ca-track { stroke: var(--ca-accent-soft); }
-.clothsy-ai-ring .ca-arc {
-  stroke: var(--ca-accent);
-  transform-origin: 50% 50%;
-  transform: rotate(-90deg);
-  transition: stroke-dashoffset 0.6s ease;
-  animation: clothsy-ai-sweep 1.4s linear infinite;
-}
-
-@keyframes clothsy-ai-sweep {
-  to { transform: rotate(270deg); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .clothsy-ai-ring .ca-arc { animation: none; }
-}
-
-.clothsy-ai-steps {
-  list-style: none;
-  margin: 0 auto;
-  padding: 0;
-  max-width: 250px;
-  text-align: left;
-}
-.clothsy-ai-steps li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 5px 0;
   font-size: 13.5px;
   color: var(--ca-muted);
 }
-.clothsy-ai-steps li b {
-  flex: none;
-  width: 19px;
-  height: 19px;
-  border-radius: 50%;
-  border: 1.5px solid var(--ca-line);
-  background: #fff;
-}
-.clothsy-ai-steps li[data-state="active"] { color: var(--ca-ink); font-weight: 600; }
-.clothsy-ai-steps li[data-state="active"] b {
-  border-color: var(--ca-accent);
-  background: var(--ca-accent-soft);
-}
-.clothsy-ai-steps li[data-state="done"] { color: var(--ca-ink); }
-.clothsy-ai-steps li[data-state="done"] b {
-  border-color: var(--ca-accent);
-  background: var(--ca-accent) url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23fff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E") center / 13px no-repeat;
-}
 
-.clothsy-ai-almost {
-  margin: 14px 0 0;
-  font-size: 12.5px;
-  color: var(--ca-muted);
-}
+/* ── Step dots ──────────────────────────────────────────── */
 
-/* ── Result step ────────────────────────────────────────── */
-
-.clothsy-ai-result-img {
-  display: block;
-  width: 100%;
-  max-height: 54vh;
-  object-fit: contain;
-  border-radius: 16px;
-  background: var(--ca-soft);
-}
-
-/* Compare: the original sits underneath and the try-on is clipped over it, so
-   dragging the handle wipes between the two without reloading either image. */
-.clothsy-ai-compare {
-  position: relative;
-  border-radius: 16px;
-  overflow: hidden;
-  background: var(--ca-soft);
-  touch-action: none;
-}
-.clothsy-ai-compare img {
-  display: block;
-  width: 100%;
-  max-height: 54vh;
-  object-fit: contain;
-}
-.clothsy-ai-compare-top {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  width: 50%;
-}
-/* The overlay is clipped, so its image must keep the full box width (set from
-   JS) — sizing it to the clip would squash the try-on as the handle moves. */
-.clothsy-ai-compare-top img {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  max-width: none;
-  object-fit: contain;
-}
-.clothsy-ai-compare-line {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: #fff;
-  box-shadow: 0 0 0 1px rgba(20, 19, 26, 0.12);
-  pointer-events: none;
-}
-.clothsy-ai-compare-grip {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 4px 14px rgba(20, 19, 26, 0.25);
+.clothsy-ai-dots {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--ca-ink);
+  gap: 0;
+  margin: 10px 0 18px;
 }
-.clothsy-ai-compare-range {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  opacity: 0;
-  cursor: ew-resize;
-}
-.clothsy-ai-tag {
-  position: absolute;
-  bottom: 10px;
-  padding: 4px 9px;
-  border-radius: 999px;
-  background: rgba(20, 19, 26, 0.72);
-  color: #fff;
-  font-size: 11px;
+.clothsy-ai-dots b {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--ca-soft);
+  color: var(--ca-muted);
+  font-size: 12.5px;
   font-weight: 600;
-  pointer-events: none;
 }
-.clothsy-ai-tag-before { left: 10px; }
-.clothsy-ai-tag-after { right: 10px; }
+.clothsy-ai-dots b[data-on="true"] { background: var(--ca-ink); color: #fff; }
+.clothsy-ai-dots i {
+  width: 54px;
+  height: 1.5px;
+  background: var(--ca-line);
+}
 
-.clothsy-ai-actions {
+/* ── Product / photo thumbnails ─────────────────────────── */
+
+.clothsy-ai-round {
+  width: 92px;
+  height: 92px;
+  margin: 0 auto 22px;
+  border-radius: 50%;
+  border: 1px solid var(--ca-line);
+  background: var(--ca-soft) center / cover no-repeat;
+  display: block;
+}
+
+.clothsy-ai-square {
+  width: 84px;
+  height: 84px;
+  margin: 4px auto 18px;
+  border-radius: 18px;
+  border: 1px solid var(--ca-line);
+  background: var(--ca-soft) center / cover no-repeat;
+  display: block;
+}
+
+/* ── Buttons ────────────────────────────────────────────── */
+
+.clothsy-ai-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 50px;
+  padding: 0 16px;
+  border-radius: 13px;
+  border: 1px solid transparent;
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.clothsy-ai-btn + .clothsy-ai-btn { margin-top: 10px; }
+.clothsy-ai-btn svg { flex: none; }
+
+.clothsy-ai-btn-dark { background: var(--ca-ink); color: #fff; }
+.clothsy-ai-btn-dark:hover { background: #000; }
+.clothsy-ai-btn-light {
+  background: #fff;
+  color: var(--ca-ink);
+  border-color: var(--ca-line);
+}
+.clothsy-ai-btn-light:hover { background: var(--ca-soft); }
+.clothsy-ai-btn-plain {
+  background: none;
+  border: none;
+  min-height: 40px;
+  font-weight: 500;
+  color: var(--ca-ink-2);
+}
+.clothsy-ai-btn-plain:hover { color: var(--ca-ink); }
+.clothsy-ai-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+.clothsy-ai-row {
   display: flex;
   gap: 10px;
   margin-top: 14px;
 }
-/* Side by side these are narrow; a wrapped "Add to / cart" looks broken. */
-.clothsy-ai-actions .clothsy-ai-primary,
-.clothsy-ai-actions .clothsy-ai-secondary {
-  flex: 1;
-  width: auto;
-  white-space: nowrap;
-  padding: 14px 12px;
+.clothsy-ai-row .clothsy-ai-btn { margin-top: 0; }
+
+/* ── Legal footnote ─────────────────────────────────────── */
+
+.clothsy-ai-legal {
+  margin: 16px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ca-muted);
+}
+.clothsy-ai-legal a { color: var(--ca-ink-2); text-decoration: underline; }
+
+/* ── Consent card ───────────────────────────────────────── */
+
+.clothsy-ai-points {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  text-align: left;
+}
+.clothsy-ai-points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 7px 0;
+  font-size: 13px;
+  color: var(--ca-ink-2);
+}
+.clothsy-ai-points svg { flex: none; margin-top: 2px; color: var(--ca-ink); }
+
+.clothsy-ai-field {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  margin-bottom: 12px;
+  border: 1px solid var(--ca-line);
+  border-radius: 13px;
+  font-family: inherit;
+  font-size: 14.5px;
+  color: var(--ca-ink);
+  background: #fff;
+  outline: none;
+}
+.clothsy-ai-field:focus { border-color: var(--ca-ink); }
+.clothsy-ai-field-error {
+  margin: -6px 0 10px;
+  font-size: 12px;
+  color: #c62d2d;
+  text-align: left;
 }
 
-.clothsy-ai-toggle {
+/* ── Photo preview ──────────────────────────────────────── */
+
+.clothsy-ai-preview-wrap {
+  position: relative;
+  margin: 2px 0 14px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--ca-soft);
+}
+.clothsy-ai-preview-wrap img {
+  display: block;
+  width: 100%;
+  max-height: 46vh;
+  object-fit: contain;
+}
+.clothsy-ai-chip {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  margin: 12px auto 0;
-  padding: 8px 14px;
-  border: 1px solid var(--ca-line);
+  height: 34px;
+  padding: 0 15px;
+  border: none;
   border-radius: 999px;
-  background: #fff;
-  color: var(--ca-ink);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 14px rgba(16, 16, 20, 0.2);
+  font-family: inherit;
   font-size: 13px;
   font-weight: 600;
-  font-family: inherit;
+  color: var(--ca-ink);
   cursor: pointer;
 }
-.clothsy-ai-toggle:hover { background: var(--ca-soft); }
-.clothsy-ai-toggle[aria-pressed="true"] {
-  border-color: var(--ca-accent);
-  color: var(--ca-accent);
-  background: var(--ca-accent-soft);
-}
-.clothsy-ai-center { display: flex; justify-content: center; }
 
-.clothsy-ai-disclaimer {
-  margin: 12px 0 0;
-  font-size: 11.5px;
-  color: var(--ca-muted);
-  text-align: center;
-}
+/* ── Generating ─────────────────────────────────────────── */
 
-/* ── Done step ──────────────────────────────────────────── */
-
-.clothsy-ai-done { text-align: center; padding: 8px 0 0; }
-.clothsy-ai-done-mark {
-  width: 64px;
-  height: 64px;
-  margin: 6px auto 16px;
-  border-radius: 50%;
-  background: var(--ca-accent);
-  color: #fff;
+.clothsy-ai-pair {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 14px;
+  margin: 18px 0 20px;
+}
+.clothsy-ai-pair span {
+  width: 74px;
+  height: 92px;
+  border-radius: 16px;
+  border: 1px solid var(--ca-line);
+  background: var(--ca-soft) center / cover no-repeat;
+}
+.clothsy-ai-pair i {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid var(--ca-line);
+  color: var(--ca-ink);
+  animation: clothsy-ai-spin 1.8s linear infinite;
+}
+@keyframes clothsy-ai-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .clothsy-ai-pair i { animation: none; }
 }
 
-/* ── Error step ─────────────────────────────────────────── */
-
-.clothsy-ai-error { text-align: center; padding: 8px 0 0; }
-.clothsy-ai-error-icon { font-size: 34px; margin: 0 0 8px; }
-.clothsy-ai-error-msg {
-  margin: 0 0 16px;
-  font-size: 14px;
+.clothsy-ai-bar {
+  height: 4px;
+  margin: 14px 0 6px;
+  border-radius: 999px;
+  background: var(--ca-line);
+  overflow: hidden;
+}
+.clothsy-ai-bar b {
+  display: block;
+  height: 100%;
+  width: 6%;
+  border-radius: 999px;
+  background: var(--ca-ink);
+  transition: width 0.5s ease;
+}
+.clothsy-ai-pct {
+  margin: 0;
+  font-size: 12px;
   color: var(--ca-muted);
 }
+
+.clothsy-ai-tip {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--ca-soft);
+}
+.clothsy-ai-tip b {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  color: var(--ca-muted);
+  margin-bottom: 5px;
+}
+.clothsy-ai-tip span { font-size: 12.5px; color: var(--ca-ink-2); }
+
+/* ── Result ─────────────────────────────────────────────── */
+
+.clothsy-ai-result {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--ca-soft);
+}
+.clothsy-ai-result img {
+  display: block;
+  width: 100%;
+  max-height: 50vh;
+  object-fit: contain;
+}
+
+.clothsy-ai-product {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--ca-line);
+  border-radius: 14px;
+  background: #fff;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.clothsy-ai-product:hover { background: var(--ca-soft); }
+.clothsy-ai-product span {
+  width: 38px;
+  height: 46px;
+  flex: none;
+  border-radius: 9px;
+  background: var(--ca-soft) center / cover no-repeat;
+}
+.clothsy-ai-product div { flex: 1; min-width: 0; }
+.clothsy-ai-product b {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.clothsy-ai-product em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--ca-muted);
+}
+.clothsy-ai-product svg { flex: none; color: var(--ca-muted); }
+
+.clothsy-ai-rate {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--ca-line);
+}
+.clothsy-ai-rate p {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  color: var(--ca-muted);
+}
+.clothsy-ai-rate div {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+.clothsy-ai-rate button {
+  width: 44px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--ca-line);
+  border-radius: 11px;
+  background: #fff;
+  color: var(--ca-ink-2);
+  cursor: pointer;
+}
+.clothsy-ai-rate button:hover { background: var(--ca-soft); color: var(--ca-ink); }
+.clothsy-ai-rate button[aria-pressed="true"] {
+  border-color: var(--ca-ink);
+  background: var(--ca-ink);
+  color: #fff;
+}
+
+/* ── History ────────────────────────────────────────────── */
+
+.clothsy-ai-history { text-align: left; }
+.clothsy-ai-history .clothsy-ai-product { margin-top: 8px; }
+.clothsy-ai-empty {
+  padding: 40px 10px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ca-muted);
+}
+
+/* ── Error ──────────────────────────────────────────────── */
+
+.clothsy-ai-error-msg {
+  margin: 20px 0 16px;
+  font-size: 13.5px;
+  color: var(--ca-ink-2);
+}
+
+/* ── Toast ──────────────────────────────────────────────── */
+
+.clothsy-ai-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: rgba(16, 16, 20, 0.92);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 500;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  white-space: nowrap;
+}
+.clothsy-ai-toast[data-show="true"] { opacity: 1; }
 
 .clothsy-ai-visually-hidden {
   position: absolute;

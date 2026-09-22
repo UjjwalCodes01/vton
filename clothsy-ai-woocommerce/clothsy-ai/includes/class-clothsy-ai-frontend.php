@@ -106,6 +106,8 @@ class Clothsy_AI_Frontend {
 				data-clothsy-ai-button
 				data-product-id="<?php echo esc_attr( (string) $product->get_id() ); ?>"
 				data-product-title="<?php echo esc_attr( wp_strip_all_tags( $product->get_name() ) ); ?>"
+				<?php /* Shown as the garment thumbnail in the try-on panel. */ ?>
+				data-product-image="<?php echo esc_url( (string) wp_get_attachment_image_url( $product->get_image_id(), 'woocommerce_single' ) ); ?>"
 				data-require-email="<?php echo $settings['require_email'] ? 'true' : 'false'; ?>"
 				data-session-url="<?php echo esc_url( rest_url( 'clothsy-ai/v1/session' ) ); ?>"
 				data-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
