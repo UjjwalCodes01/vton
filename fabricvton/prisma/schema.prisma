@@ -213,6 +213,10 @@ model TryOnEvent {
   // Consent the shopper gave before this photo was submitted (see Lead above).
   consentVersion  String?
   consentAt       DateTime?
+  // What the shopper thought of the result: "up" or "down", from the widget's
+  // one-tap rating. Null until they answer, which most never will.
+  rating          String?
+  ratedAt         DateTime?
   createdAt       DateTime @default(now())
 
   @@index([shop])
