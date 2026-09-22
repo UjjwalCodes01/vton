@@ -57,7 +57,7 @@ model ShopConfig {
   plan                String   @default("free") // free | starter | growth | pro | scale
   billingId           String?  // Shopify recurring charge ID
   // Must match PLANS[free].credits in app/billing.server.ts
-  monthlyCredits      Int      @default(10)
+  monthlyCredits      Int      @default(15)
   creditsUsed         Int      @default(0)
   billingCycleStart   DateTime @default(now())
   overageChargesTotal Float    @default(0) // Total overage billed this cycle in USD

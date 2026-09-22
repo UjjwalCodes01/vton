@@ -109,6 +109,9 @@ class Clothsy_AI_Frontend {
 				data-require-email="<?php echo $settings['require_email'] ? 'true' : 'false'; ?>"
 				data-session-url="<?php echo esc_url( rest_url( 'clothsy-ai/v1/session' ) ); ?>"
 				data-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
+				<?php /* WooCommerce's own add-to-cart endpoint, so the try-on window adds items exactly as the theme's button does. */ ?>
+				data-cart-add-url="<?php echo esc_url( WC_AJAX::get_endpoint( 'add_to_cart' ) ); ?>"
+				data-cart-url="<?php echo esc_url( wc_get_cart_url() ); ?>"
 				data-css-url="<?php echo esc_url( CLOTHSY_AI_URL . 'assets/clothsy-ai.css?ver=' . CLOTHSY_AI_VERSION ); ?>"
 				style="<?php echo esc_attr( $style ); ?>"
 			>

@@ -101,7 +101,7 @@ export const STORE_FEATURES: { title: string; blurb: string }[] = [
   },
   {
     title: "Free to start",
-    blurb: "Every store starts on Basic with 10 try-ons a month. Move up when your shoppers do. The allowance is your limit, so there are no surprise charges.",
+    blurb: "Every store starts on Basic with 15 try-ons a month. Move up when your shoppers do. The allowance is your limit, so there are no surprise charges.",
   },
 ];
 
@@ -118,11 +118,11 @@ export type Plan = {
 };
 
 export const PLANS: Plan[] = [
-  { name: "Basic", monthly: 0, yearly: null, tryOns: 10, blurb: "Try it out on your store.", support: null },
-  { name: "Starter", monthly: 9, yearly: 86, tryOns: 50, blurb: "For a small catalogue.", support: "Standard support" },
-  { name: "Growth", monthly: 49, yearly: 470, tryOns: 400, blurb: "For a store finding its rhythm.", featured: true, support: "Standard support" },
-  { name: "Pro", monthly: 99, yearly: 950, tryOns: 1000, blurb: "For a busy storefront.", support: "Standard support" },
-  { name: "Scale", monthly: 219, yearly: 2102, tryOns: 2500, blurb: "For high traffic.", support: "Priority support" },
+  { name: "Basic", monthly: 0, yearly: null, tryOns: 15, blurb: "Try it out on your store.", support: null },
+  { name: "Starter", monthly: 19.99, yearly: 191.9, tryOns: 250, blurb: "For a small catalogue.", support: "Standard support" },
+  { name: "Growth", monthly: 49.99, yearly: 479.9, tryOns: 750, blurb: "For a store finding its rhythm.", featured: true, support: "Standard support" },
+  { name: "Pro", monthly: 99.99, yearly: 959.9, tryOns: 2000, blurb: "For a busy storefront.", support: "Standard support" },
+  { name: "Scale", monthly: 199, yearly: 1910.4, tryOns: 4250, blurb: "For high traffic.", support: "Priority support" },
 ];
 
 /* ---------------- FAQ ---------------- */
@@ -183,7 +183,7 @@ export const STORE_FAQ: Faq[] = [
   },
   {
     q: "Is there a free plan?",
-    a: "Yes. Basic is free with 10 try-ons a month. Paid plans run from $9 a month for 50 try-ons up to $219 a month for 2,500.",
+    a: "Yes. Basic is free with 15 try-ons a month. Paid plans run from $19.99 a month for 250 try-ons up to $199 a month for 4,250.",
   },
   {
     q: "What happens when we use up our try-ons?",
@@ -212,7 +212,7 @@ export const PRICING_FAQ: Faq[] = [
   },
   {
     q: "Do you offer volume pricing?",
-    a: "If you expect more than 2,500 try-ons a month, get in touch and we will talk it through.",
+    a: "If you expect more than 4,250 try-ons a month, get in touch and we will talk it through.",
   },
 ];
 
@@ -339,7 +339,7 @@ export const GUIDES: Guide[] = [
     title: "Plans and your try-on allowance",
     summary: "How the monthly allowance works, and what happens at the limit.",
     body: [
-      { type: "p", text: "Every store starts on Basic, which is free and includes 10 try-ons a month. Paid plans add more try-ons." },
+      { type: "p", text: "Every store starts on Basic, which is free and includes 15 try-ons a month. Paid plans add more try-ons." },
       { type: "h", text: "The allowance is your limit" },
       {
         type: "p",

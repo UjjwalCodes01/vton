@@ -2,7 +2,7 @@
 /**
  * Plugin Name:          Clothsy AI – Virtual Try-On for WooCommerce
  * Description:          Let shoppers see your clothes on themselves before they buy. Adds an AI virtual try-on button to WooCommerce product pages.
- * Version:              0.1.0
+ * Version:              0.2.1
  * Requires at least:    6.5
  * Requires PHP:         8.1
  * Requires Plugins:     woocommerce
@@ -19,7 +19,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'CLOTHSY_AI_VERSION', '0.1.0' );
+define( 'CLOTHSY_AI_VERSION', '0.2.1' );
 define( 'CLOTHSY_AI_FILE', __FILE__ );
 define( 'CLOTHSY_AI_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CLOTHSY_AI_URL', plugin_dir_url( __FILE__ ) );

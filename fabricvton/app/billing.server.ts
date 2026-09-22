@@ -20,67 +20,78 @@ export interface Plan {
   overagePrice: number;
   monthlyOverageCap: number;
   featured?: boolean;         // highlight in UI
+  /**
+   * Withdrawn from sale. Kept in the catalog so merchants who bought it keep
+   * their label and allowance — dropping the entry would resolve them to Basic
+   * and silently cut the allowance they are paying for — but never offered.
+   */
+  legacy?: boolean;
 }
 
 // ─── Pricing plans – source of truth for both billing and the UI ──────────────
-// Matches the approved spreadsheet exactly:
-//   Starter  $9/mo  ($86/yr)   50 cr/mo   (600/yr)   $0.18/overage
-//   Growth   $49/mo ($470/yr)  400 cr/mo  (4800/yr)  $0.13/overage
-//   Pro      $99/mo ($950/yr)  1000 cr/mo (12000/yr) $0.10/overage
-//   Scale    $219/mo($2102/yr) 2500 cr/mo (30000/yr) $0.08/overage
+// Pricing of 2026-09-21. Annual is 12 months at 20% off, rounded to the cent.
+//   Starter  $19.99/mo  ($191.90/yr)   250 cr/mo  (3000/yr)   $0.090/overage
+//   Growth   $49.99/mo  ($479.90/yr)   750 cr/mo  (9000/yr)   $0.070/overage
+//   Pro      $99.99/mo  ($959.90/yr)  2000 cr/mo  (24000/yr)  $0.060/overage
+//   Scale    $199.00/mo ($1910.40/yr) 4250 cr/mo  (51000/yr)  $0.050/overage
+// Above Scale is "Custom": quoted by hand, so it is marketing copy on the
+// pricing pages and deliberately not a plan anyone can self-serve into here.
 export const PLANS: Plan[] = [
   {
     name: "free",
     label: "Basic",
     monthlyPrice: 0,
     annualPrice: 0,
-    credits: 10,
-    annualCredits: 120,
+    credits: 15,
+    annualCredits: 180,
     overagePrice: 0,
     monthlyOverageCap: 0,
   },
   {
     name: "starter",
     label: "Starter",
-    monthlyPrice: 9,
-    annualPrice: 86,
-    credits: 50,
-    annualCredits: 600,
-    overagePrice: 0.18,
+    monthlyPrice: 19.99,
+    annualPrice: 191.9,
+    credits: 250,
+    annualCredits: 3000,
+    overagePrice: 0.09,
     monthlyOverageCap: 50,
   },
   {
     name: "growth",
     label: "Growth",
-    monthlyPrice: 49,
-    annualPrice: 470,
-    credits: 400,
-    annualCredits: 4800,
-    overagePrice: 0.13,
+    monthlyPrice: 49.99,
+    annualPrice: 479.9,
+    credits: 750,
+    annualCredits: 9000,
+    overagePrice: 0.07,
     monthlyOverageCap: 100,
     featured: true,
   },
   {
     name: "pro",
     label: "Pro",
-    monthlyPrice: 99,
-    annualPrice: 950,
-    credits: 1000,
-    annualCredits: 12000,
-    overagePrice: 0.10,
+    monthlyPrice: 99.99,
+    annualPrice: 959.9,
+    credits: 2000,
+    annualCredits: 24000,
+    overagePrice: 0.06,
     monthlyOverageCap: 200,
   },
   {
     name: "scale",
     label: "Scale",
-    monthlyPrice: 219,
-    annualPrice: 2102,
-    credits: 2500,
-    annualCredits: 30000,
-    overagePrice: 0.08,
-    monthlyOverageCap: 500,
+    monthlyPrice: 199,
+    annualPrice: 1910.4,
+    credits: 4250,
+    annualCredits: 51000,
+    overagePrice: 0.05,
+    monthlyOverageCap: 400,
   },
 ];
+
+/** The plans a merchant can actually choose, in price order. */
+export const SELLABLE_PLANS = PLANS.filter((plan) => !plan.legacy);
 
 export const getPlan = (name: string): Plan =>
   PLANS.find((p) => p.name === name) ?? PLANS[0];

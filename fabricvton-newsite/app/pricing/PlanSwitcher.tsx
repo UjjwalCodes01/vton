@@ -12,9 +12,17 @@ import { SHOPIFY_URL } from "../lib/site";
 
 type Period = "monthly" | "yearly";
 
-const usd = (n: number) => `$${n.toLocaleString("en-US")}`;
+// Whole dollars stay clean ($199); anything with cents keeps both of them,
+// so a yearly price never renders as "$191.9".
+const usd = (n: number) =>
+  `$${n.toLocaleString("en-US", {
+    minimumFractionDigits: Number.isInteger(n) ? 0 : 2,
+    maximumFractionDigits: 2,
+  })}`;
 const perTryOn = (plan: Plan) => (plan.monthly === 0 ? null : plan.monthly / plan.tryOns);
-const cents = (n: number) => `$${n.toFixed(2)}`;
+// Three decimals below a dime, otherwise Pro ($0.050) and Scale ($0.047) both
+// round to $0.05 and the bigger plan looks like no improvement at all.
+const cents = (n: number) => `$${n.toFixed(n < 0.1 ? 3 : 2)}`;
 
 function Price({ plan, period }: { plan: Plan; period: Period }) {
   if (plan.monthly === 0) {

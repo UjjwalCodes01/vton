@@ -38,7 +38,7 @@ Plans are created in Razorpay automatically on first checkout, from the prices i
 
 ```sh
 svn co https://plugins.svn.wordpress.org/clothsy-ai svn-clothsy-ai
-cp -R clothsy-ai/* svn-clothsy-ai/trunk/
+\cp -R clothsy-ai/* svn-clothsy-ai/trunk/   # backslash: skip the cp -i alias
 svn cp svn-clothsy-ai/trunk svn-clothsy-ai/tags/0.1.0
 cp ../brand/wporg/{icon,banner,screenshot}-*.png svn-clothsy-ai/assets/
 cd svn-clothsy-ai && svn add --force . && svn ci -m "Clothsy AI 0.1.0"
@@ -51,6 +51,8 @@ The plugin page is live as soon as you commit; search results can take one to tw
 1. Bump the version in three places: `Version:` and `CLOTHSY_AI_VERSION` in `clothsy-ai.php`, and `Stable tag:` in `readme.txt`. Add a changelog entry.
 2. Keep `Tested up to` (readme) and `WC tested up to` (plugin header) at the current WordPress / WooCommerce releases — an out-of-date value blocks uploads.
 3. Run Plugin Check with no errors.
-4. Copy to `trunk`, tag, commit. Releases reach sites after a 6-hour hold.
+4. Copy to `trunk` with `\cp -R` (a plain `cp` is aliased to `cp -i` and stops on a prompt), check `svn status` shows the changed files, then commit trunk.
+5. Only then `svn cp trunk tags/<version>` and commit. Tagging before the copy lands publishes a tag holding the previous release's code — and wp.org builds a download for that tag, which burns the version number for good.
+6. Releases reach sites after a 6-hour hold.
 
 Listing assets are regenerated with `python3 brand/wporg/make_wporg_assets.py`.

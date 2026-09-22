@@ -156,7 +156,7 @@ export default function Home() {
                 </a>
               </div>
               <p className="cta-note">
-                Free to install. Every store starts with 10 try-ons a month.{" "}
+                Free to install. Every store starts with 15 try-ons a month.{" "}
                 <a href={WOO_URL} target="_blank" rel="noopener noreferrer" className="cta-link">
                   Also on WooCommerce
                 </a>

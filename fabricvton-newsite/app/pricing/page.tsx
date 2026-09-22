@@ -9,12 +9,12 @@ import PlanSwitcher from "./PlanSwitcher";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description: "Start free with 10 try-ons a month. Upgrade when your shoppers do. Simple monthly and yearly plans for Shopify and WooCommerce stores.",
+  description: "Start free with 15 try-ons a month. Upgrade when your shoppers do. Simple monthly and yearly plans for Shopify and WooCommerce stores.",
   alternates: { canonical: "/pricing" },
 };
 
 const assurances = [
-  { icon: <Sparkle />, title: "Free to start", copy: "10 try-ons a month on Basic" },
+  { icon: <Sparkle />, title: "Free to start", copy: "15 try-ons a month on Basic" },
   { icon: <Shield />, title: "No surprise charges", copy: "Your allowance is your limit" },
   { icon: <Swap />, title: "Change or cancel anytime", copy: "Charges appear on your Shopify bill" },
 ];
@@ -42,7 +42,7 @@ export default function PricingPage() {
               <br />
               <em>with your fashion goals.</em>
             </h1>
-            <p className="lede">Start free with 10 try-ons a month. Upgrade when your shoppers do.</p>
+            <p className="lede">Start free with 15 try-ons a month. Upgrade when your shoppers do.</p>
           </div>
 
           <div className="price-visual">
