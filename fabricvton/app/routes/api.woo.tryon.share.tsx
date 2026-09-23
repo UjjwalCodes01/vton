@@ -1,4 +1,5 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
+import { clientIpFrom } from "../ratelimit.server";
 import { handleShareRequest } from "../share/sharehandler.server";
 import { logInternalError, newRequestId } from "../requestid.server";
 import { corsHeaders, errorResponse } from "../tryon.server";
@@ -30,7 +31,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     const { store } = await verifyShopperToken(tokenFrom(request), request.headers.get("Origin"));
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-    const result = await handleShareRequest(store.shop, body);
+    const result = await handleShareRequest({ shop: store.shop, clientIp: clientIpFrom(request), body });
 
     if (!result.ok) return errorResponse(result.error, result.status, origin, requestId);
 

@@ -943,6 +943,7 @@
           method: "POST",
           headers: { "Content-Type": "application/json", "X-Clothsy-Token": s.token },
           body: JSON.stringify({
+            sessionId: sessionId,
             generationId: lastResult.generationId || "",
             productTitle: lastResult.title || "",
             productUrl: ctx.productUrl || "",

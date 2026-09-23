@@ -1,7 +1,8 @@
 // What both platforms' share endpoints do once the caller is authenticated.
 
 import db from "../db.server";
-import { createSharedLook, shareConfigured } from "./share.server";
+import { checkRateLimits, shareRules } from "../ratelimit.server";
+import { createSharedLook, shareBaseUrl, shareConfigured } from "./share.server";
 import { cachedResultUrl, rememberResultUrl } from "./imageproxy.server";
 import { getGenerationStatus } from "../youcam.server";
 
@@ -21,7 +22,13 @@ function safeUrl(value: unknown) {
   }
 }
 
-export async function handleShareRequest(shop: string, body: Record<string, unknown>) {
+export async function handleShareRequest(params: {
+  shop: string;
+  clientIp: string | null;
+  body: Record<string, unknown>;
+}) {
+  const { shop, body } = params;
+
   if (!shareConfigured()) {
     return { ok: false as const, status: 503, error: "Sharing is not available right now." };
   }
@@ -29,6 +36,13 @@ export async function handleShareRequest(shop: string, body: Record<string, unkn
   const generationId = clamp(body.generationId, 128);
   if (!generationId) {
     return { ok: false as const, status: 400, error: "A finished try-on is required." };
+  }
+
+  const limit = await checkRateLimits(
+    shareRules({ shop, sessionId: clamp(body.sessionId, 64), clientIp: params.clientIp }),
+  );
+  if (!limit.allowed) {
+    return { ok: false as const, status: 429, error: "Too many shares. Please wait a little." };
   }
 
   // The generation must belong to the shop this request was authenticated for,
@@ -39,6 +53,16 @@ export async function handleShareRequest(shop: string, body: Record<string, unkn
   });
   if (!event) {
     return { ok: false as const, status: 404, error: "Unknown try-on." };
+  }
+
+  // Sharing the same try-on twice should hand back the same page rather than
+  // storing a second copy of the identical image.
+  const existing = await db.sharedLook.findFirst({
+    where: { shop, generationId, expiresAt: { gt: new Date() } },
+    orderBy: { createdAt: "desc" },
+  });
+  if (existing) {
+    return { ok: true as const, status: 200, url: `${shareBaseUrl()}/look/${existing.id}` };
   }
 
   // The image URL is never taken from the request: it is resolved here, from

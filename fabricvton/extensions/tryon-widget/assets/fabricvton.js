@@ -870,6 +870,7 @@
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        sessionId: sessionId,
         generationId: lastResult.generationId || "",
         productTitle: lastResult.title || "",
         productUrl: ctx.productUrl || "",

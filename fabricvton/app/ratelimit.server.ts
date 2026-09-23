@@ -66,6 +66,14 @@ export const LIMITS = {
    * generation the shop is allowed to run concurrently gets a full poll budget,
    * doubled for headroom.
    */
+  /**
+   * Shares per shopper. Each one costs a provider call and an upload we then
+   * store for 30 days, so it is the one shopper action with a running cost
+   * after the try-on itself.
+   */
+  sharePerHour: envInt("TRYON_LIMIT_SHARE_PER_HOUR", 10),
+  /** Per shop, so one store cannot fill the bucket on its own. */
+  shareShopPerHour: envInt("TRYON_LIMIT_SHARE_SHOP_PER_HOUR", 300),
   shopPollPerMinute: envInt(
     "TRYON_LIMIT_SHOP_POLL_PER_MINUTE",
     envInt("TRYON_LIMIT_SHOP_CONCURRENT", 6) * 25 * 2
@@ -215,6 +223,46 @@ export function statusPollRules(params: {
       label: "status poll (shop)",
     },
   ];
+}
+
+/**
+ * Buckets a share must pass.
+ *
+ * Sharing writes to object storage and keeps the object for 30 days, so it is
+ * limited on the same three axes as a generation: the shopper first, then the
+ * IP they came from, then the shop as the backstop.
+ */
+export function shareRules(params: {
+  shop: string;
+  sessionId: string | null;
+  clientIp: string | null;
+}): RateLimitRule[] {
+  const rules: RateLimitRule[] = [];
+
+  if (params.sessionId) {
+    rules.push({
+      scope: `tryon:share:session:${params.sessionId}`,
+      limit: LIMITS.sharePerHour,
+      windowMs: HOUR,
+      label: "share (shopper)",
+    });
+  }
+  if (params.clientIp) {
+    rules.push({
+      scope: `tryon:share:ip:${params.clientIp}`,
+      limit: LIMITS.sharePerHour,
+      windowMs: HOUR,
+      label: "share (ip)",
+    });
+  }
+  rules.push({
+    scope: `tryon:share:shop:${params.shop}`,
+    limit: LIMITS.shareShopPerHour,
+    windowMs: HOUR,
+    label: "share (shop)",
+  });
+
+  return rules;
 }
 
 /**

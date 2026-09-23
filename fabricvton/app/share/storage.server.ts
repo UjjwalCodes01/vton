@@ -4,8 +4,11 @@
 // requests (PUT, GET, DELETE) against one bucket, and the SDK would add tens of
 // megabytes to an image the backend has to cold-start on Render.
 //
-// Works against Cloudflare R2 and against S3 itself; both speak SigV4 with
-// path-style addressing.
+// Works against Cloudflare R2 and against AWS S3. R2 is addressed path-style
+// (endpoint/bucket/key); S3 prefers virtual-hosted style (bucket.s3.<region>
+// .amazonaws.com/key) and has been trying to retire path-style for years. Both
+// are supported: if the endpoint's host already starts with the bucket name,
+// the bucket is not repeated in the path.
 
 import { createHash, createHmac } from "node:crypto";
 
@@ -13,8 +16,9 @@ const ENDPOINT = (process.env.SHARE_S3_ENDPOINT || "").replace(/\/+$/, "");
 const BUCKET = process.env.SHARE_S3_BUCKET || "";
 const KEY_ID = process.env.SHARE_S3_KEY_ID || "";
 const SECRET = process.env.SHARE_S3_SECRET || "";
-// R2 ignores the region but still requires one in the signature; "auto" is what
-// Cloudflare's own docs use.
+// R2 ignores the region but still requires one in the signature, and "auto" is
+// what Cloudflare's own docs use. AWS does NOT ignore it: a bucket in
+// ap-south-1 signed as "auto" is rejected outright, so S3 users must set this.
 const REGION = process.env.SHARE_S3_REGION || "auto";
 
 export function shareStorageConfigured() {
@@ -32,8 +36,22 @@ function encodeKey(key: string) {
     .join("/");
 }
 
+/**
+ * Where this object lives, in whichever addressing style the endpoint implies.
+ *
+ * Getting this wrong is quiet rather than loud — a path-style URL against a
+ * virtual-hosted endpoint asks for `bucket/bucket/key` and simply 404s — so it
+ * is decided from the endpoint itself rather than from a flag someone has to
+ * remember to set.
+ */
+function objectUrl(key: string) {
+  const base = new URL(ENDPOINT);
+  const virtualHosted = base.hostname.toLowerCase().startsWith(`${BUCKET.toLowerCase()}.`);
+  return new URL(virtualHosted ? `${ENDPOINT}/${encodeKey(key)}` : `${ENDPOINT}/${BUCKET}/${encodeKey(key)}`);
+}
+
 function signedRequest(method: "PUT" | "GET" | "DELETE", key: string, body?: Buffer, contentType?: string) {
-  const url = new URL(`${ENDPOINT}/${BUCKET}/${encodeKey(key)}`);
+  const url = objectUrl(key);
   const now = new Date();
   const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
   const dateStamp = amzDate.slice(0, 8);

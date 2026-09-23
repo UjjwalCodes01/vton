@@ -11,12 +11,16 @@ Deploy `fabricvton/` (migrations run on deploy; `20260915093953_woo_billing_and_
 | `RAZORPAY_WEBHOOK_SECRET` | The secret you type when creating the webhook below |
 | `PUBLIC_APP_URL` | Optional. Defaults to `SHOPIFY_APP_URL`; must equal the plugin's `CLOTHSY_AI_API_BASE` (`https://fabricvton-api.onrender.com`) |
 | `WOO_BILLING_CURRENCY` | Optional, default `USD` |
-| `SHARE_S3_ENDPOINT` | Bucket endpoint, e.g. `https://<account>.r2.cloudflarestorage.com` |
+| `SHARE_S3_ENDPOINT` | R2: `https://<account>.r2.cloudflarestorage.com` (no bucket). AWS S3: `https://<bucket>.s3.<region>.amazonaws.com` |
 | `SHARE_S3_BUCKET` | Bucket holding shared looks |
-| `SHARE_S3_KEY_ID` / `SHARE_S3_SECRET` | Bucket credentials (R2: an API token with object read/write) |
-| `SHARE_S3_REGION` | Optional, default `auto` (right for R2; use the real region on S3) |
+| `SHARE_S3_KEY_ID` / `SHARE_S3_SECRET` | Bucket credentials (R2: an API token with object read/write. S3: an IAM user's access key) |
+| `SHARE_S3_REGION` | `auto` for R2. **On AWS this must be the bucket's real region** (e.g. `ap-south-1`) or every request is rejected |
 | `SHARE_PUBLIC_BASE` | Optional, default `https://clothsyai.fabricvton.com` — where `/look/<id>` is served |
 | `SHARE_SIGNING_SECRET` | Optional; falls back to `SHOPIFY_API_SECRET`. Signs try-on image links |
+
+Addressing style follows the endpoint: if its host starts with the bucket name the bucket is not repeated in the path (AWS virtual-hosted style), otherwise it is (R2 path-style). So put the bucket in the host for S3 and leave it out for R2.
+
+Keep the bucket private. Shared images are streamed by the backend at `/look/<id>/image`, which is what makes a look actually vanish when it expires; a public bucket URL would outlive it.
 
 Without the four `SHARE_S3_*` variables the try-on still works; Share Look just reports that sharing is unavailable.
 

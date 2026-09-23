@@ -1,5 +1,6 @@
 import type { ActionFunctionArgs } from "react-router";
 import { authenticate } from "../shopify.server";
+import { clientIpFrom } from "../ratelimit.server";
 import { handleShareRequest } from "../share/sharehandler.server";
 import { logInternalError, newRequestId } from "../requestid.server";
 
@@ -25,7 +26,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     if (!shop) return json({ error: "This request could not be verified.", requestId }, 401);
 
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-    const result = await handleShareRequest(shop, body);
+    const result = await handleShareRequest({ shop, clientIp: clientIpFrom(request), body });
     return result.ok
       ? json({ url: result.url }, 200)
       : json({ error: result.error, requestId }, result.status);
