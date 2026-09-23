@@ -33,7 +33,6 @@ class Clothsy_AI_Settings {
 			'button_color'  => '#000000',
 			'text_color'    => '#ffffff',
 			'radius'        => 4,
-			'require_email' => true,
 			'placement'     => 'auto',
 		);
 	}
@@ -60,7 +59,6 @@ class Clothsy_AI_Settings {
 			'button_color'  => sanitize_hex_color( $input['button_color'] ?? '' ) ?: $defaults['button_color'],
 			'text_color'    => sanitize_hex_color( $input['text_color'] ?? '' ) ?: $defaults['text_color'],
 			'radius'        => max( 0, min( 50, absint( $input['radius'] ?? $defaults['radius'] ) ) ),
-			'require_email' => ! empty( $input['require_email'] ),
 			'placement'     => in_array( $input['placement'] ?? '', array( 'auto', 'manual' ), true ) ? $input['placement'] : 'auto',
 		);
 		if ( '' === $clean['button_text'] ) {

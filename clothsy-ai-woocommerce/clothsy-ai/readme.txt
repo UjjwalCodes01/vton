@@ -4,7 +4,7 @@ Tags: virtual try-on, try on, fitting room, fashion, woocommerce
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.2.2
+Stable tag: 0.2.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -17,11 +17,11 @@ Clothsy AI adds a "Try It On" button to your WooCommerce product pages. A shoppe
 * **Works with any theme.** The button appears below Add to cart automatically, or place it yourself with the Clothsy AI Try-On Button block or the `[clothsy_ai_tryon]` shortcode.
 * **Variable products.** When a shopper picks a colour, they try on that colour.
 * **Per-product control.** Turn try-on off for any product, or tell Clothsy AI whether it's a top, bottom, dress, outerwear or shoes.
-* **Lead capture.** Optionally ask for an email before the try-on, and download your leads as a CSV.
-* **Usage at a glance.** See try-ons, emails captured and your remaining monthly allowance inside WordPress.
+* **Usage at a glance.** See try-ons and your remaining monthly allowance inside WordPress.
 * **Built for speed.** Nothing loads until a shopper reaches for the button, and photos go straight to Clothsy AI, never through your web server.
-* **A try-on window shoppers finish.** It sits in the corner so the product stays in view: upload or take a photo, watch the progress, then add to cart, share the look, or open any try-on again from the shopper's own history.
-* **Consent before any photo is sent.** Shoppers tick a consent box, with a plain-language notice, before their photo leaves their browser — nothing is uploaded until they agree.
+* **A try-on window shoppers finish.** It sits in the corner so the product stays in view: upload a photo or take one with the camera, watch the progress, then add to cart, share the look, or reopen any past try-on.
+* **No email required.** The try-on never asks shoppers for an email address, so there is nothing extra to ask consent for and nothing extra to protect.
+* **Consent before any photo is sent.** Shoppers are shown, in plain language, what happens to their photo and agree once before anything leaves their browser.
 * **Privacy tools built in.** Shopper data works with WordPress's Export and Erase Personal Data tools, and the plugin suggests text for your privacy policy.
 * **Safe on staging.** A copy of your site keeps try-on switched off, so it can't use your allowance or disconnect your live store.
 * **No account to create.** Click Connect in WordPress and you're done.
@@ -55,7 +55,7 @@ No. Photos are processed to create the try-on image and are not stored by Cloths
 
 = Do shoppers have to agree before their photo is used? =
 
-Yes. The try-on window shows a consent box with a short notice explaining what happens to the photo. Nothing leaves the shopper's browser until they tick it, and the consent is recorded with the date so you have a record of it.
+Yes. Before the first try-on, the window explains what happens to the photo and asks the shopper to agree. Nothing leaves their browser until they do, and the consent is recorded with the date so you have a record of it.
 
 = Does it work with block themes and page builders? =
 
@@ -63,7 +63,7 @@ Yes. Add the **Clothsy AI Try-On Button** block to your single product template,
 
 = How do I handle a shopper's request to see or delete their data? =
 
-Use WordPress's **Tools → Export Personal Data** and **Tools → Erase Personal Data**. Clothsy AI's data (the shopper's email sign-ups and try-on history) is included automatically.
+Use WordPress's **Tools → Export Personal Data** and **Tools → Erase Personal Data**. Clothsy AI's data is included automatically, including anything captured before the try-on stopped asking for email addresses.
 
 = What happens if I disconnect or delete the plugin? =
 
@@ -78,7 +78,7 @@ A copy of your site keeps try-on switched off, so it can't use your allowance. I
 1. The try-on window on a product page: the shopper uploads a photo and sees themselves wearing the product.
 2. WooCommerce → Clothsy AI: connection, on/off switch and this month's usage.
 3. Plans: upgrade, downgrade or cancel from WordPress.
-4. Button settings: text, colours, shape, email capture and placement.
+4. Button settings: text, colours, shape and placement.
 5. The Clothsy AI tab in the product editor.
 
 == External services ==
@@ -90,13 +90,19 @@ This plugin relies on the Clothsy AI service (hosted at fabricvton-api.onrender.
 * **When you choose or cancel a plan:** your store ID and the chosen plan. You pay on a Clothsy AI checkout page, where payments are handled by a payment processor that Clothsy AI uses; card details are never sent to your site or to Clothsy AI.
 * **When an admin runs Export or Erase Personal Data for an email address:** that email address, so Clothsy AI can return or delete the data it holds for it.
 * **When you delete the plugin:** your store ID, so Clothsy AI disconnects the store.
-* **When a shopper uses the try-on:** nothing is sent until the shopper ticks a consent box confirming they are 18 or older (or have their guardian's consent) and agree to their photo being processed. Only then does the browser send the photo they upload, the email they enter (if you ask for one), an anonymous session ID, the product's name and image URL, and a record of the consent they gave. When the try-on window opens, an anonymous "opened" event is sent for your statistics.
+* **When a shopper uses the try-on:** nothing is sent until the shopper agrees, in a card explaining what happens to their photo, that they are 18 or older (or have their guardian's consent). Only then does the browser send the photo, an anonymous session ID, the product's name and image URL, and a record of the consent they gave. Shoppers are never asked for an email address. When the try-on window opens, an anonymous "opened" event is sent for your statistics; if a shopper rates a result, that rating is sent too.
 
 Try-on images are generated by an AI image-processing provider that Clothsy AI uses as a sub-processor. Photos are processed to produce the result and are not used to train AI models.
 
 The service is provided by Clothsy AI: [Terms of Service](https://www.fabricvton.com/tos), [Privacy Policy](https://www.fabricvton.com/privacy), [Shopper privacy notice](https://www.fabricvton.com/widget-privacy).
 
 == Changelog ==
+
+= 0.2.3 =
+* The try-on no longer asks shoppers for an email address at all.
+* "Take a photo" now opens the camera inside the window on laptops as well as phones.
+* Add to cart from the result screen now reports what actually happened, and says why when a store refuses an item.
+* The window keeps one height throughout, carries Clothsy AI branding, and was tuned for phones, tablets and sideways screens.
 
 = 0.2.2 =
 * Redesigned try-on window: it now docks in the corner of the page instead of covering it, keeps a history of the shopper's looks, and adds sharing and a one-tap rating.

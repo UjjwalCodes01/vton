@@ -28,7 +28,6 @@
   var HISTORY_LIMIT = 12;
 
   var KEY_CONSENT = "clothsy_consent";
-  var KEY_EMAIL = "clothsy_email";
   var KEY_HISTORY = "clothsy_history";
 
   var panel = null;
@@ -38,6 +37,7 @@
   var photoDataUrl = ""; // the chosen photo, as the shopper sees it
   var lastResult = null; // { url, title, image, at, generationId }
   var progressTimer = null;
+  var cameraStream = null; // live MediaStream while the camera step is open
   var session = null; // { token, apiBase, expiresAt, key }
   // The button that opened the panel, so the shopper's chosen variation can be
   // read from the form around it when adding to the cart.
@@ -271,6 +271,7 @@
     root.innerHTML = [
       '<div class="clothsy-ai-head">',
       '  <button type="button" class="clothsy-ai-icon-btn" data-action="back" aria-label="Back" hidden>' + ICONS.back + "</button>",
+      '  <img class="clothsy-ai-logo" data-role="logo" alt="" hidden />',
       '  <div class="clothsy-ai-head-text">',
       '    <h2 data-role="title">Try It On</h2>',
       '    <p data-role="subtitle">See how it looks on you</p>',
@@ -289,7 +290,7 @@
       '    <span class="clothsy-ai-round" data-role="garment"></span>',
       '    <button type="button" class="clothsy-ai-btn clothsy-ai-btn-dark" data-action="pick">' + ICONS.plus + "Choose Your Photo</button>",
       '    <button type="button" class="clothsy-ai-btn clothsy-ai-btn-light" data-action="camera">' + ICONS.camera + "Take a photo in a mirror</button>",
-      '    <p class="clothsy-ai-legal">Your photo isn\'t used until you agree to our <a href="' + PRIVACY_URL + '" target="_blank" rel="noopener">Try-On Privacy Policy</a>.<br>AI can make mistakes.</p>',
+      '    <p class="clothsy-ai-legal">Private &amp; secure &middot; <a href="' + PRIVACY_URL + '" target="_blank" rel="noopener">Privacy</a> &middot; AI can make mistakes</p>',
       "  </div>",
 
       // 2. Consent, asked once
@@ -302,14 +303,18 @@
       "      <li>" + ICONS.chart + "<span>We keep basic usage data, like your number of try-ons, to run this service.</span></li>",
       "      <li>" + ICONS.shield + "<span>You are 18 or older, or have your guardian’s consent. You can withdraw consent at any time.</span></li>",
       "    </ul>",
-      '    <div data-role="email-block" style="display:none;">',
-      '      <label class="clothsy-ai-visually-hidden" for="clothsy-ai-email">Email address</label>',
-      '      <input id="clothsy-ai-email" class="clothsy-ai-field" type="email" placeholder="your@email.com" autocomplete="email" />',
-      '      <p class="clothsy-ai-field-error" data-role="email-error" style="display:none;">Please enter a valid email address.</p>',
-      "    </div>",
-      '    <p class="clothsy-ai-legal" style="margin-top:0;margin-bottom:14px;">By continuing, you agree to the <a href="' + PRIVACY_URL + '" target="_blank" rel="noopener">Try-On Privacy Policy</a>.</p>',
+      '    <p class="clothsy-ai-legal" style="margin-top:0;margin-bottom:14px;">By continuing you agree to the <a href="' + PRIVACY_URL + '" target="_blank" rel="noopener">Privacy notice</a></p>',
       '    <button type="button" class="clothsy-ai-btn clothsy-ai-btn-dark" data-action="agree">Agree and continue</button>',
       '    <button type="button" class="clothsy-ai-btn clothsy-ai-btn-plain" data-action="decline">Not now</button>',
+      "  </div>",
+
+      // 2b. Camera
+      '  <div class="clothsy-ai-step" data-step="camera">',
+      '    <div class="clothsy-ai-camera">',
+      '      <video data-role="video" playsinline muted autoplay></video>',
+      "    </div>",
+      '    <button type="button" class="clothsy-ai-btn clothsy-ai-btn-dark" data-action="shutter">' + ICONS.camera + "Take photo</button>",
+      '    <button type="button" class="clothsy-ai-btn clothsy-ai-btn-plain" data-action="stop-camera">Cancel</button>',
       "  </div>",
 
       // 3. Preview
@@ -319,7 +324,7 @@
       '      <button type="button" class="clothsy-ai-chip" data-action="pick">Change Photo</button>',
       "    </div>",
       '    <button type="button" class="clothsy-ai-btn clothsy-ai-btn-dark" data-action="generate">Try It On Now</button>',
-      '    <p class="clothsy-ai-legal">By clicking \'Try It On\', you agree to our <a href="' + PRIVACY_URL + '" target="_blank" rel="noopener">Try-On Privacy Policy</a>.<br>AI can make mistakes.</p>',
+      '    <p class="clothsy-ai-legal">By continuing you agree to the <a href="' + PRIVACY_URL + '" target="_blank" rel="noopener">Privacy notice</a></p>',
       "  </div>",
 
       // 4. Generating
@@ -369,6 +374,7 @@
 
       "</div>",
 
+      '<div class="clothsy-ai-foot"><img data-role="foot-logo" alt="" hidden />Powered by <b>Clothsy AI</b></div>',
       '<input type="file" accept="image/jpeg,image/png,image/webp,image/*" hidden data-role="file" />',
       '<input type="file" accept="image/*" capture="user" hidden data-role="camera-file" />',
       '<div class="clothsy-ai-toast" data-role="toast" data-show="false" role="status"></div>'
@@ -378,15 +384,15 @@
 
     els = {
       root: root,
+      logo: root.querySelector('[data-role="logo"]'),
+      footLogo: root.querySelector('[data-role="foot-logo"]'),
+      video: root.querySelector('[data-role="video"]'),
       title: root.querySelector('[data-role="title"]'),
       subtitle: root.querySelector('[data-role="subtitle"]'),
       back: root.querySelector('[data-action="back"]'),
       historyBtn: root.querySelector('[data-action="history"]'),
       garment: root.querySelector('[data-role="garment"]'),
       detailsPhoto: root.querySelector('[data-role="details-photo"]'),
-      emailBlock: root.querySelector('[data-role="email-block"]'),
-      email: root.querySelector("#clothsy-ai-email"),
-      emailError: root.querySelector('[data-role="email-error"]'),
       preview: root.querySelector('[data-role="preview"]'),
       pairGarment: root.querySelector('[data-role="pair-garment"]'),
       pairPhoto: root.querySelector('[data-role="pair-photo"]'),
@@ -410,9 +416,6 @@
     root.addEventListener("click", onPanelClick);
     els.file.addEventListener("change", function () { onFileChosen(els.file); });
     els.cameraFile.addEventListener("change", function () { onFileChosen(els.cameraFile); });
-    els.email.addEventListener("keydown", function (event) {
-      if (event.key === "Enter") agree();
-    });
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape" && root.getAttribute("data-open") === "true") close();
     });
@@ -431,7 +434,9 @@
     else if (action === "back") goBack();
     else if (action === "history") showHistory();
     else if (action === "pick") els.file.click();
-    else if (action === "camera") els.cameraFile.click();
+    else if (action === "camera") openCamera();
+    else if (action === "shutter") takeShot();
+    else if (action === "stop-camera") { stopCamera(); showStep("intro"); }
     else if (action === "agree") agree();
     else if (action === "decline") restart();
     else if (action === "generate") generate();
@@ -488,14 +493,18 @@
     photoDataUrl = "";
     lastResult = null;
 
+    if (config.logoUrl) {
+      els.logo.src = config.logoUrl;
+      els.logo.hidden = false;
+      els.footLogo.src = config.logoUrl;
+      els.footLogo.hidden = false;
+    }
     els.garment.style.backgroundImage = config.productImageUrl
       ? 'url("' + config.productImageUrl + '")'
       : "";
     els.pairGarment.style.backgroundImage = els.garment.style.backgroundImage;
     els.file.value = "";
     els.cameraFile.value = "";
-    els.email.value = readStore(KEY_EMAIL);
-    els.emailError.style.display = "none";
 
     panel.setAttribute("data-open", "true");
     showStep("intro");
@@ -518,10 +527,12 @@
   function close() {
     if (!panel) return;
     stopProgress();
+    stopCamera();
     panel.setAttribute("data-open", "false");
   }
 
   function restart() {
+    stopCamera();
     selectedFile = null;
     photoDataUrl = "";
     els.file.value = "";
@@ -539,8 +550,10 @@
 
   function onFileChosen(input) {
     var file = input.files && input.files[0];
-    if (!file) return;
+    if (file) usePhoto(file);
+  }
 
+  function usePhoto(file) {
     if (file.size > MAX_UPLOAD_BYTES) {
       showError("That photo is larger than 10MB. Please choose a smaller image.");
       return;
@@ -561,29 +574,65 @@
       els.detailsPhoto.style.backgroundImage = 'url("' + photoDataUrl + '")';
       els.pairPhoto.style.backgroundImage = 'url("' + photoDataUrl + '")';
 
-      // The consent card doubles as the one-time email ask, so it appears when
-      // either is still outstanding.
-      var needsEmail = ctx.requireEmail && !readStore(KEY_EMAIL);
-      if (!hasConsent() || needsEmail) {
-        els.emailBlock.style.display = needsEmail ? "block" : "none";
-        showStep("details");
-      } else {
-        showStep("preview");
-      }
+      showStep(hasConsent() ? "preview" : "details");
     };
     reader.readAsDataURL(file);
   }
 
+  /**
+   * Opens the camera inside the panel. `capture` on a file input only reaches a
+   * camera on phones — on a laptop it silently opens the file picker, which is
+   * what made this button look broken — so this asks for the stream directly
+   * and keeps the file input as the fallback.
+   */
+  function openCamera() {
+    var media = navigator.mediaDevices;
+    if (!media || !media.getUserMedia) return els.cameraFile.click();
+
+    media
+      .getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 1600 } }, audio: false })
+      .then(function (stream) {
+        cameraStream = stream;
+        els.video.srcObject = stream;
+        var playing = els.video.play();
+        if (playing && playing.catch) playing.catch(function () {});
+        showStep("camera", { title: "Take a photo", subtitle: "Stand back so we can see you", hideHistory: true });
+      })
+      .catch(function () {
+        // Denied, or no camera on this device: the file input still works, and
+        // on a phone it opens the camera app.
+        els.cameraFile.click();
+      });
+  }
+
+  function stopCamera() {
+    if (!cameraStream) return;
+    cameraStream.getTracks().forEach(function (track) { track.stop(); });
+    cameraStream = null;
+    els.video.srcObject = null;
+  }
+
+  function takeShot() {
+    var video = els.video;
+    if (!video.videoWidth) return;
+
+    var canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    var g = canvas.getContext("2d");
+    // A front camera shows a mirror image; save what the shopper actually saw.
+    g.translate(canvas.width, 0);
+    g.scale(-1, 1);
+    g.drawImage(video, 0, 0);
+    stopCamera();
+
+    canvas.toBlob(function (blob) {
+      if (!blob) return showError("That photo could not be taken. Please try again.");
+      usePhoto(new File([blob], "camera.jpg", { type: "image/jpeg" }));
+    }, "image/jpeg", 0.92);
+  }
+
   function agree() {
-    if (els.emailBlock.style.display !== "none") {
-      var value = (els.email.value || "").trim();
-      if (!value || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-        els.emailError.style.display = "block";
-        return;
-      }
-      els.emailError.style.display = "none";
-      writeStore(KEY_EMAIL, value);
-    }
     writeStore(KEY_CONSENT, CONSENT_VERSION);
     showStep("preview");
   }
@@ -705,7 +754,6 @@
           sessionId: sessionId,
           personImageDataUrl: compressed,
           personImageMimeType: "image/jpeg",
-          email: readStore(KEY_EMAIL) || "",
           consentVersion: CONSENT_VERSION,
           consentAt: new Date().toISOString()
         })
@@ -829,6 +877,9 @@
   function addToCart() {
     if (!ctx || !ctx.cartAddUrl || !ctx.productId) return cartUnavailable();
 
+    var button = panel.querySelector('[data-action="add-to-cart"]');
+    if (button) button.disabled = true;
+
     // WooCommerce's own add-to-cart endpoint, so stock checks, variations and
     // cart plugins behave exactly as they do for the theme's button.
     var form = new FormData();
@@ -841,30 +892,35 @@
       .then(function (res) {
         return parseJsonSafely(res).then(function (data) {
           // Woo answers 200 with an `error` field when it refuses the item.
-          if (!res.ok || (data && data.error)) throw new Error("cart refused");
+          if (!res.ok || (data && data.error)) throw new Error("");
           return data;
         });
       })
       .then(function () {
-        refreshCartFragments();
+        if (button) button.disabled = false;
         toast("Added to your cart");
+        refreshCartCount();
       })
-      .catch(cartUnavailable);
+      .catch(function (err) {
+        if (button) button.disabled = false;
+        if (err && err.message) return toast(err.message);
+        cartUnavailable();
+      });
   }
 
   /** Nudges the theme's mini-cart to redraw, as Woo's own button does. */
-  function refreshCartFragments() {
+  function refreshCartCount() {
     if (window.jQuery) {
       try {
         window.jQuery(document.body).trigger("wc_fragment_refresh");
       } catch (e) {
-        /* A theme without the fragments script still has the item in the cart. */
+        /* The item is in the cart either way; only the badge lags. */
       }
     }
   }
 
   function cartUnavailable() {
-    toast("Use the Add to cart button on the page");
+    toast("Couldn\u2019t add it here \u2014 use Add to cart on the page");
   }
 
   function shareLook() {
@@ -971,7 +1027,7 @@
       variationId: selectedVariationId(button, productId),
       productTitle: button.getAttribute("data-product-title") || "this product",
       productImageUrl: button.getAttribute("data-product-image") || "",
-      requireEmail: button.getAttribute("data-require-email") === "true",
+      logoUrl: button.getAttribute("data-logo-url") || "",
       sessionUrl: button.getAttribute("data-session-url") || "",
       ajaxUrl: button.getAttribute("data-ajax-url") || "",
       cartAddUrl: button.getAttribute("data-cart-add-url") || "",

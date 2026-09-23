@@ -399,7 +399,8 @@ class Clothsy_AI_Admin {
 				<?php endforeach; ?>
 			</div>
 			<p class="description"><?php esc_html_e( 'Opens, try-ons and emails cover the last 30 days.', 'clothsy-ai' ); ?></p>
-			<?php self::action_button( 'leads_csv', __( 'Download leads (CSV)', 'clothsy-ai' ) ); ?>
+			<?php self::action_button( 'leads_csv', __( 'Download past leads (CSV)', 'clothsy-ai' ) ); ?>
+			<p class="description"><?php esc_html_e( 'The try-on no longer asks shoppers for an email. This downloads what was captured before that changed.', 'clothsy-ai' ); ?></p>
 		</div>
 		<?php
 	}
@@ -583,12 +584,6 @@ class Clothsy_AI_Admin {
 						<th scope="row"><label for="clothsy-ai-radius"><?php esc_html_e( 'Corner radius', 'clothsy-ai' ); ?></label></th>
 						<td><input type="number" id="clothsy-ai-radius" name="clothsy_ai[radius]" value="<?php echo esc_attr( (string) $s['radius'] ); ?>" min="0" max="50" class="small-text" /> px
 							<p class="description"><?php esc_html_e( '0 for square corners, 24 or more for a pill shape.', 'clothsy-ai' ); ?></p></td>
-					</tr>
-					<tr>
-						<th scope="row"><?php esc_html_e( 'Email', 'clothsy-ai' ); ?></th>
-						<td><label><input type="checkbox" name="clothsy_ai[require_email]" value="1" <?php checked( $s['require_email'] ); ?> />
-							<?php esc_html_e( 'Ask shoppers for their email before the try-on', 'clothsy-ai' ); ?></label>
-							<p class="description"><?php esc_html_e( 'Captured emails appear in Usage and can be downloaded as a CSV.', 'clothsy-ai' ); ?></p></td>
 					</tr>
 					<tr>
 						<th scope="row"><?php esc_html_e( 'Placement', 'clothsy-ai' ); ?></th>
