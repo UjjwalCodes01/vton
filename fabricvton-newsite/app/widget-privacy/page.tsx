@@ -20,7 +20,7 @@ export default function WidgetPrivacyPolicy() {
             You are reading this because you are visiting an online store that uses Clothsy AI to provide a virtual try-on experience. This policy explains exactly what
             happens to your data when you use it.
           </p>
-          <p className="legal-meta">Applicable to users of the Clothsy AI virtual try-on widget · Last updated September 20, 2026</p>
+          <p className="legal-meta">Applicable to users of the Clothsy AI virtual try-on widget · Last updated September 23, 2026</p>
 
           <div className="guide-body">
             <h2>1. What Information We Collect</h2>
@@ -49,6 +49,10 @@ export default function WidgetPrivacyPolicy() {
                 <strong>Usage data:</strong> anonymous counts of how the widget is used (how often it is opened, how often a try-on succeeds), so the store owner can measure
                 the feature and we can fix bugs.
               </li>
+              <li>
+                <strong>A look you choose to share:</strong> only if you tap <strong>Share Look</strong>, a copy of that one try-on image, together with the product&apos;s
+                name, link and picture, so the link you send keeps working. Your original photo is never part of it.
+              </li>
             </ul>
 
             <h2>2. How We Use Your Photo</h2>
@@ -64,8 +68,17 @@ export default function WidgetPrivacyPolicy() {
             <p>We operate with a strict data minimization policy. Different data is kept for different lengths of time, so here is all of it:</p>
             <ul>
               <li>
-                <strong>Your photo and the generated image:</strong> never stored by Clothsy AI at all. Your photo is passed straight to our AI provider for processing, and
-                the result is delivered to your browser from their servers. Neither image is written to a Clothsy AI database or disk.
+                <strong>Your photo:</strong> never stored by Clothsy AI at all. It is passed straight to our AI provider for processing and is never written to a Clothsy AI
+                database or disk.
+              </li>
+              <li>
+                <strong>The generated image:</strong> not stored either, unless you tap <strong>Share Look</strong>. Otherwise it is delivered to your browser from our AI
+                provider&apos;s servers and never written to a Clothsy AI database or disk.
+              </li>
+              <li>
+                <strong>A look you shared:</strong> when you tap Share Look, we keep a copy of that one image in our cloud storage so the link works, because the provider&apos;s
+                own link expires within hours. It is deleted automatically after 30 days, or sooner if you ask us. It is not linked to your email address and is never
+                used to train AI.
               </li>
               <li>
                 <strong>Your email address:</strong> held as a marketing lead for the store owner until they delete it, until the store uninstalls Clothsy AI, or until you ask
@@ -85,8 +98,12 @@ export default function WidgetPrivacyPolicy() {
             <ul>
               <li>
                 <strong>The merchant:</strong> the owner of the store you are visiting is the &ldquo;Data Controller&rdquo;. They receive your email address, the product you
-                tried on, and your try-on history, and can export that to a spreadsheet or their email marketing tool. They cannot see your uploaded photo or your generated
-                try-on result &mdash; those are never stored anywhere the store owner could reach them.
+                tried on, and your try-on history, and can export that to a spreadsheet or their email marketing tool. They cannot see your uploaded photo, and they cannot
+                see your try-on result unless you share its link with them.
+              </li>
+              <li>
+                <strong>Anyone you send a shared look to:</strong> a shared look is a page at clothsyai.fabricvton.com/look/&hellip; with a long, random address. Anyone who
+                has the link can open it while it exists, so only send it to people you want to see it. The page is hidden from search engines.
               </li>
               <li>
                 <strong>Clothsy AI (us):</strong> we act as the &ldquo;Data Processor&rdquo; on the store owner&apos;s behalf.
@@ -94,6 +111,10 @@ export default function WidgetPrivacyPolicy() {
               <li>
                 <strong>Our AI image-processing provider:</strong> performs the image generation. Your photo and the public product image URL are sent to them for
                 processing. They process the images transiently, are contractually bound to protect them, and do not use them for model training.
+              </li>
+              <li>
+                <strong>Our cloud storage provider:</strong> holds the copy of a look you chose to share, for up to 30 days, so the link works. It does not use it for
+                anything else.
               </li>
             </ul>
             <p>We do not sell your data, and we do not share it with advertisers.</p>
@@ -106,8 +127,9 @@ export default function WidgetPrivacyPolicy() {
                 <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
               </li>
               <li>
-                <strong>Right to deletion:</strong> your photos are never stored, so there is nothing to delete there. To have your email address and try-on history erased,
-                contact the store you used, or email us and we will erase them.
+                <strong>Right to deletion:</strong> your photos are never stored, so there is nothing to delete there. A look you shared is deleted automatically after 30
+                days; to have it deleted sooner, email us its link. To have your email address and try-on history erased, contact the store you used, or email us and we
+                will erase them.
               </li>
               <li>
                 <strong>Response time:</strong> requests are answered within 30 days.

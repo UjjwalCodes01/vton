@@ -14,6 +14,7 @@ export default function PrivacyPolicy() {
             <div className="legal-header">
               <h1>Privacy Policy (Merchants)</h1>
               <p className="effective-date">Effective Date: September 14th, 2026</p>
+              <p className="effective-date">Last Updated: 23rd September, 2026</p>
             </div>
           </FadeUp>
 
@@ -40,7 +41,7 @@ export default function PrivacyPolicy() {
                 <li><strong>Shopify Account Info:</strong> Name, email address, shop domain, and contact details (via Shopify API).</li>
                 <li><strong>Billing Information:</strong> We do not store credit card details directly; billing is handled via Shopify's Billing API.</li>
                 <li><strong>Studio Assets:</strong> If you use the FabricVTON Studio to generate marketing images, we process the model photos and product images you upload.</li>
-                <li><strong>Customer Data (On your behalf):</strong> To provide the Virtual Try-On service we process your customers&apos; photos, and &mdash; where you have email capture enabled &mdash; we store their email address, the product they viewed, and their try-on history. <em>The email addresses and try-on history are available to you in the app (Leads and Analytics, including CSV export and Klaviyo sync). Customer photos and generated try-on results are NOT: those are never stored by FabricVTON, so neither you nor we can retrieve them afterwards. See the Widget Privacy Policy for details.</em></li>
+                <li><strong>Customer Data (On your behalf):</strong> To provide the Virtual Try-On service we process your customers&apos; photos, and &mdash; where you have email capture enabled &mdash; we store their email address, the product they viewed, and their try-on history. <em>The email addresses and try-on history are available to you in the app (Leads and Analytics, including CSV export). Customer photos and generated try-on results are NOT: photos are never stored by FabricVTON, and results are only kept when a shopper taps Share Look (a copy of that one image, for 30 days, so their link works). See the Widget Privacy Policy for details.</em></li>
               </ul>
 
               <h2>3. How We Use Merchant Information</h2>
@@ -55,7 +56,7 @@ export default function PrivacyPolicy() {
               <p>We adhere to strict data security standards:</p>
               <ul>
                 <li><strong>Encryption:</strong> All data is encrypted in transit (TLS) and at rest.</li>
-                <li><strong>Data Retention:</strong> Customer photos and generated images are never stored by FabricVTON &mdash; they are forwarded to our AI provider for processing and the result is served from the provider. Captured lead emails are retained until you delete them or the shop is redacted, because they are your marketing data. Try-on history has its email stripped after 90 days and the anonymous record deleted after 13 months; aggregate daily analytics are kept for about 25 months. Merchant account data is retained as long as the App is installed.</li>
+                <li><strong>Data Retention:</strong> Customer photos are never stored by FabricVTON &mdash; they are forwarded to our AI provider for processing and the result is served from the provider. Generated images are not stored either, with one shopper-chosen exception: when a shopper taps Share Look, we keep a copy of that one image for 30 days so the shared link works, then delete it automatically. Shared looks are not linked to an email address and are deleted on that 30-day schedule even if you uninstall. Captured lead emails are retained until you delete them or the shop is redacted, because they are your marketing data. Try-on history has its email stripped after 90 days and the anonymous record deleted after 13 months; aggregate daily analytics are kept for about 25 months. Merchant account data is retained as long as the App is installed.</li>
                 <li><strong>AI Training:</strong> We DO NOT use your or your customers' data to train our AI models.</li>
               </ul>
 
@@ -65,6 +66,7 @@ export default function PrivacyPolicy() {
                 <li><strong>Shopify:</strong> platform and billing.</li>
                 <li><strong>AI image-processing provider:</strong> generates the virtual try-on image. Receives the customer photo and the public product image URL, processes them transiently, and does not use them for model training.</li>
                 <li><strong>Cloud hosting provider:</strong> runs our servers and database.</li>
+                <li><strong>Cloud storage provider:</strong> holds the copy of a try-on image a shopper chose to share, for up to 30 days.</li>
                 <li><strong>Website analytics:</strong> measures visits to our marketing website only. It is not used inside your store or the try-on widget.</li>
               </ul>
 
@@ -77,7 +79,7 @@ export default function PrivacyPolicy() {
                 <em>Virtual Try-On Feature</em><br /><br />
                 Our store uses FabricVTON, a virtual try-on application that allows you to see how products look on you before making a purchase.<br /><br />
                 <strong>How it works:</strong> When you choose to use the virtual try-on feature, you will be asked to upload a photo of yourself. This photo is sent to an AI image-processing provider, which processes it to generate a virtual try-on image.<br /><br />
-                <strong>Data Privacy:</strong> Your uploaded photo and the generated result are used solely for this purpose and are never stored by the try-on app. Your photos are NOT used to train AI models.<br /><br />
+                <strong>Data Privacy:</strong> Your uploaded photo and the generated result are used solely for this purpose and are not stored by the try-on app. The only exception is a look you choose to share: if you tap Share Look, a copy of that one image is kept for 30 days so your link works, and anyone with the link can view it. Your photos are NOT used to train AI models.<br /><br />
                 <strong>Email capture:</strong> If we ask for your email address before showing your try-on, that address is saved to our marketing list along with the product you viewed, and we may contact you about our products. You can ask us to delete it at any time.<br /><br />
                 For more details, please refer to the FabricVTON Widget Privacy Policy.
               </div>
@@ -89,7 +91,7 @@ export default function PrivacyPolicy() {
               <ul>
                 <li><strong>Access requests:</strong> when a customer requests their data through Shopify, Shopify notifies FabricVTON and we immediately compile every record we hold for that email address. Open <strong>Privacy</strong> in the FabricVTON app to download it as JSON, send it to the customer, and record that you delivered it. Shopify expects a response within 30 days.</li>
                 <li><strong>Deletion requests:</strong> Shopify&apos;s <code>customers/redact</code> webhook is handled automatically. We delete the customer&apos;s lead record, strip their email from their try-on history, and erase any stored export containing their data.</li>
-                <li><strong>Uninstalling:</strong> Shopify&apos;s <code>shop/redact</code> webhook (sent 48 hours after uninstall) deletes all of your shop&apos;s data from FabricVTON.</li>
+                <li><strong>Uninstalling:</strong> Shopify&apos;s <code>shop/redact</code> webhook (sent 48 hours after uninstall) deletes all of your shop&apos;s data from FabricVTON. Looks shoppers chose to share are not tied to an email, so they are removed on their own 30-day schedule rather than immediately.</li>
               </ul>
 
               <h2>8. Contact Us</h2>

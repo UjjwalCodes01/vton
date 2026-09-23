@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CONTACT_HREF, LEGAL, SHOPIFY_URL, SOCIALS } from "../lib/site";
+import { CONTACT_HREF, LEGAL, SHOPIFY_URL, SOCIALS, WOO_URL } from "../lib/site";
 import { Instagram, XLogo } from "./icons";
 
 type FooterLink = { href: string; label: string; external?: boolean };
@@ -13,6 +13,7 @@ const columns: { title: string; links: FooterLink[] }[] = [
       { href: "/pricing", label: "Pricing" },
       { href: "/#how", label: "How it works" },
       { href: SHOPIFY_URL, label: "Install on Shopify", external: true },
+      { href: WOO_URL, label: "Install on WooCommerce", external: true },
     ],
   },
   {

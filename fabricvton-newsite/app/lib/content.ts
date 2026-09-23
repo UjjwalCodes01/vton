@@ -97,7 +97,7 @@ export const STORE_FEATURES: { title: string; blurb: string }[] = [
   },
   {
     title: "Consent first",
-    blurb: "Shoppers tick a consent box before anything is sent. Photos and results are never stored by FabricVTON.",
+    blurb: "Shoppers tick a consent box before anything is sent. Photos are never stored, and results only when a shopper shares them.",
   },
   {
     title: "Free to start",
@@ -136,7 +136,7 @@ export const SHOPPER_FAQ: Faq[] = [
   },
   {
     q: "Is my photo stored?",
-    a: "No. FabricVTON never stores your photo or your try-on image. Your photo goes to our AI image-processing provider to create the look, and neither they nor we use it to train AI models. The store cannot see your photo or your result.",
+    a: "Your photo, never. It goes to our AI image-processing provider to create the look, and neither they nor we use it to train AI models. Your try-on image isn't stored either, unless you tap Share Look: then we keep a copy of that one image for 30 days so your link works, and anyone with the link can see it. The store cannot see your photo, or your result unless you send them the link.",
   },
   {
     q: "Does anything get sent as soon as I choose a photo?",
@@ -272,8 +272,9 @@ export const GUIDES: Guide[] = [
         type: "ul",
         items: [
           "Your photo goes to our AI image-processing provider to create the look. Neither they nor we use it to train AI models.",
-          "FabricVTON never stores your photo or the try-on image.",
-          "The store cannot see your photo or your result.",
+          "FabricVTON never stores your photo.",
+          "Your try-on image isn't stored either, unless you tap Share Look. Then a copy of that one image is kept for 30 days so your link works, and anyone with the link can open it.",
+          "The store cannot see your photo, or your result unless you send them the link.",
         ],
       },
       { type: "h", text: "Emails and history" },

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ArrowUpRight, Check } from "../components/icons";
 import { PLANS, type Plan } from "../lib/content";
-import { SHOPIFY_URL } from "../lib/site";
+import { SHOPIFY_URL, WOO_URL } from "../lib/site";
 
 /**
  * The plan cards, billing toggle and comparison table. Plans and prices mirror the Shopify billing code:
@@ -108,6 +108,13 @@ export default function PlanSwitcher() {
           );
         })}
       </div>
+
+      <p className="plan-woo">
+        On WooCommerce?{" "}
+        <a href={WOO_URL} target="_blank" rel="noopener noreferrer">
+          Install the plugin <ArrowUpRight className="btn-arrow" />
+        </a>
+      </p>
 
       <p className="plan-table-hint">Swipe sideways to compare every plan.</p>
       <div className="plan-table-wrap" tabIndex={0} role="region" aria-label="Plan comparison, scrolls sideways">

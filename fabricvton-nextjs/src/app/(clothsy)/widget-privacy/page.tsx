@@ -33,6 +33,7 @@ export default function WidgetPrivacyPolicy() {
                 <li><strong>Email Address:</strong> Most stores require your email before the try-on runs. Where the store has enabled this, your email is saved and <strong>shared with the store owner as a marketing lead</strong>, together with the product you were viewing. If you would rather not share it, please do not use the try-on feature.</li>
                 <li><strong>Try-On History:</strong> For each try-on we record the product, the time, whether it succeeded, and &mdash; for up to 90 days &mdash; the email you entered. The store owner can see this history.</li>
                 <li><strong>Usage Data:</strong> Anonymous counts of how the widget is used (how often it is opened, how often a try-on succeeds), so the store owner can measure the feature and we can fix bugs.</li>
+                <li><strong>A Look You Choose to Share:</strong> only if you tap <strong>Share Look</strong>, a copy of that one try-on image, together with the product&apos;s name, link and picture, so the link you send keeps working. Your original photo is never part of it.</li>
               </ul>
 
               <h2>2. How We Use Your Photo</h2>
@@ -54,9 +55,11 @@ export default function WidgetPrivacyPolicy() {
 
               <h2>4. Who Sees Your Data?</h2>
               <ul>
-                <li><strong>The Merchant:</strong> the owner of the store you are visiting is the &quot;Data Controller&quot;. They receive your email address, the product you tried on, and your try-on history, and they can export that to a spreadsheet or to their email marketing tool. <em>They cannot see your uploaded photo or your generated try-on result &mdash; those are never stored anywhere the store owner could reach them.</em></li>
+                <li><strong>The Merchant:</strong> the owner of the store you are visiting is the &quot;Data Controller&quot;. They receive your email address, the product you tried on, and your try-on history, and they can export that to a spreadsheet or to their email marketing tool. <em>They cannot see your uploaded photo, and they cannot see your try-on result unless you share its link with them.</em></li>
+                <li><strong>Anyone you send a shared look to:</strong> a shared look is a page at clothsyai.fabricvton.com/look/&hellip; with a long, random address. Anyone who has the link can open it while it exists, so only send it to people you want to see it. The page is hidden from search engines.</li>
                 <li><strong>FabricVTON (Us):</strong> we act as the &quot;Data Processor&quot; on the store owner&apos;s behalf.</li>
                 <li><strong>Our AI image-processing provider:</strong> performs the image generation. Your photo and the public product image URL are sent to them for processing. They process the images transiently, are contractually bound to protect them, and do not use them for model training.</li>
+                <li><strong>Our cloud storage provider:</strong> holds the copy of a look you chose to share, for up to 30 days, so the link works. It does not use it for anything else.</li>
               </ul>
               <p>We do not sell your data, and we do not share it with advertisers.</p>
 
@@ -64,7 +67,7 @@ export default function WidgetPrivacyPolicy() {
               <p>Under laws like the GDPR, the CCPA and India&apos;s Digital Personal Data Protection Act, 2023, you have rights regarding your data:</p>
               <ul>
                 <li><strong>Right to Access:</strong> you can ask the store you used for a copy of everything held about you. When the store raises that request through Shopify, we compile every record we hold for your email address so the store can send it to you. You can also email us directly at fabricvton@gmail.com.</li>
-                <li><strong>Right to Deletion:</strong> your photos are never stored, so there is nothing to delete there. To have your email address and try-on history erased, contact the store you used, or email us at fabricvton@gmail.com and we will erase them.</li>
+                <li><strong>Right to Deletion:</strong> your photos are never stored, so there is nothing to delete there. A look you shared is deleted automatically after 30 days; to have it deleted sooner, email us its link at fabricvton@gmail.com. To have your email address and try-on history erased, contact the store you used, or email us at fabricvton@gmail.com and we will erase them.</li>
                 <li><strong>Response time:</strong> requests are answered within 30 days.</li>
               </ul>
 

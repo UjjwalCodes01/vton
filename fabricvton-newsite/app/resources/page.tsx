@@ -5,6 +5,7 @@ import { ArrowRight, ArrowUpRight, Sparkle } from "../components/icons";
 import { GUIDES } from "../lib/content";
 import { BOOK_DEMO_URL, CONTACT_HREF, LEGAL } from "../lib/site";
 import GuideGrid from "./GuideGrid";
+import ResHeroArt from "./ResHeroArt";
 
 export const metadata: Metadata = {
   title: "Resources",
@@ -42,14 +43,7 @@ export default function ResourcesPage() {
           </div>
 
           <div className="res-hero-art">
-            <Image
-              src="/resource_hero.png"
-              alt="Cards for guides, expert insights, industry trends and product updates"
-              width={1712}
-              height={919}
-              sizes="(max-width: 900px) 100vw, 55vw"
-              priority
-            />
+            <ResHeroArt />
           </div>
         </div>
       </section>

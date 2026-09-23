@@ -4,10 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowRight, Search } from "./icons";
+import { ArrowRight } from "./icons";
 
 const links = [
-  { href: "/", label: "Features" },
+  { href: "/#how", label: "Features" },
   { href: "/pricing", label: "Pricing" },
   { href: "/resources", label: "Resources" },
   { href: "/#about", label: "About" },
@@ -47,9 +47,6 @@ export default function SiteNav() {
           </nav>
 
           <div className="nav-actions">
-            <button className="nav-icon" type="button" aria-label="Search">
-              <Search />
-            </button>
             <Link className="btn btn-dark btn-sm" href="/#demo">
               Try Now <ArrowRight className="btn-arrow" />
             </Link>

@@ -571,14 +571,233 @@ main [id] {
   justify-content: flex-end;
 }
 
-.hero-art img {
-  width: auto;
+/* ---- hero visual: two floating layers cut from the same source artwork ---- */
+
+.hero-art-stack {
+  position: relative;
   height: min(78svh, 1050px);
+  width: calc(min(78svh, 1050px) * 1465 / 1074);
   max-width: calc(100% + var(--gutter) + 6vw);
   margin: 0 calc(var(--gutter) * -1) -96px auto;
+}
+
+.hero-layer {
+  position: absolute;
+}
+
+.hero-layer img {
   object-fit: contain;
-  object-position: bottom right;
-  filter: drop-shadow(-24px 26px 44px rgba(46, 26, 107, 0.26));
+}
+
+.hero-layer-girl {
+  left: 7.51%;
+  top: 0;
+  width: 50.17%;
+  height: 100%;
+  z-index: 1;
+  filter: drop-shadow(-20px 22px 36px rgba(46, 26, 107, 0.26));
+}
+
+.hero-layer-girl img {
+  object-position: bottom;
+}
+
+.hero-layer-card {
+  left: 47.44%;
+  top: 0;
+  width: 49.49%;
+  height: 89.57%;
+  z-index: 2;
+  filter: drop-shadow(-14px 18px 30px rgba(46, 26, 107, 0.2));
+}
+
+.hero-layer-card img {
+  object-position: top;
+}
+
+.motion .hero-layer-girl {
+  animation: heroFloatGirl 6.4s ease-in-out infinite;
+}
+
+.motion .hero-layer-card {
+  animation: heroFloatCard 5.2s ease-in-out infinite;
+  animation-delay: -1.4s;
+}
+
+@keyframes heroFloatGirl {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-16px) rotate(-0.6deg);
+  }
+}
+
+@keyframes heroFloatCard {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* the "Try On" result photo: loops a soft blur-to-sharp reveal, as if it keeps re-generating */
+
+.hero-tryon-live {
+  position: absolute;
+  left: 62.2%;
+  top: 36.4%;
+  width: 30.9%;
+  height: 32.8%;
+  overflow: hidden;
+  border-radius: 10%/7.5%;
+}
+
+.hero-tryon-live img {
+  object-fit: cover;
+}
+
+.motion .hero-tryon-live img {
+  animation: heroTryonPulse 4.8s ease-in-out infinite;
+}
+
+@keyframes heroTryonPulse {
+  0%,
+  6% {
+    filter: blur(9px) saturate(0.85) brightness(0.9);
+    transform: scale(1.045);
+  }
+  30%,
+  74% {
+    filter: blur(0) saturate(1) brightness(1);
+    transform: scale(1);
+  }
+  96%,
+  100% {
+    filter: blur(9px) saturate(0.85) brightness(0.9);
+    transform: scale(1.045);
+  }
+}
+
+.hero-tryon-live::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 32%, rgba(255, 255, 255, 0.6) 50%, transparent 68%);
+  transform: translateX(-130%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.motion .hero-tryon-live::after {
+  animation: heroTryonShimmer 4.8s ease-in-out infinite;
+}
+
+@keyframes heroTryonShimmer {
+  0%,
+  6% {
+    opacity: 0.85;
+    transform: translateX(-130%);
+  }
+  26% {
+    opacity: 0;
+    transform: translateX(130%);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(130%);
+  }
+}
+
+.hero-tryon-chip {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translate(-50%, 4px);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(22, 19, 28, 0.82);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+}
+
+.hero-tryon-chip svg {
+  width: 12px;
+  height: 12px;
+}
+
+.motion .hero-tryon-chip {
+  animation: heroTryonChip 4.8s ease-in-out infinite;
+}
+
+@keyframes heroTryonChip {
+  0%,
+  4% {
+    opacity: 0;
+    transform: translate(-50%, 4px);
+  }
+  10%,
+  22% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  30%,
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 4px);
+  }
+}
+
+/* a quiet "processing" ring around the swap icon printed on the card artwork */
+
+.hero-swap-ping {
+  position: absolute;
+  left: 53.6%;
+  top: 49%;
+  width: 8.2%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.motion .hero-swap-ping {
+  animation: heroSwapPing 4.8s ease-in-out infinite;
+}
+
+@keyframes heroSwapPing {
+  0%,
+  24% {
+    box-shadow: 0 0 0 0 rgba(91, 33, 232, 0);
+  }
+  30% {
+    box-shadow: 0 0 0 10px rgba(91, 33, 232, 0.18);
+  }
+  40%,
+  100% {
+    box-shadow: 0 0 0 16px rgba(91, 33, 232, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-layer-girl,
+  .hero-layer-card,
+  .hero-tryon-live img,
+  .hero-tryon-live::after,
+  .hero-tryon-chip,
+  .hero-swap-ping {
+    animation: none !important;
+  }
 }
 
 .scroll-cue {
@@ -1967,11 +2186,12 @@ main [id] {
     justify-content: center;
   }
 
-  .hero-art img {
+  .hero-art-stack {
     width: 100%;
     height: auto;
+    aspect-ratio: 1465 / 1074;
     max-width: 100%;
-    margin-right: 0;
+    margin: 0 auto;
   }
 
   .scroll-cue {

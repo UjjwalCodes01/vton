@@ -22,7 +22,7 @@ export default function PrivacyPolicy() {
             This policy describes how FabricVTON (&ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;our&rdquo;) collects, uses, and discloses information in connection with your
             installation and use of Clothsy AI (the &ldquo;App&rdquo;) on your Shopify or WooCommerce store. It is directed at merchants (store owners).
           </p>
-          <p className="legal-meta">Effective September 14, 2026</p>
+          <p className="legal-meta">Effective September 14, 2026 · Last updated September 23, 2026</p>
 
           <div className="legal-callout">
             <p>Looking for the privacy policy your shoppers see?</p>
@@ -53,8 +53,8 @@ export default function PrivacyPolicy() {
               <li>
                 <strong>Customer data (on your behalf):</strong> to run the try-on we process your customers&apos; photos, and &mdash; where you have email capture enabled
                 &mdash; we store their email address, the product they viewed, and their try-on history. The email addresses and try-on history are available to you in the
-                app under Leads and Analytics, including CSV export. Customer photos and generated try-on results are not: those are never stored by Clothsy AI, so neither
-                you nor we can retrieve them afterwards. See the shopper privacy policy for details.
+                app under Leads and Analytics, including CSV export. Customer photos and generated try-on results are not: photos are never stored by Clothsy AI, and results are
+                only kept when a shopper taps Share Look (a copy of that one image, for 30 days, so their link works). See the shopper privacy policy for details.
               </li>
             </ul>
 
@@ -73,8 +73,10 @@ export default function PrivacyPolicy() {
                 <strong>Encryption:</strong> all data is encrypted in transit (TLS) and at rest.
               </li>
               <li>
-                <strong>Data retention:</strong> customer photos and generated images are never stored by Clothsy AI &mdash; they are forwarded to our AI provider for
-                processing and the result is served from the provider. Captured lead emails are retained until you delete them or the shop is uninstalled, because they are
+                <strong>Data retention:</strong> customer photos are never stored by Clothsy AI &mdash; they are forwarded to our AI provider for processing and the
+                result is served from the provider. Generated images are not stored either, with one shopper-chosen exception: when a shopper taps Share Look, we keep a
+                copy of that one image for 30 days so the shared link works, then delete it automatically. Shared looks are not linked to an email address and are
+                deleted on that 30-day schedule even if you uninstall. Captured lead emails are retained until you delete them or the shop is uninstalled, because they are
                 your marketing data. Try-on history has its email stripped after 90 days and the anonymous record deleted after 13 months; aggregate daily analytics are kept
                 for about 25 months. Merchant account data is retained as long as the App is installed.
               </li>
@@ -95,6 +97,9 @@ export default function PrivacyPolicy() {
               </li>
               <li>
                 <strong>Cloud hosting provider:</strong> runs our servers and database.
+              </li>
+              <li>
+                <strong>Cloud storage provider:</strong> holds the copy of a try-on image a shopper chose to share, for up to 30 days.
               </li>
               <li>
                 <strong>Website analytics:</strong> measures visits to our marketing website only. It is not used inside your store or the try-on widget.
@@ -120,8 +125,9 @@ export default function PrivacyPolicy() {
               image-processing provider, which processes it to generate a virtual try-on image.
               <br />
               <br />
-              <strong>Data privacy:</strong> your uploaded photo and the generated result are used solely for this purpose and are never stored by the try-on app. Your photos
-              are not used to train AI models.
+              <strong>Data privacy:</strong> your uploaded photo and the generated result are used solely for this purpose and are not stored by the try-on app. The only
+              exception is a look you choose to share: if you tap Share Look, a copy of that one image is kept for 30 days so your link works, and anyone with the link can
+              view it. Your photos are not used to train AI models.
               <br />
               <br />
               <strong>Email capture:</strong> if we ask for your email address before showing your try-on, that address is saved to our marketing list along with the product
@@ -145,7 +151,8 @@ export default function PrivacyPolicy() {
               </li>
               <li>
                 <strong>Uninstalling:</strong> on Shopify, the <code>shop/redact</code> webhook (sent 48 hours after uninstall) deletes all of your shop&apos;s data from
-                Clothsy AI. On WooCommerce, uninstalling the plugin does the same.
+                Clothsy AI. On WooCommerce, uninstalling the plugin does the same. Looks shoppers chose to share are not tied to an email, so they are removed on their own
+                30-day schedule rather than immediately.
               </li>
             </ul>
 
