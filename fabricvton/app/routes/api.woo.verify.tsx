@@ -26,8 +26,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     const siteUrl = normaliseStoreUrl(data.siteUrl ?? store.siteUrl);
     const verifyUrl = normaliseStoreUrl(data.verifyUrl);
-    if (verifyUrl.origin !== siteUrl.origin) {
-      throw new UnsafeUrlError("The verify endpoint must be on the store's own domain");
+    // Origin alone is not enough. A store's identity is its origin *and* path
+    // (storeUrlString), so on a WordPress multisite in subdirectories —
+    // example.com/shopA, example.com/shopB — an origin-only check would let one
+    // site answer the challenge for its neighbour and take the neighbour's
+    // store over. The callback must live under the store's own path.
+    const sitePrefix = storeUrlString(siteUrl);
+    const verifyPath = storeUrlString(verifyUrl);
+    if (verifyPath !== sitePrefix && !verifyPath.startsWith(`${sitePrefix}/`)) {
+      throw new UnsafeUrlError("The verify endpoint must be on the store's own site");
     }
     // normaliseStoreUrl drops the query string, but plain-permalink sites serve
     // the REST API at ?rest_route=..., so that one parameter is carried over.

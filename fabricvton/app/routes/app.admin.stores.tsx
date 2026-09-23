@@ -11,6 +11,7 @@ import { useAppBridge } from "@shopify/app-bridge-react";
 import type { Prisma } from "@prisma/client";
 import db from "../db.server";
 import { PLANS, getPlan } from "../billing.server";
+import { setCustomPlan } from "../customplan.server";
 import { useEffect } from "react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -106,6 +107,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         data: {
           plan: plan.name,
           monthlyCredits: plan.credits,
+          // Moving a store onto a standard plan ends any custom arrangement,
+          // so the allowance and the plan name cannot disagree afterwards.
+          customPlanLabel: null,
+          customCredits: null,
+          customNote: null,
+          customSetAt: null,
+          customSetBy: null,
         },
       });
       await db.adminAuditLog.create({
@@ -117,6 +125,46 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         },
       });
       return { success: true, message: `${targetShop} plan changed to ${newPlan}.` };
+    }
+
+    case "set_custom_plan": {
+      const credits = Number(formData.get("customCredits"));
+      if (!Number.isFinite(credits) || credits < 0 || credits > 1_000_000) {
+        return { error: "Give a monthly allowance between 0 and 1,000,000." };
+      }
+      await setCustomPlan({
+        shop: targetShop,
+        label: String(formData.get("customLabel") || ""),
+        credits: Math.round(credits),
+        note: String(formData.get("customNote") || ""),
+        setBy: session.shop,
+      });
+      await db.adminAuditLog.create({
+        data: {
+          adminShop: session.shop,
+          action: "set_custom_plan",
+          targetShop,
+          details: JSON.stringify({
+            credits: Math.round(credits),
+            label: String(formData.get("customLabel") || "Custom"),
+            note: String(formData.get("customNote") || ""),
+          }),
+        },
+      });
+      return { success: true, message: `${targetShop} is on a custom plan of ${Math.round(credits)} try-ons a month.` };
+    }
+
+    case "clear_custom_plan": {
+      await setCustomPlan({ shop: targetShop, label: null, credits: null, note: null, setBy: session.shop });
+      await db.adminAuditLog.create({
+        data: {
+          adminShop: session.shop,
+          action: "clear_custom_plan",
+          targetShop,
+          details: null,
+        },
+      });
+      return { success: true, message: `${targetShop} is back on its own plan's allowance.` };
     }
 
     case "reset_credits": {
@@ -284,6 +332,52 @@ export default function AdminStores() {
                               </select>
                               <button type="submit" className="fv-action-btn purple">Set Plan</button>
                               </fetcher.Form>
+
+                              {/* Custom plan: a negotiated allowance that every
+                                  billing sync afterwards leaves alone. */}
+                              {store.customCredits != null ? (
+                                <fetcher.Form method="post" className="fv-custom-plan">
+                                  <input type="hidden" name="intent" value="clear_custom_plan" />
+                                  <input type="hidden" name="targetShop" value={store.shop} />
+                                  <span className="fv-custom-tag">
+                                    {store.customPlanLabel || "Custom"} · {store.customCredits.toLocaleString("en-US")}/mo
+                                  </span>
+                                  {store.customNote ? (
+                                    <span className="fv-custom-note" title={store.customNote}>{store.customNote}</span>
+                                  ) : null}
+                                  <button type="submit" className="fv-action-btn">Remove custom</button>
+                                </fetcher.Form>
+                              ) : (
+                                <fetcher.Form method="post" className="fv-custom-plan">
+                                  <input type="hidden" name="intent" value="set_custom_plan" />
+                                  <input type="hidden" name="targetShop" value={store.shop} />
+                                  <input
+                                    name="customLabel"
+                                    className="fv-input"
+                                    placeholder="Label (Enterprise)"
+                                    maxLength={40}
+                                    style={{ width: 130 }}
+                                  />
+                                  <input
+                                    name="customCredits"
+                                    className="fv-input"
+                                    type="number"
+                                    min={0}
+                                    max={1000000}
+                                    placeholder="Try-ons / mo"
+                                    required
+                                    style={{ width: 110 }}
+                                  />
+                                  <input
+                                    name="customNote"
+                                    className="fv-input"
+                                    placeholder="What they pay, invoice ref…"
+                                    maxLength={200}
+                                    style={{ width: 190 }}
+                                  />
+                                  <button type="submit" className="fv-action-btn purple">Give custom plan</button>
+                                </fetcher.Form>
+                              )}
                            </div>
                         </td>
                         </tr>

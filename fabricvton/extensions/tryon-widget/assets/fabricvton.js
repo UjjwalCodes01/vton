@@ -43,9 +43,23 @@
   // Every accessor is guarded: private mode and blocked cookies both throw, and
   // a try-on must still work when they do.
 
+  /**
+   * History is kept per tab, consent per browser.
+   *
+   * A history entry is a link to an image of the shopper wearing something, and
+   * any other script on the merchant's page can read the same storage. Keeping
+   * it in sessionStorage means it is gone when the tab closes, rather than
+   * sitting on a shared computer indefinitely. Consent is a preference with
+   * nothing personal in it, so it persists — that is what "we only ask once"
+   * depends on.
+   */
+  function storageFor(key) {
+    return key === KEY_HISTORY ? window.sessionStorage : window.localStorage;
+  }
+
   function readStore(key) {
     try {
-      return window.localStorage.getItem(key) || "";
+      return storageFor(key).getItem(key) || "";
     } catch (e) {
       return "";
     }
@@ -53,9 +67,19 @@
 
   function writeStore(key, value) {
     try {
-      window.localStorage.setItem(key, value);
+      storageFor(key).setItem(key, value);
     } catch (e) {
       /* Nothing to do: the shopper is simply asked again next time. */
+    }
+  }
+
+  /** Withdrawing consent, as the consent card promises the shopper they can. */
+  function forgetEverything() {
+    try {
+      window.sessionStorage.removeItem(KEY_HISTORY);
+      window.localStorage.removeItem(KEY_CONSENT);
+    } catch (e) {
+      /* Blocked storage had nothing to forget in the first place. */
     }
   }
 
@@ -289,6 +313,7 @@
       // 6. History
       '  <div class="fabricvton-step fabricvton-history" data-step="history">',
       '    <div data-role="history-list"></div>',
+      '    <button type="button" class="fabricvton-btn fabricvton-btn-plain" data-action="forget" data-role="forget">Clear my try-ons</button>',
       "  </div>",
 
       // 7. Error
@@ -331,6 +356,7 @@
       resultDate: root.querySelector('[data-role="result-date"]'),
       rate: root.querySelector('[data-role="rate"]'),
       historyList: root.querySelector('[data-role="history-list"]'),
+      forget: root.querySelector('[data-role="forget"]'),
       errorMsg: root.querySelector('[data-role="error-msg"]'),
       errorAction: root.querySelector('[data-role="error-action"]'),
       file: root.querySelector('[data-role="file"]'),
@@ -371,6 +397,12 @@
     else if (action === "view-product") close();
     else if (action === "restart") restart();
     else if (action === "open-entry") openHistoryEntry(trigger.getAttribute("data-entry"));
+    else if (action === "forget") {
+      forgetEverything();
+      lastResult = null;
+      toast("Cleared from this device");
+      restart();
+    }
   }
 
   // ── Step and header handling ─────────────────────────────
@@ -413,6 +445,9 @@
 
   function open(config) {
     if (!panel) buildPanel();
+    // Re-opening from a second button must not leave the first panel's camera
+    // running behind a hidden step.
+    stopCamera();
     ctx = config;
     selectedFile = null;
     photoDataUrl = "";
@@ -509,6 +544,13 @@
     media
       .getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 1600 } }, audio: false })
       .then(function (stream) {
+        // The permission prompt is not modal: the shopper can close the panel
+        // while it is open and only then click Allow. Without this the stream
+        // would start against a hidden panel and stay live.
+        if (panel.getAttribute("data-open") !== "true") {
+          stream.getTracks().forEach(function (track) { track.stop(); });
+          return;
+        }
         cameraStream = stream;
         els.video.srcObject = stream;
         var playing = els.video.play();
@@ -959,18 +1001,20 @@
     if (!list.length) {
       els.historyList.innerHTML =
         '<p class="fabricvton-empty">No try-ons yet. Your looks will appear here.</p>';
+      els.forget.style.display = "none";
     } else {
       var html = "";
       for (var i = 0; i < list.length; i++) {
         var entry = list[i];
         html +=
           '<button type="button" class="fabricvton-product" data-action="open-entry" data-entry="' + i + '">' +
-          '<span style="background-image:url(\'' + (entry.image || entry.url) + '\')"></span>' +
+          '<span style="background-image:url(\'' + escapeHtml(safeImageUrl(entry.image) || safeImageUrl(entry.url)) + '\')"></span>' +
           "<div><b>" + escapeHtml(entry.title || "Try-on") + "</b><em>" + formatDate(entry.at) + "</em></div>" +
           ICONS.chevron +
           "</button>";
       }
       els.historyList.innerHTML = html;
+      els.forget.style.display = "block";
     }
     showStep("history", {
       title: "Your Try-Ons",
@@ -985,6 +1029,16 @@
     var list = readHistory();
     var entry = list[Number(index)];
     if (entry) showResult(entry, true);
+  }
+
+  /**
+   * A URL is only safe to put in markup, or hand to the browser, if it is
+   * plainly an https one. History lives in storage that any other script on the
+   * merchant's page can write to, so what comes back out is treated as hostile.
+   */
+  function safeImageUrl(value) {
+    if (typeof value !== "string") return "";
+    return /^https:\/\//i.test(value) || /^data:image\//i.test(value) ? value : "";
   }
 
   function escapeHtml(value) {

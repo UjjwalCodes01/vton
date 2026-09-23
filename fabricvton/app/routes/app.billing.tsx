@@ -8,6 +8,7 @@ import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import db from "../db.server";
+import { hasCustomPlan } from "../customplan.server";
 import {
   SELLABLE_PLANS,
   OVERAGE_BILLING_ENABLED,
@@ -35,8 +36,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const config = await db.shopConfig.findUnique({ where: { shop } });
   const currentPlan = getPlan(config?.plan ?? "free");
 
+  // A store on a negotiated deal sees that deal, not the tier it happens to be
+  // subscribed to underneath it.
+  const custom = hasCustomPlan(config)
+    ? { label: config!.customPlanLabel || "Custom", credits: config!.customCredits as number }
+    : null;
+
   return {
     currentPlan,
+    custom,
     // A merchant on a withdrawn plan still sees it above as their current plan;
     // it just isn't offered in the grid below.
     plans: SELLABLE_PLANS,
@@ -62,7 +70,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 // ─── Billing page UI ──────────────────────────────────────────────────────────
 export default function Billing() {
-  const { currentPlan, plans, entryPlan, activationMessage, overageEnabled } =
+  const { currentPlan, custom, plans, entryPlan, activationMessage, overageEnabled } =
     useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const shopify = useAppBridge();
@@ -91,12 +99,19 @@ export default function Billing() {
       <s-section heading="Current plan">
         <s-stack gap="small-200">
           <s-stack direction="inline" gap="small-200" alignItems="center">
-            <s-heading>{currentPlan.label}</s-heading>
+            <s-heading>{custom ? custom.label : currentPlan.label}</s-heading>
             <s-badge tone="success">Active</s-badge>
+            {custom && <s-badge tone="info">Custom</s-badge>}
           </s-stack>
           <s-text color="subdued">
-            {currentPlan.credits.toLocaleString("en-US")} try-ons per month
+            {(custom ? custom.credits : currentPlan.credits).toLocaleString("en-US")} try-ons per month
           </s-text>
+          {custom && (
+            <s-paragraph>
+              This allowance was agreed with us directly. Choosing a plan below
+              would replace it, so talk to us first if you want to change it.
+            </s-paragraph>
+          )}
           {overageEnabled && currentPlan.overagePrice > 0 && (
             <s-paragraph>
               If you use your full allowance before the cycle ends, try-ons keep

@@ -416,6 +416,22 @@ class Clothsy_AI_Admin {
 		$scheduled = is_array( $billing['scheduled'] ?? null ) ? $billing['scheduled'] : null;
 		$plans     = is_array( $billing['plans'] ?? null ) ? $billing['plans'] : array();
 		$currency  = (string) ( $billing['currency'] ?? 'USD' );
+		$custom    = is_array( $billing['custom'] ?? null ) ? $billing['custom'] : null;
+
+		// A store on a negotiated allowance is not on a listed plan, so show the
+		// arrangement instead of a plan picker that would replace it.
+		if ( $custom ) {
+			printf(
+				'<p><strong>%s</strong><br /><span class="description">%s</span></p>',
+				esc_html( sprintf(
+					/* translators: 1: custom plan name, 2: monthly try-on allowance. */
+					__( '%1$s — %2$s try-ons a month', 'clothsy-ai' ),
+					(string) ( $custom['label'] ?? __( 'Custom', 'clothsy-ai' ) ),
+					number_format_i18n( (int) ( $custom['credits'] ?? 0 ) )
+				) ),
+				esc_html__( 'This allowance was agreed with Clothsy AI directly. Choosing a plan below would replace it — talk to us first.', 'clothsy-ai' )
+			);
+		}
 
 		$current_price = 0.0;
 		foreach ( $plans as $plan ) {

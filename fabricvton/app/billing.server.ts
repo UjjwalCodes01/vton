@@ -2,6 +2,7 @@
 // Uses Shopify Billing API via GraphQL
 
 import db from "./db.server";
+import { creditsFor } from "./customplan.server";
 
 export type PlanName = "free" | "starter" | "growth" | "pro" | "scale";
 
@@ -308,7 +309,8 @@ export async function syncShopPlanFromShopifyBilling(
       update: {
         plan: entryPlan.name,
         billingId: null,
-        monthlyCredits: entryPlan.credits,
+        // A negotiated allowance survives a downgrade to the entry tier.
+        monthlyCredits: creditsFor(existing, entryPlan.credits),
         // Downgrading does not refill the allowance — see isBillingCycleDue.
         // A cycle roll also clears the in-flight overage hold: the approved cap
         // is per cycle, so carrying last cycle's reservations into the new one
@@ -352,7 +354,7 @@ export async function syncShopPlanFromShopifyBilling(
     update: {
       plan: plan.name,
       billingId: activeSubscription.id,
-      monthlyCredits: plan.credits,
+      monthlyCredits: creditsFor(existing, plan.credits),
       isEnabled: true,
       // An active subscription clears any suspension we applied for billing
       // reasons, but leaves an admin's manual suspension in place.

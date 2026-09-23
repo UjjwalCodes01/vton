@@ -47,6 +47,17 @@ export const LIMITS = {
   ipPerHour: envInt("TRYON_LIMIT_IP_PER_HOUR", 30),
   /** Per shop, so distributed abuse still cannot drain one merchant's plan. */
   shopPerHour: envInt("TRYON_LIMIT_SHOP_PER_HOUR", 400),
+  /**
+   * Per shop, per minute — the cap that does not depend on anything the caller
+   * can rotate.
+   *
+   * Session ids and IPs are both client-supplied, so an abusive caller can
+   * always present fresh ones; without this, the hourly shop budget could be
+   * spent in seconds and a merchant's whole monthly allowance in an afternoon.
+   * Sized well above a real storefront's peak: 20/minute is 1,200/hour of
+   * headroom against an hourly cap of 400.
+   */
+  shopPerMinute: envInt("TRYON_LIMIT_SHOP_PER_MINUTE", 20),
   /** Generations allowed to be in flight for one shop at the same time. */
   shopConcurrent: envInt("TRYON_LIMIT_SHOP_CONCURRENT", 6),
   /** Widget-open analytics pings are writes too, so they get their own bucket. */
@@ -172,6 +183,12 @@ export function tryOnGenerationRules(params: {
 
   rules.push({
     scope: `tryon:gen:shop:${params.shop}`,
+    limit: LIMITS.shopPerMinute,
+    windowMs: MINUTE,
+    label: "shop burst",
+  });
+  rules.push({
+    scope: `tryon:gen:shop:${params.shop}`,
     limit: LIMITS.shopPerHour,
     windowMs: HOUR,
     label: "shop hourly",
@@ -266,30 +283,28 @@ export function shareRules(params: {
 }
 
 /**
- * Client IP from the proxy chain.
+ * Client IP from the proxy chain — best effort, and treated as such.
  *
- * Every storefront request reaches us through Shopify's app proxy and then the
- * hosting platform's load balancer, so the socket address is useless. The
- * left-most X-Forwarded-For entry is the closest thing to the shopper, and is
- * spoofable — which is why it is only one of several buckets and never the only
- * gate.
+ * Only X-Forwarded-For is read. CF-Connecting-IP, Fly-Client-IP, True-Client-IP
+ * and X-Real-IP used to be preferred over it, but nothing in this deployment
+ * sets them: the app sits behind Render's load balancer, not Cloudflare or Fly.
+ * They were therefore pure caller input, and reading them first meant one header
+ * defeated every per-IP bucket in the system.
+ *
+ * X-Forwarded-For is not trustworthy either. Render appends the real peer, so
+ * the right-most entry is honest — but on Shopify traffic that peer is Shopify's
+ * own edge, shared by every storefront, so bucketing on it would throttle
+ * unrelated shoppers. The left-most entry attributes better and can be forged.
+ *
+ * So this value is a convenience, never a gate. The limits that actually hold
+ * are keyed on the signed shop (see tryOnGenerationRules), which no caller can
+ * rotate.
  */
 export function clientIpFrom(request: Request): string | null {
-  const candidates = [
-    request.headers.get("CF-Connecting-IP"),
-    request.headers.get("Fly-Client-IP"),
-    request.headers.get("True-Client-IP"),
-    request.headers.get("X-Real-IP"),
-    request.headers.get("X-Forwarded-For")?.split(",")[0],
-  ];
-
-  for (const candidate of candidates) {
-    const ip = candidate?.trim();
-    // Cap the length so a hostile header cannot bloat a scope key (and with it
-    // the index entry) to an arbitrary size.
-    if (ip && ip.length <= 45) return ip;
-  }
-  return null;
+  const ip = request.headers.get("X-Forwarded-For")?.split(",")[0]?.trim();
+  // Cap the length so a hostile header cannot bloat a scope key (and with it the
+  // index entry) to an arbitrary size.
+  return ip && ip.length <= 45 ? ip : null;
 }
 
 /**

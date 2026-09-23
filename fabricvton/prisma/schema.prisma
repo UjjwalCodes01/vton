@@ -58,6 +58,17 @@ model ShopConfig {
   billingId           String?  // Shopify recurring charge ID
   // Must match PLANS[free].credits in app/billing.server.ts
   monthlyCredits      Int      @default(15)
+
+  // ── Custom plan (set by a super admin, for a store on a negotiated deal) ──
+  // When customCredits is set it overrides the allowance the store's plan would
+  // otherwise grant, and every billing sync leaves it alone. Payment for these
+  // happens outside the plan picker — a Shopify private plan, an invoice, a
+  // bank transfer — so customNote records what was agreed and by whom.
+  customPlanLabel     String?
+  customCredits       Int?
+  customNote          String?
+  customSetAt         DateTime?
+  customSetBy         String?
   creditsUsed         Int      @default(0)
   billingCycleStart   DateTime @default(now())
   overageChargesTotal Float    @default(0) // Total overage billed this cycle in USD

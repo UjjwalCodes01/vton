@@ -1,6 +1,7 @@
 import type { ActionFunctionArgs } from "react-router";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
+import { creditsFor } from "../customplan.server";
 import { BILLING_SUSPEND_PREFIX, getPlan } from "../billing.server";
 
 // app_subscriptions/update — Shopify fires this on every subscription status
@@ -69,12 +70,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // Not a payment failure — the merchant simply stopped paying for a paid
     // tier. Drop them to the entry plan rather than suspending them.
     const entryPlan = getPlan("free");
+    const existing = await db.shopConfig.findUnique({ where: { shop } });
     await db.shopConfig.update({
       where: { shop },
       data: {
         plan: entryPlan.name,
         billingId: null,
-        monthlyCredits: entryPlan.credits,
+        // A negotiated allowance is not something Shopify granted, so
+        // cancelling a Shopify subscription does not take it away.
+        monthlyCredits: creditsFor(existing, entryPlan.credits),
       },
     });
     console.log(`[Billing] ${shop} moved to ${entryPlan.label} — subscription ${status}.`);

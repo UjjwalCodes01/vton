@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { Prisma, type BillingSubscription, type ShopConfig } from "@prisma/client";
 import db from "../db.server";
 import { BILLING_SUSPEND_PREFIX, getPlan, SELLABLE_PLANS, type Plan } from "../billing.server";
+import { creditsFor, hasCustomPlan } from "../customplan.server";
 import { originMatchesStore, WooAuthError } from "./auth.server";
 import { hmacHex, safeEqual } from "./crypto.server";
 
@@ -160,6 +161,8 @@ export interface BillingState {
     paymentIssue: boolean;
   } | null;
   scheduled: { plan: string; label: string; startsAt: string | null } | null;
+  /** Set when this store is on a negotiated allowance rather than a listed plan. */
+  custom: { label: string; credits: number } | null;
 }
 
 /** What the plugin's Plan section shows. */
@@ -175,6 +178,9 @@ export async function billingState(store: ShopConfig): Promise<BillingState> {
   return {
     enabled: billingConfigured(),
     currency: BILLING_CURRENCY,
+    custom: hasCustomPlan(store)
+      ? { label: store.customPlanLabel || "Custom", credits: store.customCredits as number }
+      : null,
     plans: PAID_PLANS.map((plan) => ({
       name: plan.name,
       label: plan.label,
@@ -393,7 +399,9 @@ async function applyToStore(row: BillingSubscription) {
     const { count } = await db.shopConfig.updateMany({
       where: { shop: store.shop, billingId: row.id },
       // No refill on the way down — see isBillingCycleDue in billing.server.ts.
-      data: { plan: free.name, billingId: null, monthlyCredits: free.credits },
+      // A negotiated allowance is kept: it was not bought through Razorpay and
+      // does not end when a Razorpay subscription does.
+      data: { plan: free.name, billingId: null, monthlyCredits: creditsFor(store, free.credits) },
     });
     if (count > 0) console.log(`[Billing] ${store.shop} returned to ${free.label} (${row.id} ${row.status})`);
   }
@@ -410,7 +418,7 @@ async function activate(store: ShopConfig, row: BillingSubscription) {
     data: {
       plan: plan.name,
       billingId: row.id,
-      monthlyCredits: plan.credits,
+      monthlyCredits: creditsFor(store, plan.credits),
       // A new paid plan is a new paid period with a full allowance.
       creditsUsed: 0,
       overageReserved: 0,

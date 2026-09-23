@@ -438,3 +438,38 @@
 .fv-mt-md { margin-top: 16px; }
 .fv-mb-md { margin-bottom: 16px; }
 .fv-w-full { width: 100%; }
+
+/* ── Custom plans in the store table ─────────────────────────────────────── */
+/* Each row's actions wrap freely, so the custom-plan form sits on its own line
+   rather than squeezing the buttons above it. */
+.fv-custom-plan {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed #e3e3e8;
+}
+
+.fv-custom-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #efecfd;
+  color: #4c33b5;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.fv-custom-note {
+  font-size: 12px;
+  color: #6b6b75;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
