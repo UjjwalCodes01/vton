@@ -13,7 +13,7 @@ export default function WidgetPrivacyPolicy() {
             <div className="legal-header">
               <h1>Privacy Policy for Shoppers</h1>
               <p className="effective-date">Applicable to users of the FabricVTON Virtual Try-On Widget</p>
-              <p className="effective-date">Last Updated: 20th September, 2026</p>
+              <p className="effective-date">Last Updated: 23rd September, 2026</p>
             </div>
           </FadeUp>
 
@@ -45,7 +45,8 @@ export default function WidgetPrivacyPolicy() {
               <h2>3. Data Retention</h2>
               <p>We operate with a strict data minimization policy. Different data is kept for different lengths of time, so here is all of it:</p>
               <ul>
-                <li><strong>Your photo and the generated image:</strong> never stored by FabricVTON at all. Your photo is passed straight to our AI provider for processing, and the result is delivered to your browser from their servers. Neither image is written to a FabricVTON database or disk.</li>
+                <li><strong>Your photo:</strong> never stored by FabricVTON at all. It is passed straight to our AI provider for processing and is never written to a FabricVTON database or disk.</li>
+                <li><strong>The generated image:</strong> not stored either &mdash; unless you tap <strong>Share Look</strong>. Sharing makes a page carrying a copy of that one image, so the link still works after the provider&apos;s own link expires. The copy and the page are deleted automatically after 30 days, and sooner if you ask us.</li>
                 <li><strong>Your email address:</strong> held as a marketing lead for the store owner until they delete it, until the store uninstalls FabricVTON, or until you ask for it to be removed. Because this is the store owner&apos;s own marketing data, we do not expire it on a timer &mdash; see &quot;Your Rights&quot; below to have it erased.</li>
                 <li><strong>Try-on history:</strong> your email is stripped from these records after 90 days. The remaining anonymous record (product, time, outcome) is deleted after 13 months.</li>
                 <li><strong>Aggregate statistics:</strong> daily totals containing no personal data, kept for about 25 months.</li>

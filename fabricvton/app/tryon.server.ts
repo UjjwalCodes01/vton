@@ -1,4 +1,10 @@
 import db from "./db.server";
+import { rememberResultUrl, signImageToken } from "./share/imageproxy.server";
+
+/** Where the backend itself answers, for links it hands to a shopper's browser. */
+function publicBaseUrl() {
+  return (process.env.PUBLIC_APP_URL || process.env.SHOPIFY_APP_URL || "").replace(/\/+$/, "");
+}
 import { getPlan, isBillingCycleDue } from "./billing.server";
 import {
   countInFlightGenerations,
@@ -201,10 +207,14 @@ export async function handleTryOnLoader(request: Request, verifiedShop: string) 
         gen.errorCode ?? null
       );
 
+      if (gen.resultImageUrl) rememberResultUrl(generationId, gen.resultImageUrl);
+
       return jsonResponse(
         {
           status: gen.status,
-          resultImageUrl: gen.resultImageUrl ?? null,
+          resultImageUrl: gen.resultImageUrl
+            ? `${publicBaseUrl()}/i/${signImageToken(verifiedShop, generationId)}`
+            : null,
           // Only our own error table is ever surfaced — never the provider's raw
           // message, which can name endpoints and task internals.
           errorMessage: gen.errorCode ? describeYouCamError(gen.errorCode) : null,

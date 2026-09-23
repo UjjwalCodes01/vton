@@ -322,3 +322,27 @@ model WooRequestNonce {
 
   @@index([createdAt])
 }
+
+// ═══════════════════════════════════════════════════════════
+// A try-on the shopper chose to share.
+//
+// This is the only place a generated image is ever kept, and only because the
+// shopper asked for a link that outlives the provider's two-hour URL. It is
+// deleted with its stored image after RETENTION.sharedLookDays.
+// ═══════════════════════════════════════════════════════════
+model SharedLook {
+  id           String   @id // the short token in the /look/<id> URL
+  shop         String
+  // Provider task id, so a support request about one shared look can be traced.
+  generationId String?
+  imageKey     String   // object key in the share bucket
+  contentType  String   @default("image/jpeg")
+  productTitle String?
+  productUrl   String?
+  productImage String?
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+
+  @@index([expiresAt])
+  @@index([shop])
+}

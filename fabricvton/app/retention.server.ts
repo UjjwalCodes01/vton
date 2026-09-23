@@ -38,6 +38,7 @@
 //                                      WooCommerce counterpart of shop/redact.
 
 import db from "./db.server";
+import { purgeExpiredLooks } from "./share/share.server";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -54,6 +55,8 @@ export const RETENTION = {
   privacyRequestDays: 730, // 24 months
   /** How long a disconnected WooCommerce store's data waits for a reconnect. */
   wooDisconnectedStoreDays: 30,
+  /** A shared look's page, and the stored image behind it. */
+  sharedLookDays: 30,
 } as const;
 
 export interface PurgeSummary {
@@ -66,6 +69,7 @@ export interface PurgeSummary {
   wooPendingStoresDeleted: number;
   wooDisconnectedStoresDeleted: number;
   billingWebhookEventsDeleted: number;
+  sharedLooksDeleted: number;
 }
 
 function cutoff(days: number) {
@@ -90,6 +94,7 @@ export async function purgeExpiredData(): Promise<PurgeSummary> {
     wooPendingStoresDeleted: 0,
     wooDisconnectedStoresDeleted: 0,
     billingWebhookEventsDeleted: 0,
+    sharedLooksDeleted: 0,
   };
 
   // Drop the identifier from older try-on rows but keep the row, so analytics
@@ -186,6 +191,11 @@ export async function purgeExpiredData(): Promise<PurgeSummary> {
   if (touched) {
     console.log("[Retention] Purge pass complete:", summary);
   }
+
+
+  // Shared looks own an image in the bucket, so each one is removed through
+  // the share module rather than a bulk delete that would orphan the file.
+  summary.sharedLooksDeleted = (await purgeExpiredLooks()).deleted;
 
   return summary;
 }

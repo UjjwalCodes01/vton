@@ -11,6 +11,14 @@ Deploy `fabricvton/` (migrations run on deploy; `20260915093953_woo_billing_and_
 | `RAZORPAY_WEBHOOK_SECRET` | The secret you type when creating the webhook below |
 | `PUBLIC_APP_URL` | Optional. Defaults to `SHOPIFY_APP_URL`; must equal the plugin's `CLOTHSY_AI_API_BASE` (`https://fabricvton-api.onrender.com`) |
 | `WOO_BILLING_CURRENCY` | Optional, default `USD` |
+| `SHARE_S3_ENDPOINT` | Bucket endpoint, e.g. `https://<account>.r2.cloudflarestorage.com` |
+| `SHARE_S3_BUCKET` | Bucket holding shared looks |
+| `SHARE_S3_KEY_ID` / `SHARE_S3_SECRET` | Bucket credentials (R2: an API token with object read/write) |
+| `SHARE_S3_REGION` | Optional, default `auto` (right for R2; use the real region on S3) |
+| `SHARE_PUBLIC_BASE` | Optional, default `https://clothsyai.fabricvton.com` — where `/look/<id>` is served |
+| `SHARE_SIGNING_SECRET` | Optional; falls back to `SHOPIFY_API_SECRET`. Signs try-on image links |
+
+Without the four `SHARE_S3_*` variables the try-on still works; Share Look just reports that sharing is unavailable.
 
 Never set `WOO_ALLOW_INSECURE_URLS` or `RAZORPAY_API_BASE` in production (local testing only).
 

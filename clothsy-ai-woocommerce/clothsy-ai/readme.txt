@@ -4,7 +4,7 @@ Tags: virtual try-on, try on, fitting room, fashion, woocommerce
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.2.3
+Stable tag: 0.2.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -98,15 +98,17 @@ The service is provided by Clothsy AI: [Terms of Service](https://www.fabricvton
 
 == Changelog ==
 
+= 0.2.4 =
+* Sharing a look now gives a link on Clothsy AI's own domain, with the product and a button to buy it, instead of a long provider link that stopped working after two hours. Shared looks are deleted after 30 days.
+* Try-on images are served from Clothsy AI rather than from the image provider.
+
 = 0.2.3 =
+* Redesigned try-on window: it docks in the corner of the page instead of covering it, keeps a history of the shopper's looks, and adds sharing and a one-tap rating.
+* Consent is asked once, in plain language, and still recorded with every try-on.
 * The try-on no longer asks shoppers for an email address at all.
 * "Take a photo" now opens the camera inside the window on laptops as well as phones.
 * Add to cart from the result screen now reports what actually happened, and says why when a store refuses an item.
 * The window keeps one height throughout, carries Clothsy AI branding, and was tuned for phones, tablets and sideways screens.
-
-= 0.2.2 =
-* Redesigned try-on window: it now docks in the corner of the page instead of covering it, keeps a history of the shopper's looks, and adds sharing and a one-tap rating.
-* Consent is asked once, in plain language, and still recorded with every try-on.
 
 = 0.2.1 =
 * Shoppers now give explicit consent before any photo is sent, with a plain-language notice and an age confirmation. The consent is recorded and shown in personal data exports.

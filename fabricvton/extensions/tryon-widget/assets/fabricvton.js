@@ -467,10 +467,10 @@
 
   function onFileChosen(input) {
     var file = input.files && input.files[0];
-    if (file) usePhoto(file);
+    if (file) acceptPhoto(file);
   }
 
-  function usePhoto(file) {
+  function acceptPhoto(file) {
     if (file.size > MAX_UPLOAD_BYTES) {
       showError("That photo is larger than 10MB. Please choose a smaller image.");
       return;
@@ -545,7 +545,7 @@
 
     canvas.toBlob(function (blob) {
       if (!blob) return showError("That photo could not be taken. Please try again.");
-      usePhoto(new File([blob], "camera.jpg", { type: "image/jpeg" }));
+      acceptPhoto(new File([blob], "camera.jpg", { type: "image/jpeg" }));
     }, "image/jpeg", 0.92);
   }
 
@@ -852,28 +852,80 @@
     toast("Couldn\u2019t add it here \u2014 use Add to cart on the page");
   }
 
+  /**
+   * Turns the result into a link on our own domain before sharing it.
+   *
+   * The image URL the panel renders is short-lived and names our provider, so
+   * it is never what gets pasted into a chat: the backend stores a copy and
+   * hands back a branded page that carries the product and a way to buy it.
+   */
   function shareLook() {
     if (!lastResult) return;
-    var shareData = {
+    var button = panel.querySelector('[data-action="share"]');
+
+    if (lastResult.shareUrl) return handOff(lastResult.shareUrl);
+    if (button) button.disabled = true;
+
+    fetch(ctx.backendUrl + "/api/tryon/share", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        generationId: lastResult.generationId || "",
+        productTitle: lastResult.title || "",
+        productUrl: ctx.productUrl || "",
+        productImage: ctx.productImageUrl || ""
+      })
+    })
+      .then(function (res) {
+        return parseJsonSafely(res).then(function (data) {
+          if (!res.ok || !data.url) throw new Error(data.error || "");
+          return data.url;
+        });
+      })
+      .then(function (url) {
+        if (button) button.disabled = false;
+        lastResult.shareUrl = url;
+        rememberShareUrl(lastResult.generationId, url);
+        handOff(url);
+      })
+      .catch(function (err) {
+        if (button) button.disabled = false;
+        toast(err.message || "The link could not be created.");
+      });
+  }
+
+  /** Native share sheet where there is one, clipboard where there isn't. */
+  function handOff(url) {
+    var data = {
       title: lastResult.title || "My virtual try-on",
       text: "Here's how " + (lastResult.title || "this") + " looks on me.",
-      url: lastResult.url
+      url: url
     };
-
-    // Sharing the image itself is nicer than a link, but only some browsers
-    // allow files — fall back to the link, then to the clipboard.
     if (navigator.share) {
-      navigator.share(shareData).catch(function () {});
+      navigator.share(data).catch(function () {});
       return;
     }
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard
-        .writeText(lastResult.url)
+        .writeText(url)
         .then(function () { toast("Link copied"); })
-        .catch(function () { window.open(lastResult.url, "_blank", "noopener"); });
+        .catch(function () { window.open(url, "_blank", "noopener"); });
       return;
     }
-    window.open(lastResult.url, "_blank", "noopener");
+    window.open(url, "_blank", "noopener");
+  }
+
+  /** Keeps a share link with its look, so sharing twice reuses one page. */
+  function rememberShareUrl(generationId, url) {
+    if (!generationId) return;
+    var list = readHistory();
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].generationId === generationId) {
+        list[i].shareUrl = url;
+        writeStore(KEY_HISTORY, JSON.stringify(list));
+        return;
+      }
+    }
   }
 
   function sendRating(button) {
@@ -955,6 +1007,7 @@
       productImageUrl: button.getAttribute("data-product-image") || "",
       version: button.getAttribute("data-version") || "",
       logoUrl: button.getAttribute("data-logo-url") || "",
+      productUrl: button.getAttribute("data-product-url") || "",
       // Cart routes come from the theme via Liquid, so markets and locale
       // prefixes (/en-gb/cart/add.js) are respected instead of assumed.
       cartAddUrl: button.getAttribute("data-cart-add-url") || "",

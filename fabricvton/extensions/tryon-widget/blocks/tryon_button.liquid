@@ -25,6 +25,7 @@
       data-variant-id="{{ product.selected_or_first_available_variant.id }}"
       data-css-url="{{ 'fabricvton.css' | asset_url }}"
       data-logo-url="{{ 'clothsy-mark.png' | asset_url }}"
+      data-product-url="{{ shop.url }}{{ product.url }}"
       style="
         background-color: {{ block.settings.button_color }};
         color: {{ block.settings.button_text_color }};
