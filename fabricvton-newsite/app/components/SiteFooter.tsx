@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CONTACT_HREF, LEGAL, SHOPIFY_URL, SOCIALS, WOO_URL } from "../lib/site";
-import { Instagram, XLogo } from "./icons";
+import { Instagram, LinkedIn, XLogo } from "./icons";
 
 type FooterLink = { href: string; label: string; external?: boolean };
 
@@ -66,9 +66,9 @@ export default function SiteFooter() {
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={`Clothsy AI on ${social.name} (@${social.handle})`}
+                  aria-label={social.name === "LinkedIn" ? "Clothsy AI on LinkedIn" : `Clothsy AI on ${social.name} (@${social.handle})`}
                 >
-                  {social.name === "Instagram" ? <Instagram /> : <XLogo />}
+                  {social.name === "Instagram" ? <Instagram /> : social.name === "LinkedIn" ? <LinkedIn /> : <XLogo />}
                 </a>
               ))}
             </div>

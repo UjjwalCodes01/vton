@@ -1336,3 +1336,173 @@ select,
   .rh-chip { padding: 5px 12px 5px 5px; gap: 7px; }
   .rh-chip i { width: 24px; height: 24px; }
 }
+
+/* ============================================================
+   Phone pass 2 (2026-09-23): no layout changes above 900px.
+   ============================================================ */
+
+@media (max-width: 900px) {
+  /* hero: the lavender band sits behind the art only, not behind the buttons */
+  .hero {
+    padding-bottom: 0;
+  }
+
+  .hero-bg::after {
+    display: none;
+  }
+
+  .hero-art {
+    margin: 4px calc(var(--gutter) * -1) 0;
+    padding: 30px var(--gutter) 0;
+    overflow: hidden;
+    border-radius: 28px 28px 0 0;
+    background:
+      radial-gradient(120% 85% at 15% 10%, rgba(255, 255, 255, 0.75), transparent 60%),
+      linear-gradient(160deg, #d9d1f9 0%, #c9bef6 45%, #b9abf2 100%);
+  }
+
+  .hero-art-stack {
+    margin-bottom: -2px;
+  }
+}
+
+@media (max-width: 680px) {
+  /* tighter rhythm between sections: the page was ~7,800px tall */
+  .section {
+    padding-block: 48px;
+  }
+
+  .hero-inner {
+    gap: 26px;
+  }
+
+  /* about: three facts in one compact row instead of a tall list */
+  .about-points {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 28px;
+  }
+
+  .about-points div {
+    align-items: center;
+    gap: 8px;
+    padding: 14px 6px 12px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--paper);
+    text-align: center;
+  }
+
+  .about-points .icon-chip {
+    width: 40px;
+    height: 40px;
+  }
+
+  .about-points .icon-chip svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .about-points b {
+    font-size: 13px;
+    line-height: 1.25;
+  }
+
+  /* how it works: step cards as compact rows */
+  .step-cards {
+    gap: 10px;
+  }
+
+  .step-card {
+    position: relative;
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-areas: "icon title" "icon copy";
+    column-gap: 14px;
+    align-items: center;
+    padding: 14px 44px 14px 14px;
+  }
+
+  .step-card .num {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    font-size: 13px;
+  }
+
+  .step-card .icon-chip {
+    grid-area: icon;
+    width: 44px;
+    height: 44px;
+    margin: 0;
+  }
+
+  .step-card h3 {
+    grid-area: title;
+    margin: 0 0 2px;
+  }
+
+  .step-card p {
+    grid-area: copy;
+  }
+
+  /* pricing: swipe through the plans instead of scrolling past five tall cards */
+  .plan-grid {
+    display: flex;
+    gap: 14px;
+    margin-inline: calc(var(--gutter) * -1);
+    padding: 6px var(--gutter) 20px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--gutter);
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .plan-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .plan-grid > .plan {
+    flex: 0 0 84%;
+    scroll-snap-align: center;
+  }
+
+  /* small labels up to a readable size */
+  .plan-included,
+  .preview-tag,
+  .footer-col b {
+    font-size: 12px;
+  }
+
+  .plan-stats span {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 680px) {
+  .tv-head .preview-tag {
+    font-size: 11.5px;
+  }
+}
+
+@media (max-width: 680px) {
+  /* pricing assurances: title above its note, compact rows */
+  .price-assurances {
+    gap: 14px;
+  }
+
+  .price-assurances div div {
+    display: block;
+  }
+
+  .price-assurances .icon-chip {
+    width: 42px;
+    height: 42px;
+  }
+
+  .price-assurances span:not(.icon-chip) {
+    display: block;
+    margin-top: 2px;
+  }
+}

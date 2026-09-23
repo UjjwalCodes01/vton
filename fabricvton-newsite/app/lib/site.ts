@@ -27,6 +27,7 @@ export const LEGAL = {
 export const SOCIALS = [
   { name: "Instagram", handle: "clothsyai", href: "https://www.instagram.com/clothsyai/" },
   { name: "X", handle: "clothsyai", href: "https://x.com/clothsyai" },
+  { name: "LinkedIn", handle: "clothsy", href: "https://www.linkedin.com/company/clothsy/" },
 ] as const;
 
 /**

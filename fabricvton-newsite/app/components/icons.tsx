@@ -184,6 +184,12 @@ export const Instagram = ({ className }: IconProps) => (
   </svg>
 );
 
+export const LinkedIn = ({ className }: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className={className} width="16" height="16">
+    <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5ZM3 9.75h4v11.25H3V9.75Zm6.5 0h3.83v1.54h.05c.53-1 1.84-2.06 3.79-2.06 4.05 0 4.8 2.66 4.8 6.13V21h-4v-5.02c0-1.2-.02-2.74-1.67-2.74-1.67 0-1.93 1.3-1.93 2.65V21h-3.87V9.75Z" />
+  </svg>
+);
+
 export const XLogo = ({ className }: IconProps) => (
   <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className={className} width="16" height="16">
     <path d="M17.75 3h3.1l-6.77 7.74L22 21h-6.2l-4.86-6.36L5.4 21H2.3l7.24-8.27L2 3h6.36l4.4 5.82L17.75 3Zm-1.09 16.15h1.72L7.4 4.75H5.55l11.11 14.4Z" />
