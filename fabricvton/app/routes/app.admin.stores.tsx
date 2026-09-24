@@ -345,7 +345,7 @@ export default function AdminStores() {
                                   {store.customNote ? (
                                     <span className="fv-custom-note" title={store.customNote}>{store.customNote}</span>
                                   ) : null}
-                                  <button type="submit" className="fv-action-btn">Remove custom</button>
+                                  <button type="submit" className="fv-action-btn ghost">Remove custom</button>
                                 </fetcher.Form>
                               ) : (
                                 <fetcher.Form method="post" className="fv-custom-plan">

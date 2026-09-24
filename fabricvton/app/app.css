@@ -201,6 +201,14 @@
 .fv-action-btn.info { background: var(--fv-info); }
 .fv-action-btn.purple { background: var(--fv-accent); }
 .fv-action-btn.warning { background: var(--fv-warning); }
+/* The base class paints white text and no background, so a button without a
+   variant is invisible. This is the neutral one. */
+.fv-action-btn.ghost {
+  background: #fff;
+  color: #3a3a42;
+  border: 1px solid #d8d8e0;
+}
+.fv-action-btn.ghost:hover { background: #f6f6f8; }
 
 /* ── Section Headers ── */
 .fv-section-title {
