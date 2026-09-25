@@ -66,4 +66,7 @@ export const api = {
   failures: <T>(page: number) => call<T>(`/api/admin/failures${query({ page })}`),
   act: <T>(shop: string, action: string, payload: Record<string, unknown>, actor: string) =>
     call<T>("/api/admin/store", { method: "POST", actor, body: { shop, action, actor, ...payload } }),
+  invoices: <T>(shop?: string) => call<T>(`/api/admin/invoices${query({ shop })}`),
+  invoiceAct: <T>(payload: Record<string, unknown>, actor: string) =>
+    call<T>("/api/admin/invoices", { method: "POST", actor, body: { actor, ...payload } }),
 };

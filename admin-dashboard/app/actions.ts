@@ -12,6 +12,26 @@ import { api, ApiError } from "@/lib/api";
 import { authenticate, endSession, getSession, recordAttempt, startSession, tooManyAttempts } from "@/lib/auth";
 import { headers } from "next/headers";
 
+/** Drafting, sending and cancelling credit invoices. */
+export async function invoiceAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const session = await getSession();
+  if (!session) return { error: "Your session expired. Reload and sign in again." };
+
+  const payload: Record<string, unknown> = {};
+  for (const [key, value] of form.entries()) payload[key] = value;
+  // A checkbox is absent when unticked, so the default is decided here rather
+  // than left to whatever the form happened to send.
+  payload.send = form.get("send") !== "draft";
+
+  try {
+    const result = await api.invoiceAct<{ message: string }>(payload, session.email);
+    revalidatePath("/", "layout");
+    return { message: result.message };
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : "That did not work." };
+  }
+}
+
 export interface ActionState {
   error?: string;
   message?: string;

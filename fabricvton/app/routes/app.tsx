@@ -28,6 +28,7 @@ export default function App() {
         <s-link href="/app/leads">Leads</s-link>
         <s-link href="/app/settings">Settings</s-link>
         <s-link href="/app/billing">Billing</s-link>
+        <s-link href="/app/credits">Credits</s-link>
         <s-link href="/app/privacy">Privacy</s-link>
 
         {/* ── Super Admin (only visible to admin shops) ── */}

@@ -30,6 +30,17 @@ import { chargeOverage, getOverageAvailability, getPlan } from "./billing.server
  */
 export const RESERVATION_TTL_MS = 15 * 60 * 1000;
 
+/**
+ * What a store may spend this cycle: the plan's allowance plus anything bought
+ * on top of it.
+ *
+ * Every screen that shows "x of y used" must use this, or a merchant who has
+ * just paid an invoice sees their old ceiling and thinks the payment failed.
+ */
+export function allowanceFor(config: { monthlyCredits: number; cycleTopUpCredits: number }) {
+  return config.monthlyCredits + config.cycleTopUpCredits;
+}
+
 export type Reservation =
   | { ok: true; overageAmount: number; billedAs: "allowance" | "overage" }
   | { ok: false; reason: string };
@@ -79,10 +90,14 @@ export async function reserveTryOnCredit(params: {
   const { shop, requestId } = params;
 
   // ── Inside the allowance ──
+  // The allowance is the plan's own credits plus any bought for this cycle
+  // through an invoice. Both are compared in one atomic statement so a top-up
+  // landing mid-generation can never be double-spent.
   const withinAllowance = await db.$executeRaw`
     UPDATE "ShopConfig"
     SET "creditsUsed" = "creditsUsed" + 1
-    WHERE "shop" = ${shop} AND "creditsUsed" < "monthlyCredits"
+    WHERE "shop" = ${shop}
+      AND "creditsUsed" < "monthlyCredits" + "cycleTopUpCredits"
   `;
 
   if (withinAllowance > 0) {
@@ -106,7 +121,7 @@ export async function reserveTryOnCredit(params: {
     SET "creditsUsed" = "creditsUsed" + 1,
         "overageReserved" = "overageReserved" + ${price}::double precision
     WHERE "shop" = ${shop}
-      AND "creditsUsed" >= "monthlyCredits"
+      AND "creditsUsed" >= "monthlyCredits" + "cycleTopUpCredits"
       AND "overageReserved" + ${price}::double precision <= ${availability.remainingCap}::double precision
   `;
 
@@ -117,7 +132,8 @@ export async function reserveTryOnCredit(params: {
     const afterRoll = await db.$executeRaw`
       UPDATE "ShopConfig"
       SET "creditsUsed" = "creditsUsed" + 1
-      WHERE "shop" = ${shop} AND "creditsUsed" < "monthlyCredits"
+      WHERE "shop" = ${shop}
+        AND "creditsUsed" < "monthlyCredits" + "cycleTopUpCredits"
     `;
     if (afterRoll > 0) {
       return { ok: true, overageAmount: 0, billedAs: "allowance" };

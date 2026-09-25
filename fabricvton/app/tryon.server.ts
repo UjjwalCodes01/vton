@@ -552,7 +552,9 @@ export async function runTryOn(input: TryOnRequest): Promise<Response> {
     if (isBillingCycleDue(config.billingCycleStart)) {
       config = await db.shopConfig.update({
         where: { shop },
-        data: { creditsUsed: 0, overageReserved: 0, billingCycleStart: new Date() },
+        // cycleTopUpCredits is cleared here: credits bought through an invoice
+        // are for the cycle they were bought in, as the invoice states.
+        data: { creditsUsed: 0, overageReserved: 0, cycleTopUpCredits: 0, billingCycleStart: new Date() },
       });
       console.log(`[TryOn API][${requestId}] Rolled billing cycle for ${shop}`);
     }

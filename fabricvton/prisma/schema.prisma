@@ -69,6 +69,10 @@ model ShopConfig {
   customNote          String?
   customSetAt         DateTime?
   customSetBy         String?
+  // Credits bought outright through a one-off invoice, on top of the plan's own
+  // allowance. Cleared when the billing cycle rolls — a top-up is for the cycle
+  // it was bought in, which is what the invoice says when it is drafted.
+  cycleTopUpCredits   Int      @default(0)
   creditsUsed         Int      @default(0)
   billingCycleStart   DateTime @default(now())
   overageChargesTotal Float    @default(0) // Total overage billed this cycle in USD
@@ -356,4 +360,49 @@ model SharedLook {
 
   @@index([expiresAt])
   @@index([shop])
+}
+
+/// A one-off sale of credits: drafted by an admin, paid by the merchant through
+/// Razorpay, and applied to the store's allowance for the current cycle.
+///
+/// Money and credits are deliberately separate columns: `amount` is what the
+/// merchant agreed to pay in whatever currency was quoted, and `credits` is what
+/// they get. Nothing derives one from the other, because these are negotiated
+/// deals rather than a price list.
+model CreditInvoice {
+  id        String @id
+  shop      String
+  /// Try-ons granted when this is paid.
+  credits   Int
+  /// Charged amount in `currency` major units (₹29000.00, $349.00).
+  amount    Float
+  /// INR or USD — chosen per invoice, since stores are sold to in both.
+  currency  String @default("INR")
+
+  /// draft → sent → paid, or cancelled from either of the first two.
+  /// Only `sent` invoices are visible to the merchant, and only `sent` ones can
+  /// be paid, so a half-written draft can never be charged by accident.
+  status    String @default("draft")
+
+  /// What the merchant sees on the invoice, e.g. "Diwali top-up, agreed on call".
+  description String?
+  /// Internal only, never sent to the merchant.
+  internalNote String?
+
+  razorpayOrderId   String? @unique
+  razorpayPaymentId String?
+
+  /// Set the moment credits are granted, and checked before granting, so a
+  /// retried webhook and a returning browser cannot both top the store up.
+  creditsAppliedAt DateTime?
+
+  createdBy   String
+  sentAt      DateTime?
+  paidAt      DateTime?
+  cancelledAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([shop, status])
+  @@index([status, createdAt])
 }

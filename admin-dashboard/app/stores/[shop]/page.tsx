@@ -4,6 +4,7 @@ import { requireSession } from "@/lib/guard";
 import { dateOnly, dateTime, number, percent, timeAgo } from "@/lib/format";
 import { Shell } from "@/components/Shell";
 import { ActionForm } from "@/components/ActionForm";
+import { InvoiceForm, InvoiceRowActions } from "@/components/InvoiceForm";
 import { Badge, BarChart, Card, Empty, PageHead, PlatformBadge, Stat } from "@/components/ui";
 
 interface StoreDetail {
@@ -26,11 +27,27 @@ interface StoreDetail {
 
 const PLANS = ["free", "starter", "growth", "pro", "scale"];
 
+interface Invoice {
+  id: string; credits: number; amount: number; currency: string; status: string;
+  description: string | null; internalNote: string | null; createdAt: string; paidAt: string | null;
+}
+
+const SYMBOL: Record<string, string> = { INR: "\u20b9", USD: "$" };
+const money = (amount: number, currency: string) =>
+  `${SYMBOL[currency] ?? ""}${amount.toLocaleString("en-US", {
+    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    maximumFractionDigits: 2,
+  })}`;
+const TONE: Record<string, string> = { paid: "good", sent: "accent", draft: "", cancelled: "warn" };
+
 export default async function StorePage({ params }: { params: Promise<{ shop: string }> }) {
   const session = await requireSession();
   const { shop: encoded } = await params;
   const shop = decodeURIComponent(encoded);
-  const data = await api.store<StoreDetail>(shop);
+  const [data, invoiceData] = await Promise.all([
+    api.store<StoreDetail>(shop),
+    api.invoices<{ invoices: Invoice[]; paymentsEnabled: boolean }>(shop),
+  ]);
   const s = data.store;
   const isWoo = s.platform === "woocommerce";
   const used = percent(s.creditsUsed, s.monthlyCredits);
@@ -137,6 +154,44 @@ export default async function StorePage({ params }: { params: Promise<{ shop: st
           </div>
         </Card>
       </div>
+
+      <Card
+        title="Sell credits"
+        action={invoiceData.paymentsEnabled ? null : <Badge tone="warn">Razorpay not configured</Badge>}
+      >
+        <p className="sub" style={{ marginBottom: 12 }}>
+          Drafts stay private. Sending puts the invoice in this merchant&apos;s billing portal, where
+          they pay by card or UPI; the credits land on their next page load.
+        </p>
+        <InvoiceForm shop={s.shop} />
+      </Card>
+
+      <Card title="Invoices" flush>
+        {invoiceData.invoices.length ? (
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr><th>Raised</th><th>Credits</th><th>Amount</th><th>Status</th><th>Description</th><th /></tr>
+              </thead>
+              <tbody>
+                {invoiceData.invoices.map((invoice) => (
+                  <tr key={invoice.id}>
+                    <td className="nowrap sub">{dateOnly(invoice.createdAt)}</td>
+                    <td className="nowrap">{invoice.credits.toLocaleString("en-US")}</td>
+                    <td className="nowrap strong">{money(invoice.amount, invoice.currency)}</td>
+                    <td><Badge tone={TONE[invoice.status] ?? ""}>{invoice.status}</Badge></td>
+                    <td className="sub clip">
+                      {invoice.description || "\u2014"}
+                      {invoice.internalNote ? <div className="sub">note: {invoice.internalNote}</div> : null}
+                    </td>
+                    <td className="right"><InvoiceRowActions id={invoice.id} status={invoice.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : <Empty>No invoices for this store yet.</Empty>}
+      </Card>
 
       <Card title="Recent try-ons" flush>
         {data.recentTryOns.length ? (

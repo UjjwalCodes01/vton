@@ -24,6 +24,20 @@ Keep the bucket private. Shared images are streamed by the backend at `/look/<id
 
 Without the four `SHARE_S3_*` variables the try-on still works; Share Look just reports that sharing is unavailable.
 
+### Credit sales (admin dashboard + merchant portal)
+
+| Variable | Notes |
+| --- | --- |
+| `ADMIN_API_TOKEN` | Shared with the admin dashboard. Without it the whole `/api/admin/*` surface is off |
+| `PORTAL_PUBLIC_BASE` | Optional, default `https://app.clothsy.fabricvton.com` — where merchants pay |
+| `PORTAL_SIGNING_SECRET` | Optional; falls back to `SHOPIFY_API_SECRET`. Signs portal handoffs and sessions |
+| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | Already set for WooCommerce plans; credit invoices reuse them |
+
+In the Razorpay dashboard, point the **`payment.captured`** event at
+`/webhooks/razorpay` alongside the subscription events. That is what grants the
+credits when a merchant closes the tab on the payment screen before the browser
+can confirm.
+
 Never set `WOO_ALLOW_INSECURE_URLS` or `RAZORPAY_API_BASE` in production (local testing only).
 
 Without the three Razorpay variables the plugin still works; its Plan section says paid plans are coming soon and stores stay on Basic.

@@ -7,6 +7,7 @@
 import type { Prisma } from "@prisma/client";
 import db from "../db.server";
 import { getPlan, PLANS } from "../billing.server";
+import { allowanceFor } from "../credits.server";
 import { creditsFor, planLabelFor, setCustomPlan } from "../customplan.server";
 import { checkProviderHealth } from "../youcam.server";
 import { AdminApiError } from "./api.server";
@@ -52,7 +53,7 @@ export async function overview() {
     orderBy: { creditsUsed: "desc" },
     take: 6,
     select: {
-      shop: true, platform: true, plan: true, creditsUsed: true, monthlyCredits: true,
+      shop: true, platform: true, plan: true, creditsUsed: true, monthlyCredits: true, cycleTopUpCredits: true,
       customCredits: true, customPlanLabel: true, isSuspended: true,
     },
   });
@@ -63,7 +64,7 @@ export async function overview() {
   return {
     counts: { stores, active, suspended, shopify, woo, tryOns, tryOns30, failed30, leads, sharedLooks, customPlans },
     provider,
-    busiest: busiest.map((s) => ({ ...s, planLabel: planLabelFor(s) })),
+    busiest: busiest.map((s) => ({ ...s, planLabel: planLabelFor(s), monthlyCredits: allowanceFor(s) })),
     recentAudit,
   };
 }
@@ -116,7 +117,7 @@ export async function listStores(params: {
       isCustom: s.customCredits != null,
       customLabel: s.customPlanLabel,
       customNote: s.customNote,
-      credits: s.monthlyCredits,
+      credits: allowanceFor(s),
       used: s.creditsUsed,
       isEnabled: s.isEnabled,
       isSuspended: s.isSuspended,
@@ -147,7 +148,13 @@ export async function storeDetail(shop: string) {
   ]);
 
   return {
-    store: { ...store, planLabel: planLabelFor(store), planCredits: getPlan(store.plan).credits },
+    store: {
+      ...store,
+      planLabel: planLabelFor(store),
+      planCredits: getPlan(store.plan).credits,
+      // What they can actually spend this cycle, top-ups included.
+      monthlyCredits: allowanceFor(store),
+    },
     subscription,
     recentTryOns,
     leadCount,

@@ -1,5 +1,6 @@
 import type { ActionFunctionArgs } from "react-router";
 import db from "../db.server";
+import { allowanceFor } from "../credits.server";
 import { getPlan, isBillingCycleDue } from "../billing.server";
 import { clampText } from "../tryon-input.server";
 import { originMatchesStore, parseJsonBody, verifySignedRequest } from "../woo/auth.server";
@@ -58,7 +59,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       isEnabled: store.isEnabled,
       isSuspended: store.isSuspended,
       plan: { name: plan.name, label: plan.label },
-      monthlyCredits: store.monthlyCredits,
+      monthlyCredits: allowanceFor(store),
       creditsUsed,
       last30Days: {
         opens: totals._sum.widgetOpens ?? 0,

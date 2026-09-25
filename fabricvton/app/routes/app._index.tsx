@@ -3,6 +3,7 @@ import { useLoaderData } from "react-router";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import db from "../db.server";
+import { allowanceFor } from "../credits.server";
 import { getPlan } from "../billing.server";
 import { themeEditorAddBlockUrl } from "../theme-editor.server";
 import { Metric } from "../components/Metric";
@@ -44,7 +45,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     themeEditorUrl: themeEditorAddBlockUrl(shop),
     isEnabled: config.isEnabled,
     planLabel: getPlan(config.plan).label,
-    monthlyCredits: config.monthlyCredits,
+    monthlyCredits: allowanceFor(config),
+    topUpCredits: config.cycleTopUpCredits,
     creditsUsed: config.creditsUsed,
     today: {
       widgetOpens: todayStats?.widgetOpens ?? 0,
