@@ -32,7 +32,8 @@ export default function TermsOfService() {
             <h2>2. Description of Service</h2>
             <p>
               Clothsy AI is a Shopify and WooCommerce application that provides AI-powered virtual try-on capabilities for e-commerce stores. The Service allows merchants to
-              offer their customers the ability to visualize products on themselves before buying.
+              offer their customers the ability to visualize products on themselves before buying. The Service includes a billing portal where you manage
+              your plan, credits and invoices.
             </p>
 
             <h2>3. User Accounts</h2>
@@ -40,8 +41,9 @@ export default function TermsOfService() {
             <ul>
               <li>You represent that you are at least 18 years of age.</li>
               <li>You agree to provide accurate and complete information about yourself and your business.</li>
-              <li>You are responsible for maintaining the security of your store account.</li>
+              <li>You are responsible for maintaining the security of your store account, and of any account or sign-in method you use to reach our billing portal.</li>
               <li>You are responsible for all activities that occur under your account.</li>
+              <li>You are responsible for obtaining any consent your shoppers must give before their photograph is processed, and for complying with the privacy laws that apply to them.</li>
             </ul>
 
             <h2>4. Acceptable Use</h2>
@@ -69,7 +71,19 @@ export default function TermsOfService() {
                 <strong>Refunds:</strong> refunds are handled in accordance with Shopify&apos;s refund policy (Shopify plans) or at our sole discretion (WooCommerce plans).
               </li>
               <li>
+                <strong>Credit top-ups:</strong> we may agree a one-off purchase of additional try-ons with you. These are invoiced through our billing portal and
+                paid by card or UPI through our payment processor.
+              </li>
+              <li>
+                <strong>Purchased credits expire:</strong> credits bought this way are added to your current billing cycle and are used after your plan&apos;s own
+                allowance. Like the plan allowance, they expire when that cycle resets, and they are not refunded or carried forward. The invoice states this
+                before you pay.
+              </li>
+              <li>
                 <strong>Changes to pricing:</strong> we reserve the right to modify our pricing plans with notice to you.
+              </li>
+              <li>
+                <strong>Taxes:</strong> amounts are exclusive of taxes unless stated otherwise, and you are responsible for any taxes applicable to you.
               </li>
             </ul>
 
@@ -81,7 +95,15 @@ export default function TermsOfService() {
               </li>
               <li>
                 <strong>Your rights:</strong> you retain ownership of your product images and store data. By using the Service, you grant us a limited license to process
-                your images solely for the purpose of providing the virtual try-on functionality.
+                your images, and photographs your shoppers choose to submit, solely for the purpose of providing the virtual try-on functionality.
+              </li>
+              <li>
+                <strong>Product images:</strong> you confirm you hold the rights necessary for us to process the product images you make available through the
+                Service.
+              </li>
+              <li>
+                <strong>Shared looks:</strong> where a shopper chooses to share a try-on, we host a copy of that image at a link on our own domain so the link
+                keeps working. Shared looks are deleted automatically after 30 days, and sooner on request.
               </li>
             </ul>
 
