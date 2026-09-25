@@ -3029,7 +3029,7 @@ body {
   gap: 3px;
   color: #64748b;
   text-decoration: none;
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   font-weight: 600;
   position: relative;
   padding: 4px 12px;
@@ -4004,4 +4004,8 @@ a, button, summary, input, select, [role="button"] { touch-action: manipulation;
 
 @media (max-width: 900px) {
   .mobile-drawer-close { width: 44px; height: 44px; }
+}
+
+@media (max-width: 768px) {
+  .footer-legal .footer-cookie-btn { min-height: 44px; }
 }

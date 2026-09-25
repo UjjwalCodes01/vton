@@ -403,3 +403,16 @@ a.fv-card:active { background: #fff; }
 }
 
 .fv-footer-address { margin-top: 16px; display: grid; gap: 2px; font-style: normal; font-size: 13.5px; line-height: 1.5; color: var(--fv-ink-3); }
+
+/* phones: finger-sized targets for text links and social icons */
+@media (max-width: 899px) {
+  .fv-footer .fv-social li a { width: 44px; height: 44px; justify-content: center; }
+  .fv-link, .fv-textlink { min-height: 44px; }
+  a.fv-rule-title { display: inline-flex; align-items: center; min-height: 40px; }
+}
+
+/* phones: the hero's scroll-linked mesh reads as stray lines on a stacked layout, so show the clean mark */
+@media (max-width: 899px) {
+  .fv-mesh, .fv-nodes { display: none; }
+  .fv-mark-shift img { opacity: 1; }
+}

@@ -288,6 +288,8 @@ main:focus {
 .plan-table-wrap {
   margin-top: clamp(36px, 4vw, 56px);
   overflow-x: auto;
+  /* keeps the wide table's painting inside the scroller, so it can't widen the page on phones */
+  contain: paint;
   border: 1px solid var(--line-2);
   border-radius: 20px;
   background: var(--paper);

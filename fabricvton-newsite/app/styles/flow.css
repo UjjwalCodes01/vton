@@ -472,3 +472,10 @@
 .sd-hint + .sp {
   padding-top: 10px;
 }
+
+/* touch: a thicker hue track and a finger-sized thumb */
+@media (pointer: coarse) {
+  .sd-field input.sp-hue { height: 22px; }
+  .sp-hue::-webkit-slider-thumb { width: 30px; height: 30px; }
+  .sp-hue::-moz-range-thumb { width: 24px; height: 24px; }
+}
