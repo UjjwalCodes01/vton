@@ -5,7 +5,7 @@ import HowFlow from "./components/HowFlow";
 import { ArrowRight, ArrowUpRight, Bag, Eye, Wand } from "./components/icons";
 import StoreDemo from "./components/StoreDemo";
 import WatchDemo from "./components/WatchDemo";
-import { BOOK_DEMO_URL, SHOPIFY_URL, WOO_URL } from "./lib/site";
+import { BOOK_DEMO_URL, PRODUCT_HUNT_BADGE, PRODUCT_HUNT_URL, SHOPIFY_URL, WOO_URL } from "./lib/site";
 
 const points = [
   { icon: <Wand />, label: "AI Powered" },
@@ -48,6 +48,15 @@ export default function Home() {
                 WooCommerce
               </a>
             </p>
+            <a
+              className="hero-ph"
+              href={`${PRODUCT_HUNT_URL}?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-clothys-ai`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={PRODUCT_HUNT_BADGE} alt="Clothsy AI, featured on Product Hunt" width={250} height={54} loading="lazy" />
+            </a>
           </div>
 
           <div className="hero-art">

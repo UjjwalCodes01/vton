@@ -8,6 +8,11 @@ export const PARENT_URL = "https://www.fabricvton.com";
 
 export const SHOPIFY_URL = "https://apps.shopify.com/fabricvton";
 export const WOO_URL = "https://wordpress.org/plugins/clothsy-ai/";
+/** Product Hunt listing (the listing itself is titled "Clothys AI"). */
+export const PRODUCT_HUNT_URL = "https://www.producthunt.com/products/clothys-ai";
+export const PRODUCT_HUNT_BADGE =
+  "https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1261271&theme=light&t=1790363009645";
+
 export const BOOK_DEMO_URL = "https://cal.com/fabricvton-hz9xbt/demo";
 
 /** Registered address, shown in the footer. */

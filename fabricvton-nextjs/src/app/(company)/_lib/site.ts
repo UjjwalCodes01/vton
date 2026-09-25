@@ -24,6 +24,9 @@ export const CONTACT_HREF = "/contact";
  */
 export const CONTACT_FORM_ID = "BzN6Q5";
 
+/** Clothsy AI on Product Hunt (the listing itself is titled "Clothys AI"). */
+export const PRODUCT_HUNT_URL = "https://www.producthunt.com/products/clothys-ai";
+
 /** Application form for the virtual try-on research team (Tally). */
 export const RESEARCH_FORM_URL = "https://tally.so/r/NpzRM0";
 

@@ -4,6 +4,7 @@ import { TRYON_STATUS } from "../_lib/content";
 import { CLOTHSY_URL } from "../_lib/site";
 import { cssVars, delay } from "../_lib/style";
 import { Arrow } from "./Arrow";
+import ProductHuntCard from "./ProductHuntCard";
 
 /**
  * Clothsy AI, presented as a product derived from FabricVTON's research. The composite on the right is
@@ -34,6 +35,9 @@ export default function Product() {
             <Link className="fv-btn fv-btn--soft" href="/products" data-magnet>
               Learn more
             </Link>
+          </div>
+          <div data-reveal style={delay(220)}>
+            <ProductHuntCard />
           </div>
         </div>
 

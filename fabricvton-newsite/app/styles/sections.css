@@ -876,6 +876,25 @@ select,
 
 /* ---- fixes 2026-09-23: platforms line, demo video, Woo on pricing, editorial crop, resources hero art ---- */
 
+.hero-ph {
+  display: inline-block;
+  margin-top: 16px;
+  border-radius: 10px;
+  transition: transform 0.25s ease;
+}
+
+.hero-ph img {
+  display: block;
+  width: 214px;
+  height: auto;
+}
+
+@media (hover: hover) {
+  .hero-ph:hover {
+    transform: translateY(-2px);
+  }
+}
+
 .hero-platforms {
   margin: 20px 0 0;
   font-size: 14px;

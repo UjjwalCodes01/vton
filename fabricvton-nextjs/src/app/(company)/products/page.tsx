@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { CtaBand } from "../_components/Blocks";
 import PageHero from "../_components/PageHero";
+import ProductHuntCard from "../_components/ProductHuntCard";
 import Shell from "../_components/Shell";
 import { Arrow } from "../_components/Arrow";
 import { PROBLEMS } from "../_content/research";
@@ -73,6 +74,7 @@ export default function ProductsPage() {
                 WordPress.org <Arrow dir="up" />
               </a>
             </div>
+            <ProductHuntCard />
           </div>
           <div className="fv-feature-media" data-reveal style={delay(100)}>
             <Image

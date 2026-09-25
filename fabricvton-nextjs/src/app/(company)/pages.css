@@ -416,3 +416,30 @@ a.fv-card:active { background: #fff; }
   .fv-mesh, .fv-nodes { display: none; }
   .fv-mark-shift img { opacity: 1; }
 }
+
+/* ---- Product Hunt card -------------------------------------------------- */
+.fv-ph {
+  display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 16px; align-items: center;
+  max-width: 520px; margin-top: 28px; padding: 16px 18px; border-radius: 18px;
+  background: #fff; border: 1px solid var(--fv-line); box-shadow: 0 2px 8px rgba(24, 25, 27, 0.05);
+  transition: border-color 0.3s var(--fv-ease), transform 0.4s var(--fv-ease-out);
+}
+.fv-ph-logo { width: 56px; height: 56px; border-radius: 12px; object-fit: cover; }
+.fv-ph-body { display: grid; gap: 2px; min-width: 0; }
+.fv-ph-kicker { display: inline-flex; align-items: center; gap: 6px; font-family: var(--fv-mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: #d94a3e; }
+.fv-ph-title { font-size: 1.0625rem; font-weight: 500; color: var(--fv-ink); }
+.fv-ph-text { font-size: 14px; color: var(--fv-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fv-ph-cta { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px; border-radius: 999px; background: #ff6154; color: #fff; font-size: 14px; font-weight: 500; white-space: nowrap; }
+@media (hover: hover) {
+  .fv-ph:hover { border-color: #f3b2ab; transform: translateY(-2px); }
+  .fv-ph:hover .fv-arrow--up { --hx: 2px; --hy: -2px; }
+}
+@media (max-width: 499px) {
+  .fv-ph { grid-template-columns: 48px minmax(0, 1fr); }
+  .fv-ph-logo { width: 48px; height: 48px; }
+  .fv-ph-cta { grid-column: 1 / -1; justify-content: center; height: 44px; }
+}
+.fv-ph-kicker { white-space: nowrap; }
+/* narrow product column on the homepage: button on its own row */
+.fv-product-text .fv-ph { grid-template-columns: 56px minmax(0, 1fr); max-width: 400px; }
+.fv-product-text .fv-ph-cta { grid-column: 1 / -1; justify-content: center; }
