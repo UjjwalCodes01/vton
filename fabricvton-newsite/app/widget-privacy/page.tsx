@@ -20,7 +20,7 @@ export default function WidgetPrivacyPolicy() {
             You are reading this because you are visiting an online store that uses Clothsy AI to provide a virtual try-on experience. This policy explains exactly what
             happens to your data when you use it.
           </p>
-          <p className="legal-meta">Applicable to users of the Clothsy AI virtual try-on widget · Last updated September 23, 2026</p>
+          <p className="legal-meta">Applicable to users of the Clothsy AI virtual try-on widget · Last updated September 25, 2026</p>
 
           <div className="guide-body">
             <h2>1. What Information We Collect</h2>

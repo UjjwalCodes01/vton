@@ -22,7 +22,7 @@ export default function PrivacyPolicy() {
             This policy describes how FabricVTON (&ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;our&rdquo;) collects, uses, and discloses information in connection with your
             installation and use of Clothsy AI (the &ldquo;App&rdquo;) on your Shopify or WooCommerce store. It is directed at merchants (store owners).
           </p>
-          <p className="legal-meta">Effective September 14, 2026 · Last updated September 23, 2026</p>
+          <p className="legal-meta">Effective September 14, 2026 · Last updated September 25, 2026</p>
 
           <div className="legal-callout">
             <p>Looking for the privacy policy your shoppers see?</p>
@@ -167,7 +167,7 @@ export default function PrivacyPolicy() {
             <p>
               <strong>Publisher:</strong> FabricVTON
               <br />
-              <strong>Address:</strong> KIET Group of Institutions, Muradnagar, Ghaziabad, Uttar Pradesh 201206, India.
+              <strong>Address:</strong> Near Shiv Mandir, Kendua Bazar Hatia Patti, Kenduadih, Dhanbad, Jharkhand 828116, India.
               <br />
               <strong>Hosting:</strong> Vercel Inc., Covina, CA, USA.
             </p>

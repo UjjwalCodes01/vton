@@ -3,13 +3,11 @@ import Approach from "./_components/Approach";
 import Careers from "./_components/Careers";
 import Company from "./_components/Company";
 import FinalCta from "./_components/FinalCta";
-import Footer from "./_components/Footer";
 import Hero from "./_components/Hero";
 import Journal from "./_components/Journal";
-import Motion from "./_components/Motion";
-import Nav from "./_components/Nav";
 import Product from "./_components/Product";
 import Research from "./_components/Research";
+import Shell from "./_components/Shell";
 import { SITE_NAME, SITE_TAGLINE } from "./_lib/site";
 
 const TITLE = `${SITE_NAME} — building intelligence for the visual world`;
@@ -38,23 +36,15 @@ export const metadata: Metadata = {
 
 export default function CompanyHome() {
   return (
-    <>
-      <a className="fv-skip" href="#main">
-        Skip to content
-      </a>
-      <Nav />
-      <main id="main">
-        <Hero />
-        <Research />
-        <Approach />
-        <Product />
-        <Journal />
-        <Company />
-        <Careers />
-        <FinalCta />
-      </main>
-      <Footer />
-      <Motion />
-    </>
+    <Shell>
+      <Hero />
+      <Research />
+      <Approach />
+      <Product />
+      <Journal />
+      <Company />
+      <Careers />
+      <FinalCta />
+    </Shell>
   );
 }

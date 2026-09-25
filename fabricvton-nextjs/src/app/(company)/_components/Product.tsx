@@ -1,6 +1,7 @@
+import Link from "next/link";
 import Image from "next/image";
 import { TRYON_STATUS } from "../_lib/content";
-import { CLOTHSY_LEARN_MORE_URL, CLOTHSY_URL } from "../_lib/site";
+import { CLOTHSY_URL } from "../_lib/site";
 import { cssVars, delay } from "../_lib/style";
 import { Arrow } from "./Arrow";
 
@@ -30,9 +31,9 @@ export default function Product() {
             <a className="fv-btn fv-btn--dark" href={CLOTHSY_URL} data-magnet>
               Visit Clothsy AI <Arrow dir="up" />
             </a>
-            <a className="fv-btn fv-btn--soft" href={CLOTHSY_LEARN_MORE_URL} data-magnet>
+            <Link className="fv-btn fv-btn--soft" href="/products" data-magnet>
               Learn more
-            </a>
+            </Link>
           </div>
         </div>
 

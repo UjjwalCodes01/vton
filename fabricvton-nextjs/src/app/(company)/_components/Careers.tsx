@@ -1,5 +1,5 @@
 import { ROLES } from "../_lib/content";
-import { CONTACT_HREF } from "../_lib/site";
+import { CONTACT_HREF, RESEARCH_FORM_URL } from "../_lib/site";
 import { delay } from "../_lib/style";
 import { Arrow } from "./Arrow";
 
@@ -24,7 +24,10 @@ export default function Careers() {
             <ul className="fv-roles" data-reveal style={delay(120)}>
               {ROLES.map((role) => (
                 <li key={role.title}>
-                  <a href={role.href}>
+                  <a
+                    href={role.href}
+                    {...(role.href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                  >
                     <span>{role.title}</span>
                     {role.meta ? <span>{role.meta}</span> : null}
                   </a>
@@ -34,12 +37,15 @@ export default function Careers() {
           ) : null}
 
           <p className="fv-body" data-reveal style={delay(140)}>
-            We’re always interested in exceptional people working at the intersection of AI, computer vision and product
-            engineering.
+            We’re building a virtual try-on research team of students, researchers and engineers. The work is real
+            research, and it ships in production. The application takes about two minutes.
           </p>
           <div className="fv-actions" data-reveal style={delay(200)}>
-            <a className="fv-btn fv-btn--dark" href={CONTACT_HREF} data-magnet>
-              Get in touch <Arrow />
+            <a className="fv-btn fv-btn--dark" href={RESEARCH_FORM_URL} target="_blank" rel="noopener noreferrer" data-magnet>
+              Apply to the research team <Arrow dir="up" />
+            </a>
+            <a className="fv-btn fv-btn--soft" href={CONTACT_HREF} data-magnet>
+              Get in touch
             </a>
           </div>
         </div>

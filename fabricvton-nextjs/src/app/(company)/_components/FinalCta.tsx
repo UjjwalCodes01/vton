@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CONTACT_HREF } from "../_lib/site";
 import { delay } from "../_lib/style";
 import { Arrow } from "./Arrow";
@@ -19,9 +20,9 @@ export default function FinalCta() {
           <a className="fv-btn fv-btn--dark" href={CONTACT_HREF} data-magnet>
             Talk to us <Arrow />
           </a>
-          <a className="fv-btn fv-btn--soft" href="#careers" data-magnet>
-            Explore careers
-          </a>
+          <Link className="fv-btn fv-btn--soft" href="/careers" data-magnet>
+            Join the research team
+          </Link>
         </div>
       </div>
     </section>

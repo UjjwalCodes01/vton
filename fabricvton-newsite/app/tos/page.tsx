@@ -115,11 +115,11 @@ export default function TermsOfService() {
             <p>
               <strong>FabricVTON</strong>
               <br />
-              KIET Group of Institutions
+              Near Shiv Mandir, Kendua Bazar Hatia Patti
               <br />
-              Muradnagar, Ghaziabad
+              Kenduadih, Dhanbad
               <br />
-              Uttar Pradesh 201206, India
+              Jharkhand 828116, India
               <br />
               Email: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
             </p>

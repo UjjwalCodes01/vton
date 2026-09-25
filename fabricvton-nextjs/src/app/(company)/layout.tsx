@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { GoogleAnalytics } from "@next/third-parties/google";
 import { Caveat, Geist, Geist_Mono } from "next/font/google";
 import { CONTACT_EMAIL, SITE_NAME, SITE_TAGLINE, SITE_URL, SOCIALS } from "./_lib/site";
+import CookieConsent from "../_shared/CookieConsent";
+import ResearchInvite from "./_components/ResearchInvite";
 import "./company.css";
+import "./pages.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"], display: "swap" });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"], display: "swap" });
@@ -36,6 +38,14 @@ const ORGANIZATION_JSON_LD = {
   logo: `${SITE_URL}/brand/icon-512.png`,
   description: SITE_TAGLINE,
   email: CONTACT_EMAIL,
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: "Near Shiv Mandir, Kendua Bazar Hatia Patti, Kenduadih",
+    addressLocality: "Dhanbad",
+    addressRegion: "Jharkhand",
+    postalCode: "828116",
+    addressCountry: "IN",
+  },
   sameAs: SOCIALS.map((s) => s.href),
 };
 
@@ -60,8 +70,9 @@ export default function CompanyRootLayout({ children }: Readonly<{ children: Rea
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ORGANIZATION_JSON_LD) }} />
         {children}
+        <ResearchInvite waitForConsent={Boolean(gaId)} />
+        <CookieConsent gaId={gaId} />
       </body>
-      {gaId ? <GoogleAnalytics gaId={gaId} /> : null}
     </html>
   );
 }

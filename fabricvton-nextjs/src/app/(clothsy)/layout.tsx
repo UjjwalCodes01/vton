@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { GoogleAnalytics } from "@next/third-parties/google";
+import CookieConsent from "../_shared/CookieConsent";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -95,8 +95,8 @@ export default function RootLayout({
         <MobileBottomNav />
         <PwaManager />
         <Toaster position="bottom-right" richColors />
+        <CookieConsent gaId={gaId} aboveBottomNav />
       </body>
-      {gaId ? <GoogleAnalytics gaId={gaId} /> : null}
     </html>
   );
 }

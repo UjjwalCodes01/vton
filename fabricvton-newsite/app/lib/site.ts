@@ -10,7 +10,14 @@ export const SHOPIFY_URL = "https://apps.shopify.com/fabricvton";
 export const WOO_URL = "https://wordpress.org/plugins/clothsy-ai/";
 export const BOOK_DEMO_URL = "https://cal.com/fabricvton-hz9xbt/demo";
 
-export const CONTACT_EMAIL = "fabricvton@gmail.com";
+/** Registered address, shown in the footer. */
+export const ADDRESS = [
+  "Near Shiv Mandir, Kendua Bazar Hatia Patti",
+  "Kenduadih, Dhanbad",
+  "Jharkhand 828116, India",
+] as const;
+
+export const CONTACT_EMAIL = "contact@fabricvton.com";
 export const CONTACT_HREF = `mailto:${CONTACT_EMAIL}`;
 
 /**

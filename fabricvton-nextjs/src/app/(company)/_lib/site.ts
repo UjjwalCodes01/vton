@@ -13,11 +13,40 @@ export const CLOTHSY_URL = "https://clothsyai.fabricvton.com";
 export const CLOTHSY_LEARN_MORE_URL = "/clothsy";
 
 /** One public contact address for the whole site. Swap here to change every "Talk to us" / "Get in touch". */
-export const CONTACT_EMAIL = "fabricvton@gmail.com";
-export const CONTACT_HREF = `mailto:${CONTACT_EMAIL}`;
+export const CONTACT_EMAIL = "contact@fabricvton.com";
+export const CONTACT_MAILTO = `mailto:${CONTACT_EMAIL}`;
+/** Every "Talk to us" / "Contact" goes to the contact page, which carries the form and the address. */
+export const CONTACT_HREF = "/contact";
 
-/** Only channels that exist. Add LinkedIn / GitHub / YouTube here once the handles are confirmed. */
+/**
+ * Tally form embedded on /contact. Leave empty until the form exists: the page then shows the email
+ * address and a mailto button only.
+ */
+export const CONTACT_FORM_ID = "BzN6Q5";
+
+/** Application form for the virtual try-on research team (Tally). */
+export const RESEARCH_FORM_URL = "https://tally.so/r/NpzRM0";
+
+/**
+ * Legal pages. They live under the (clothsy) route group today, and the Shopify app and WooCommerce plugin
+ * hard-code these exact paths, so keep them working if the pages move.
+ */
+export const LEGAL = [
+  { label: "Privacy", href: "/privacy" },
+  { label: "Terms", href: "/tos" },
+  { label: "Shopper privacy", href: "/widget-privacy" },
+] as const;
+
+/** Registered address, shown in the footer. */
+export const ADDRESS = [
+  "Near Shiv Mandir, Kendua Bazar Hatia Patti",
+  "Kenduadih, Dhanbad",
+  "Jharkhand 828116, India",
+] as const;
+
+/** Official channels (shared with clothsyai.fabricvton.com). Add GitHub / YouTube here once they exist. */
 export const SOCIALS = [
-  { name: "X", href: "https://x.com/fabricvton93490" },
-  { name: "Instagram", href: "https://www.instagram.com/fabricvton/" },
+  { name: "LinkedIn", handle: "clothsy", href: "https://www.linkedin.com/company/clothsy/" },
+  { name: "X", handle: "clothsyai", href: "https://x.com/clothsyai" },
+  { name: "Instagram", handle: "clothsyai", href: "https://www.instagram.com/clothsyai/" },
 ] as const;

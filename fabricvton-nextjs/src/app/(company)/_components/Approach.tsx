@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Image from "next/image";
 import { PIPELINE } from "../_lib/content";
 import { cssVars } from "../_lib/style";
@@ -31,9 +32,9 @@ export default function Approach() {
               We combine computer vision, generative models and physical understanding to build AI that respects the
               real world — its materials, geometry and complexity.
             </p>
-            <a className="fv-textlink" href="#research" data-magnet>
+            <Link className="fv-textlink" href="/research" data-magnet>
               Our approach <Arrow />
-            </a>
+            </Link>
           </div>
         </header>
 

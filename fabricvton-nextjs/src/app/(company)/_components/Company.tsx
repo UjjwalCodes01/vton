@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { delay } from "../_lib/style";
+import { Arrow } from "./Arrow";
 
 export default function Company() {
   return (
@@ -23,6 +25,9 @@ export default function Company() {
             <p className="fv-body" data-reveal style={delay(200)}>
               We research the underlying technology and turn that work into products people can use.
             </p>
+            <Link className="fv-textlink" href="/company" data-reveal style={delay(240)}>
+              Read our vision <Arrow />
+            </Link>
           </div>
         </div>
 

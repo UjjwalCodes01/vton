@@ -105,10 +105,10 @@ export default function TermsOfService() {
               <p>If you have any questions about these Terms, please contact us at:</p>
               <p>
                 <strong>FabricVTON</strong><br />
-                KIET Group of Institutions<br />
-                Muradnagar, Ghaziabad<br />
-                Uttar Pradesh 201206, India<br />
-                Email: fabricvton@gmail.com
+                Near Shiv Mandir, Kendua Bazar Hatia Patti<br />
+                Kenduadih, Dhanbad<br />
+                Jharkhand 828116, India<br />
+                Email: contact@fabricvton.com
               </p>
             </div>
           </FadeUp>

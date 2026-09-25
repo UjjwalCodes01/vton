@@ -1,7 +1,14 @@
+import Link from "next/link";
 import Image from "next/image";
-import { CLOTHSY_URL, CONTACT_EMAIL, CONTACT_HREF, SITE_NAME, SOCIALS } from "../_lib/site";
+import { CookieSettingsButton } from "../../_shared/CookieConsent";
+import { ADDRESS, CLOTHSY_URL, CONTACT_EMAIL, CONTACT_HREF, CONTACT_MAILTO, LEGAL, RESEARCH_FORM_URL, SITE_NAME, SOCIALS } from "../_lib/site";
 
 const ICONS: Record<string, React.ReactNode> = {
+  LinkedIn: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.36V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z" />
+    </svg>
+  ),
   X: (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
@@ -38,16 +45,29 @@ export default function Footer() {
               unoptimized
             />
             <p>AI research and technology company building intelligence for the visual world.</p>
+            <address className="fv-footer-address">
+              {ADDRESS.map((line) => (
+                <span key={line}>{line}</span>
+              ))}
+            </address>
           </div>
 
           <nav aria-label="Research">
             <h3>Research</h3>
             <ul>
               <li>
-                <a href="#research">Research areas</a>
+                <Link href="/research">Research areas</Link>
               </li>
               <li>
-                <a href="#journal">Journal</a>
+                <Link href="/research/open-problems">Open problems</Link>
+              </li>
+              <li>
+                <Link href="/journal">Journal</Link>
+              </li>
+              <li>
+                <a href={RESEARCH_FORM_URL} target="_blank" rel="noopener noreferrer">
+                  Join the research team
+                </a>
               </li>
             </ul>
           </nav>
@@ -55,6 +75,9 @@ export default function Footer() {
           <nav aria-label="Products">
             <h3>Products</h3>
             <ul>
+              <li>
+                <Link href="/products">All products</Link>
+              </li>
               <li>
                 <a href={CLOTHSY_URL}>Clothsy AI</a>
               </li>
@@ -65,10 +88,10 @@ export default function Footer() {
             <h3>Company</h3>
             <ul>
               <li>
-                <a href="#company">About</a>
+                <Link href="/company">Vision &amp; company</Link>
               </li>
               <li>
-                <a href="#careers">Careers</a>
+                <Link href="/careers">Careers</Link>
               </li>
               <li>
                 <a href={CONTACT_HREF}>Contact</a>
@@ -87,7 +110,7 @@ export default function Footer() {
                 </li>
               ))}
               <li>
-                <a href={CONTACT_HREF} aria-label={`Email ${CONTACT_EMAIL}`}>
+                <a href={CONTACT_MAILTO} aria-label={`Email ${CONTACT_EMAIL}`}>
                   {ICONS.Email}
                 </a>
               </li>
@@ -98,6 +121,14 @@ export default function Footer() {
         <div className="fv-footer-bottom">
           <p>© {new Date().getFullYear()} FabricVTON. All rights reserved.</p>
           <p>Clothsy AI is a product by FabricVTON.</p>
+          <nav className="fv-legal" aria-label="Legal">
+            {LEGAL.map((link) => (
+              <a key={link.href} href={link.href}>
+                {link.label}
+              </a>
+            ))}
+            <CookieSettingsButton />
+          </nav>
         </div>
       </div>
     </footer>

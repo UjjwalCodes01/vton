@@ -14,7 +14,7 @@ export default function PrivacyPolicy() {
             <div className="legal-header">
               <h1>Privacy Policy (Merchants)</h1>
               <p className="effective-date">Effective Date: September 14th, 2026</p>
-              <p className="effective-date">Last Updated: 23rd September, 2026</p>
+              <p className="effective-date">Last Updated: 25th September, 2026</p>
             </div>
           </FadeUp>
 
@@ -96,13 +96,13 @@ export default function PrivacyPolicy() {
 
               <h2>8. Contact Us</h2>
               <ul>
-                <li><strong>General & Support:</strong> fabricvton@gmail.com</li>
+                <li><strong>General & Support:</strong> contact@fabricvton.com</li>
               </ul>
 
               <h2>9. Legal</h2>
               <p>
                 <strong>Publisher:</strong> FabricVTON<br />
-                <strong>Address:</strong> KIET Group of Institutions, Muradnagar, Ghaziabad, Uttar Pradesh 201206, India.<br />
+                <strong>Address:</strong> Near Shiv Mandir, Kendua Bazar Hatia Patti, Kenduadih, Dhanbad, Jharkhand 828116, India.<br />
                 <strong>Hosting:</strong> Vercel Inc., Covina, CA, USA.
               </p>
             </div>

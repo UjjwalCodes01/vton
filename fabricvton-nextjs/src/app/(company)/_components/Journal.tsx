@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Image from "next/image";
 import { JOURNAL_POSTS, type JournalPost } from "../_lib/content";
 import { delay } from "../_lib/style";
@@ -49,11 +50,9 @@ export default function Journal() {
             <p className="fv-lead">
               A behind-the-scenes look at our research, engineering and journey building visual AI.
             </p>
-            {anyPublished ? (
-              <a className="fv-link" href="/journal" data-magnet>
-                View all posts <Arrow />
-              </a>
-            ) : null}
+            <Link className="fv-link" href="/journal" data-magnet>
+              {anyPublished ? "View all posts" : "Visit the journal"} <Arrow />
+            </Link>
           </div>
         </div>
 

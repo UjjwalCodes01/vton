@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CONTACT_HREF, LEGAL, SHOPIFY_URL, SOCIALS, WOO_URL } from "../lib/site";
+import { ADDRESS, CONTACT_HREF, LEGAL, PARENT_URL, SHOPIFY_URL, SOCIALS, WOO_URL } from "../lib/site";
 import { Instagram, LinkedIn, XLogo } from "./icons";
 
 type FooterLink = { href: string; label: string; external?: boolean };
@@ -59,6 +59,11 @@ export default function SiteFooter() {
               <Image className="brand-word" src="/clothsy-wordmark.png" alt="" width={600} height={149} />
             </Link>
             <p>A fitting room for the internet, so shoppers can see the piece on them before they buy.</p>
+            <address className="footer-address">
+              {ADDRESS.map((line) => (
+                <span key={line}>{line}</span>
+              ))}
+            </address>
             <div className="footer-social">
               {SOCIALS.map((social) => (
                 <a
@@ -85,7 +90,12 @@ export default function SiteFooter() {
         </div>
 
         <div className="footer-bottom">
-          <span>© {new Date().getFullYear()} Clothsy AI · A product by FabricVTON</span>
+          <span>
+            © {new Date().getFullYear()} Clothsy AI · Powered by{" "}
+            <a className="footer-powered" href={PARENT_URL} target="_blank" rel="noopener noreferrer">
+              FabricVTON
+            </a>
+          </span>
           <div>
             <Link href={LEGAL.privacy}>Privacy</Link>
             <Link href={LEGAL.shopperPrivacy}>Shopper privacy</Link>
