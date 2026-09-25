@@ -8,6 +8,7 @@ const MESSAGES: Record<string, string> = {
   bad_state: "That sign-in could not be verified. Please try again.",
   google_failed: "Google could not complete the sign-in. Please try again.",
   google_unavailable: "Google sign-in is not set up yet. Open the portal from your Shopify admin instead.",
+  unavailable: "We could not reach Clothsy AI just then. Try again in a moment.",
 };
 
 function GoogleMark() {
