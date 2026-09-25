@@ -1,6 +1,6 @@
 # Clothsy AI — merchant billing portal
 
-Where a merchant pays for credits: `app.clothsy.fabricvton.com`.
+Where a merchant pays for credits: `app.clothsyai.fabricvton.com`.
 
 Credits are sold as one-off invoices rather than through Shopify's or
 WooCommerce's billing. You agree a price, raise the invoice in the admin

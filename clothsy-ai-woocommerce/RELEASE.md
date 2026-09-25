@@ -29,7 +29,7 @@ Without the four `SHARE_S3_*` variables the try-on still works; Share Look just 
 | Variable | Notes |
 | --- | --- |
 | `ADMIN_API_TOKEN` | Shared with the admin dashboard. Without it the whole `/api/admin/*` surface is off |
-| `PORTAL_PUBLIC_BASE` | Optional, default `https://app.clothsy.fabricvton.com` — where merchants pay |
+| `PORTAL_PUBLIC_BASE` | Optional, default `https://app.clothsyai.fabricvton.com` — where merchants pay |
 | `PORTAL_SIGNING_SECRET` | Optional; falls back to `SHOPIFY_API_SECRET`. Signs portal handoffs and sessions |
 | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | Already set for WooCommerce plans; credit invoices reuse them |
 

@@ -36,7 +36,7 @@ export function portalConfigured() {
 }
 
 export function portalBaseUrl() {
-  return (process.env.PORTAL_PUBLIC_BASE || "https://app.clothsy.fabricvton.com").replace(/\/+$/, "");
+  return (process.env.PORTAL_PUBLIC_BASE || "https://app.clothsyai.fabricvton.com").replace(/\/+$/, "");
 }
 
 /** Mints the one-time token that carries a merchant from Shopify to the portal. */
