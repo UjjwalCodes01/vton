@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs } from "react-router";
 import db from "../db.server";
 import { adminJson } from "../admin/api.server";
-import { readPortalSession } from "../invoices/portal.server";
+import { ownsStore, subjectFromSession } from "../invoices/subject.server";
 import {
   applyPaidInvoice,
   checkoutSignatureValid,
@@ -24,13 +24,18 @@ import {
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     const body = (await request.json().catch(() => ({}))) as Record<string, string>;
-    const shop = readPortalSession(body.session);
-    if (!shop) return adminJson({ error: "Session expired." }, 401);
+    const subject = await subjectFromSession(body.session);
+    if (!subject) return adminJson({ error: "Session expired." }, 401);
 
+    // Scoped to the stores this account manages, so one signed-in person can
+    // neither see nor pay an invoice raised against somebody else's store.
     const invoice = await db.creditInvoice.findFirst({
-      where: { id: String(body.invoiceId || ""), shop },
+      where: { id: String(body.invoiceId || ""), shop: { in: subject.stores.map((s) => s.shop) } },
     });
-    if (!invoice) return adminJson({ error: "No such invoice." }, 404);
+    if (!invoice || !ownsStore(subject, invoice.shop)) {
+      return adminJson({ error: "No such invoice." }, 404);
+    }
+    const shop = invoice.shop;
 
     if (body.step === "start") {
       const { orderId } = await orderForInvoice(invoice);

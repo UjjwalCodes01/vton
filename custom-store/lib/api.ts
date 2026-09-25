@@ -6,6 +6,9 @@
 
 const BASE = (process.env.CLOTHSY_API_BASE || "https://fabricvton-api.onrender.com").replace(/\/+$/, "");
 
+/** Where "Continue with Google" points. The exchange happens server-side there. */
+export const googleSignInUrl = `${BASE}/auth/google/start`;
+
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
@@ -37,19 +40,31 @@ async function post<T>(path: string, body: Record<string, unknown>): Promise<T> 
   return data as T;
 }
 
+export interface StoreSummary {
+  shop: string;
+  name: string;
+  platform: string;
+  plan: string;
+  planCredits: number;
+  allowance: number;
+  topUpCredits: number;
+  used: number;
+  cycleStart: string;
+  isSuspended: boolean;
+  isEnabled: boolean;
+}
+
 export interface PortalData {
-  store: {
-    shop: string;
-    name: string;
-    platform: string;
-    plan: string;
-    planCredits: number;
-    allowance: number;
-    topUpCredits: number;
-    used: number;
-    cycleStart: string;
-    isSuspended: boolean;
+  account: {
+    id: string;
+    email: string;
+    name: string | null;
+    avatarUrl: string | null;
+    credits: number;
+    isPlaceholder: boolean;
   };
+  stores: StoreSummary[];
+  stats: { tryOnsThisMonth: number };
   invoices: {
     id: string;
     credits: number;
@@ -63,9 +78,28 @@ export interface PortalData {
   payments: { enabled: boolean; keyId: string };
 }
 
+export interface Generations {
+  page: number;
+  pages: number;
+  total: number;
+  generations: {
+    id: string;
+    shop: string;
+    status: string;
+    productTitle: string | null;
+    createdAt: string;
+    seconds: number | null;
+    errorCode: string | null;
+    rating: string | null;
+    imageUrl: string | null;
+  }[];
+}
+
 export const api = {
   /** Swaps the one-time handoff token from Shopify for a portal session. */
-  exchange: (token: string) => post<{ shop: string; session: string }>("/api/portal/session", { token }),
+  exchange: (token: string) => post<{ shop?: string; email?: string; session: string }>("/api/portal/session", { token }),
+  generations: (session: string, page = 1, shop?: string) =>
+    post<Generations>("/api/portal/generations", { session, page, shop }),
   me: (session: string) => post<PortalData>("/api/portal/me", { session }),
   startPayment: (session: string, invoiceId: string) =>
     post<{ orderId: string; keyId: string; amount: number; currency: string; description: string }>(

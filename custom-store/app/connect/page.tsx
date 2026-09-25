@@ -20,7 +20,9 @@ export default async function ConnectPage({
     const { session } = await api.exchange(token);
     await setPortalSession(session);
   } catch {
-    redirect("/login?expired=1");
+    // Either the token aged out (they are short-lived on purpose) or it was
+    // never ours. Both look the same from here, and should.
+    redirect("/login?error=expired");
   }
 
   redirect("/");

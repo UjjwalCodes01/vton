@@ -1,5 +1,7 @@
 import type { ActionFunctionArgs } from "react-router";
+import db from "../db.server";
 import { adminJson } from "../admin/api.server";
+import { accountForShop } from "../invoices/account.server";
 import { mintPortalSession, readHandoff } from "../invoices/portal.server";
 
 /**
@@ -10,9 +12,21 @@ import { mintPortalSession, readHandoff } from "../invoices/portal.server";
  */
 export const action = async ({ request }: ActionFunctionArgs) => {
   const body = (await request.json().catch(() => ({}))) as { token?: string };
-  const shop = readHandoff(String(body.token || ""));
-  if (!shop) return adminJson({ error: "That sign-in link has expired. Open the portal from your Shopify admin again." }, 401);
-  return adminJson({ shop, session: mintPortalSession(shop) });
+  const subject = readHandoff(String(body.token || ""));
+  if (!subject) {
+    return adminJson({ error: "That sign-in link has expired. Sign in again." }, 401);
+  }
+
+  // A handoff names either an account (Google sign-in) or a shop (arrived from
+  // the Shopify admin). Both end up as an account session.
+  if (subject.startsWith("account:")) {
+    const account = await db.account.findUnique({ where: { id: subject.slice("account:".length) } });
+    if (!account) return adminJson({ error: "That account no longer exists." }, 401);
+    return adminJson({ email: account.email, session: mintPortalSession(account.id) });
+  }
+
+  const account = await accountForShop(subject);
+  return adminJson({ shop: subject, email: account.email, session: mintPortalSession(account.id) });
 };
 
 export const loader = () => new Response("Method not allowed", { status: 405 });

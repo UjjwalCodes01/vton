@@ -406,3 +406,51 @@ model CreditInvoice {
   @@index([shop, status])
   @@index([status, createdAt])
 }
+
+/// A person who signs in to the platform.
+///
+/// Identity used to *be* a Shopify shop: if you were not a merchant with the app
+/// installed, you did not exist. An account decouples the two — you sign in with
+/// Google, and connecting a store becomes something you do, not something you
+/// must do first. A merchant arriving from their Shopify admin still gets an
+/// account; it is just created for them instead of by them.
+model Account {
+  id         String   @id
+  /// Lower-cased. The natural key across sign-in methods, so a merchant who
+  /// later signs in with Google lands on the account their store already made.
+  email      String   @unique
+  name       String?
+  avatarUrl  String?
+  /// Google's stable subject id. Kept separate from the email, which people change.
+  googleSub  String?  @unique
+
+  /// Credits held by the account itself, for the Playground and (later) API
+  /// keys. A connected store's plan allowance is separate and stays on the store.
+  credits    Int      @default(0)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  lastSeenAt DateTime?
+
+  stores     AccountStore[]
+
+  @@index([googleSub])
+}
+
+/// Links an account to a store it may manage.
+///
+/// Many-to-many on purpose: one person can run several stores, and one store can
+/// be reachable by more than one person without either of them sharing a login.
+model AccountStore {
+  accountId String
+  shop      String
+  /// How this link came about: "shopify" (arrived from the store admin) or
+  /// "manual" (connected from the platform). Useful when revoking.
+  via       String   @default("shopify")
+  linkedAt  DateTime @default(now())
+
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@id([accountId, shop])
+  @@index([shop])
+}

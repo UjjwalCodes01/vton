@@ -69,15 +69,25 @@ export function readHandoff(token: string): string | null {
  *
  * Separate from the handoff on purpose — a different `k` — so a session cookie
  * can never be replayed as a fresh handoff, or the other way round.
+ *
+ * A session names an account. Sessions minted before accounts existed named a
+ * shop instead, and readPortalSession still understands those so nobody is
+ * logged out by this change; they disappear on their own within 12 hours.
  */
-export function mintPortalSession(shop: string) {
+export function mintPortalSession(accountId: string) {
   const payload = Buffer.from(
-    JSON.stringify({ s: shop, x: Date.now() + PORTAL_SESSION_HOURS * 3600_000, k: "session" }),
+    JSON.stringify({ a: accountId, x: Date.now() + PORTAL_SESSION_HOURS * 3600_000, k: "session" }),
   ).toString("base64url");
   return `${payload}.${sign(payload)}`;
 }
 
-export function readPortalSession(token: string | undefined | null): string | null {
+export interface PortalSubject {
+  accountId?: string;
+  /** Only set for a session issued before accounts existed. */
+  shop?: string;
+}
+
+export function readPortalSession(token: string | undefined | null): PortalSubject | null {
   const dot = String(token || "").lastIndexOf(".");
   if (dot < 1) return null;
 
@@ -86,9 +96,16 @@ export function readPortalSession(token: string | undefined | null): string | nu
 
   try {
     const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-    if (data.k !== "session" || typeof data.s !== "string" || !data.x || data.x < Date.now()) return null;
-    return data.s;
+    if (data.k !== "session" || !data.x || data.x < Date.now()) return null;
+    if (typeof data.a === "string") return { accountId: data.a };
+    if (typeof data.s === "string") return { shop: data.s };
+    return null;
   } catch {
     return null;
   }
+}
+
+/** Where Google sends the browser back to. */
+export function googleConfigured() {
+  return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 }
