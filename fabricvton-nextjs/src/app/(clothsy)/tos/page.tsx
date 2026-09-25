@@ -13,32 +13,37 @@ export default function TermsOfService() {
             <div className="legal-header">
               <h1>Terms of Service</h1>
               <p className="effective-date">Effective Date: April 17th, 2025</p>
+              <p className="effective-date">Last Updated: 25th September, 2026</p>
             </div>
           </FadeUp>
           
           <FadeUp delay={0.1}>
             <div className="legal-content">
               <p>
-                Welcome to FabricVTON! By installing our Shopify Application or using our website, you agree to these Terms of Service. Please read them carefully.
+                Welcome to Clothsy AI. By installing our Shopify app or WooCommerce plugin, or by using our website or billing portal, you agree to these Terms of Service. Please read them carefully.
               </p>
 
               <h2>1. Acceptance of Terms</h2>
               <p>
-                By accessing or using the FabricVTON application ("App"), website, or services (collectively, the "Service"), provided by FabricVTON ("we," "us," or "our"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, you may not use the Service.
+                By accessing or using the Clothsy AI application, plugin, website, billing portal, or services (collectively, the "Service"), provided by FabricVTON ("we," "us," or "our"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, you may not use the Service.
               </p>
 
               <h2>2. Description of Service</h2>
               <p>
-                FabricVTON is a Shopify application that provides AI-powered virtual try-on capabilities for e-commerce stores. The Service allows merchants to offer their customers the ability to visualize products on themselves or models using artificial intelligence.
+                Clothsy AI provides AI-powered virtual try-on for online stores, available as a Shopify app and as a WooCommerce plugin. The Service lets merchants offer their shoppers the ability to see a product on themselves before buying. It includes a billing portal where merchants manage their plan, credits and invoices.
+              </p>
+              <p>
+                Generating a try-on relies on third-party AI processing infrastructure. We select and manage those providers, and we may change them at any time without notice, provided the Service continues to function as described.
               </p>
 
               <h2>3. User Accounts</h2>
-              <p>To use the Service, you must be a registered Shopify merchant. By installing the App:</p>
+              <p>To use the Service you must operate a Shopify or WooCommerce store, or hold an account on our billing portal. By installing the app or plugin, or by signing in to the portal:</p>
               <ul>
                 <li>You represent that you are at least 18 years of age.</li>
                 <li>You agree to provide accurate and complete information about yourself and your business.</li>
-                <li>You are responsible for maintaining the security of your Shopify account and store.</li>
+                <li>You are responsible for maintaining the security of your store and of any account used to reach the Service, including the sign-in method you use for our billing portal.</li>
                 <li>You are responsible for all activities that occur under your account.</li>
+                <li>You are responsible for obtaining any consent your shoppers must give before their photograph is processed, and for complying with the privacy laws that apply to them.</li>
               </ul>
 
               <h2>4. Acceptable Use</h2>
@@ -52,18 +57,28 @@ export default function TermsOfService() {
               </ul>
 
               <h2>5. Billing and Payments</h2>
-              <p>The Service is billed through Shopify's billing system.</p>
+              <p>How you are charged depends on where your store runs:</p>
               <ul>
-                <li><strong>Subscription Plans:</strong> We offer various subscription plans. Fees are billed in advance on a recurring basis (monthly or annually) as specified in your plan.</li>
-                <li><strong>Usage Charges:</strong> Some plans may include usage limits. Overage fees may apply if you exceed these limits, as described in the plan details.</li>
-                <li><strong>Refunds:</strong> Refunds are handled in accordance with Shopify's refund policy and at our sole discretion.</li>
-                <li><strong>Changes to Pricing:</strong> We reserve the right to modify our pricing plans with notice to you.</li>
+                <li><strong>Shopify stores</strong> are billed through Shopify&apos;s own billing system, and those charges appear on your Shopify invoice.</li>
+                <li><strong>WooCommerce stores</strong> are billed through our payment processor. Subscriptions renew monthly until cancelled.</li>
+                <li><strong>Credit top-ups</strong> may be agreed with us separately and are paid through our payment processor from the billing portal.</li>
+              </ul>
+              <ul>
+                <li><strong>Subscription plans:</strong> fees are billed in advance on a recurring basis, monthly or annually, as specified in your plan.</li>
+                <li><strong>Try-on allowance:</strong> each plan includes a number of try-ons per billing cycle. The allowance resets at the start of each cycle and unused try-ons do not carry over.</li>
+                <li><strong>Purchased credits:</strong> credits bought through an invoice are added to your current billing cycle and are used after your plan&apos;s own allowance. Like the plan allowance, they expire when that cycle resets and are not refunded or carried forward. The invoice states this before you pay.</li>
+                <li><strong>Usage beyond the allowance:</strong> some plans permit additional try-ons beyond the included allowance at the rate shown in your plan. These are only ever charged where the billing platform supports them and where you have approved the applicable spending cap.</li>
+                <li><strong>Refunds:</strong> refunds on Shopify follow Shopify&apos;s refund policy. All other refunds are at our discretion. A refund does not reverse credits that have already been granted or used.</li>
+                <li><strong>Changes to pricing:</strong> we may modify our pricing with notice to you. Changes do not affect a billing cycle you have already paid for.</li>
+                <li><strong>Taxes:</strong> amounts are exclusive of taxes unless stated otherwise, and you are responsible for any taxes applicable to you.</li>
               </ul>
 
               <h2>6. Intellectual Property</h2>
               <ul>
                 <li><strong>Our Rights:</strong> We retain all rights, title, and interest in and to the Service, including all software, code, designs, and intellectual property.</li>
-                <li><strong>Your Rights:</strong> You retain ownership of your product images and store data. By using the Service, you grant us a limited license to process your images solely for the purpose of providing the virtual try-on functionality.</li>
+                <li><strong>Your Rights:</strong> You retain ownership of your product images and store data. By using the Service, you grant us a limited licence to process your images, and photographs your shoppers choose to submit, solely for the purpose of providing the virtual try-on functionality.</li>
+                <li><strong>Product images:</strong> You confirm you hold the rights necessary for us to process the product images you make available through the Service.</li>
+                <li><strong>Shared looks:</strong> Where a shopper chooses to share a try-on, we host a copy of that image at a link on our own domain so the link keeps working. Shared looks are deleted automatically after 30 days, and sooner on request.</li>
               </ul>
 
               <h2>7. Data Privacy and Security</h2>
