@@ -21,6 +21,7 @@ function Icon({ name }: { name: string }) {
 
 const MAIN: [string, string, string][] = [
   ["/", "Overview", "overview"],
+  ["/playground", "Playground", "playground"],
   ["/generations", "Generations", "generations"],
   ["/billing", "Billing", "billing"],
 ];
@@ -45,7 +46,8 @@ export function Shell({
     <div className="app">
       <aside className="side">
         <div className="brand">
-          <span className="brand-mark">C</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="brand-mark" src="/icon.png" alt="" width={28} height={28} />
           <span className="brand-text">
             <b>Clothsy AI</b>
             <em>platform</em>
@@ -59,13 +61,6 @@ export function Shell({
               <span>{label}</span>
             </Link>
           ))}
-
-          <span className="nav-label">Coming soon</span>
-          <span className="nav-link is-soon">
-            <Icon name="playground" />
-            <span>Playground</span>
-            <span className="soon-tag">soon</span>
-          </span>
 
           <span className="nav-label">Account</span>
           {ACCOUNT.map(([href, label, icon]) => (

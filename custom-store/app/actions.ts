@@ -59,3 +59,50 @@ export async function confirmPayment(
     };
   }
 }
+
+// ─── Playground ────────────────────────────────────────────────────────────
+
+export interface RunState {
+  error?: string;
+  taskId?: string;
+  token?: string;
+  creditsLeft?: number;
+}
+
+/**
+ * Starts a Playground run.
+ *
+ * The images arrive as data URLs and are forwarded straight through: the
+ * browser never holds a session token, and the backend is the only thing that
+ * talks to the generator.
+ */
+export async function runPlayground(payload: {
+  personImage: string;
+  garmentImage: string;
+  title: string;
+}): Promise<RunState> {
+  const session = await getPortalSession();
+  if (!session) return { error: "Your session ended. Sign in again." };
+
+  try {
+    const started = await api.playgroundStart(session, payload);
+    revalidatePath("/", "layout");
+    return started;
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : "That run could not be started." };
+  }
+}
+
+export async function pollPlayground(taskId: string) {
+  const session = await getPortalSession();
+  if (!session) return { status: "failed" as const, message: "Your session ended. Sign in again." };
+
+  try {
+    return await api.playgroundStatus(session, taskId);
+  } catch (error) {
+    return {
+      status: "failed" as const,
+      message: error instanceof ApiError ? error.message : "Lost contact with the run.",
+    };
+  }
+}

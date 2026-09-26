@@ -36,7 +36,8 @@ export default async function LoginPage({
     <main className="centre">
       <div className="signin">
         <div className="brand">
-          <span className="brand-mark">C</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="brand-mark" src="/icon.png" alt="" width={28} height={28} />
           <span className="brand-text">
             <b>Clothsy AI</b>
             <em>platform</em>

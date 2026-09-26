@@ -98,6 +98,17 @@ export interface Generations {
 export const api = {
   /** Swaps the one-time handoff token from Shopify for a portal session. */
   exchange: (token: string) => post<{ shop?: string; email?: string; session: string }>("/api/portal/session", { token }),
+  playgroundStart: (session: string, payload: { personImage: string; garmentImage: string; title: string }) =>
+    post<{ taskId: string; token: string; creditsLeft: number }>("/api/portal/playground", {
+      session,
+      step: "start",
+      ...payload,
+    }),
+  playgroundStatus: (session: string, taskId: string) =>
+    post<{ status: "pending" | "success" | "failed"; imageToken?: string; message?: string }>(
+      "/api/portal/playground",
+      { session, step: "status", taskId },
+    ),
   generations: (session: string, page = 1, shop?: string) =>
     post<Generations>("/api/portal/generations", { session, page, shop }),
   me: (session: string) => post<PortalData>("/api/portal/me", { session }),
