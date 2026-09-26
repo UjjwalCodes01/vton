@@ -1,3 +1,6 @@
+import "server-only";
+import { redactSecrets } from "./format";
+
 // The dashboard's only link to the product's data.
 //
 // Every call is server-to-server with the shared admin token; the browser never
@@ -44,8 +47,29 @@ async function call<T>(path: string, options: { method?: string; body?: unknown;
     throw new ApiError(response.status, "The API returned something that wasn't JSON.");
   }
 
-  if (!response.ok) throw new ApiError(response.status, (data.error as string) || `Request failed (${response.status}).`);
-  return data as T;
+  if (!response.ok) {
+    // This text reaches the browser through action state, so keep it short and
+    // free of anything credential-shaped.
+    const message = typeof data.error === "string" ? redactSecrets(data.error, 200) : "";
+    throw new ApiError(response.status, message || `Request failed (${response.status}).`);
+  }
+  return stripSecrets(data) as T;
+}
+
+// The backend returns whole rows in places (the store detail spreads the full
+// store record, including the encrypted site secret, the Klaviyo key and the
+// subscription's checkout token). None of that is ever shown here, so drop any
+// credential-shaped key before the data reaches a page or a client component.
+const isSecretKey = (key: string) => /secret|token|password|api_?key/i.test(key) || /Enc$/.test(key);
+
+function stripSecrets(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stripSecrets);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).filter(([key]) => !isSecretKey(key)).map(([key, item]) => [key, stripSecrets(item)]),
+    );
+  }
+  return value;
 }
 
 const query = (params: Record<string, string | number | undefined>) => {
@@ -57,6 +81,15 @@ const query = (params: Record<string, string | number | undefined>) => {
   return text ? `?${text}` : "";
 };
 
+// Keys the server decides; a form field with one of these names is dropped.
+// (Invoice forms legitimately send their own shop and action, so only `actor`
+// is reserved there.)
+const RESERVED = ["shop", "action", "actor"];
+
+function without(payload: Record<string, unknown>, drop: string[]) {
+  return Object.fromEntries(Object.entries(payload).filter(([key]) => !drop.includes(key)));
+}
+
 export const api = {
   overview: <T>() => call<T>("/api/admin/overview"),
   stores: <T>(params: Record<string, string | number | undefined>) => call<T>(`/api/admin/stores${query(params)}`),
@@ -64,9 +97,10 @@ export const api = {
   analytics: <T>(days: number) => call<T>(`/api/admin/analytics${query({ days })}`),
   audit: <T>(page: number) => call<T>(`/api/admin/audit${query({ page })}`),
   failures: <T>(page: number) => call<T>(`/api/admin/failures${query({ page })}`),
+  // Server-derived fields go last so nothing in a form can override them.
   act: <T>(shop: string, action: string, payload: Record<string, unknown>, actor: string) =>
-    call<T>("/api/admin/store", { method: "POST", actor, body: { shop, action, actor, ...payload } }),
+    call<T>("/api/admin/store", { method: "POST", actor, body: { ...without(payload, RESERVED), shop, action, actor } }),
   invoices: <T>(shop?: string) => call<T>(`/api/admin/invoices${query({ shop })}`),
   invoiceAct: <T>(payload: Record<string, unknown>, actor: string) =>
-    call<T>("/api/admin/invoices", { method: "POST", actor, body: { actor, ...payload } }),
+    call<T>("/api/admin/invoices", { method: "POST", actor, body: { ...without(payload, ["actor"]), actor } }),
 };

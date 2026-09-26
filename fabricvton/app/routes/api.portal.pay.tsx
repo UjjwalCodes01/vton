@@ -3,12 +3,13 @@ import db from "../db.server";
 import { adminJson } from "../admin/api.server";
 import { ownsStore, subjectFromSession } from "../invoices/subject.server";
 import {
-  applyPaidInvoice,
+  confirmAndApply,
   checkoutSignatureValid,
   InvoiceError,
   orderForInvoice,
   razorpayKeyId,
 } from "../invoices/invoice.server";
+import { readJsonLimited } from "../bodylimit.server";
 
 /**
  * Starting a payment, and finishing one.
@@ -23,7 +24,7 @@ import {
  */
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
-    const body = (await request.json().catch(() => ({}))) as Record<string, string>;
+    const body = (await readJsonLimited(request)) as Record<string, string>;
     const subject = await subjectFromSession(body.session);
     if (!subject) return adminJson({ error: "Session expired." }, 401);
 
@@ -62,7 +63,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         return adminJson({ error: "That payment could not be verified." }, 400);
       }
 
-      const { invoice: updated, granted } = await applyPaidInvoice(invoice.id, paymentId);
+      // A valid checkout signature proves the payment was authorised, not that
+      // it was captured — so the order's own status decides, same as the
+      // webhook. If capture lags, the webhook applies the credits when it lands.
+      const confirmed = await confirmAndApply(orderId, paymentId);
+      if (!confirmed || !("granted" in confirmed) || (!confirmed.granted && confirmed.invoice.status !== "paid")) {
+        return adminJson({
+          ok: true,
+          pending: true,
+          message: "Payment received. Your credits will appear in a minute or two, once it clears.",
+        });
+      }
+      const { invoice: updated, granted } = confirmed;
       return adminJson({
         ok: true,
         credits: updated.credits,

@@ -741,8 +741,8 @@
         return parseJsonSafely(res).then(function (data) {
           if (!res.ok) {
             var message = messageForStatus(res.status, data.error || data.message || "");
-            // The backend returns a correlation id rather than provider detail,
-            // which gives the shopper something concrete to quote to support.
+            // The backend returns a correlation id rather than internal error
+            // detail, which gives the shopper something concrete to quote to support.
             if (data.requestId && res.status >= 500) {
               message += " (ref: " + data.requestId + ")";
             }
@@ -897,9 +897,9 @@
   /**
    * Turns the result into a link on our own domain before sharing it.
    *
-   * The image URL the panel renders is short-lived and names our provider, so
-   * it is never what gets pasted into a chat: the backend stores a copy and
-   * hands back a branded page that carries the product and a way to buy it.
+   * The image URL the panel renders is short-lived, so it is never what gets
+   * pasted into a chat: the backend keeps a copy for 30 days and hands back a
+   * branded page that carries the product and a way to buy it.
    */
   function shareLook() {
     if (!lastResult) return;

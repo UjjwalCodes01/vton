@@ -9,20 +9,39 @@
 import { useEffect, useRef, useState } from "react";
 import { pollPlayground, runPlayground } from "@/app/actions";
 
-const MAX_BYTES = 8 * 1024 * 1024;
+/** What a phone may hand us; it is shrunk before it goes anywhere. */
+const MAX_BYTES = 20 * 1024 * 1024;
+/** Longest edge after resizing — ample for try-on, small enough to upload fast. */
+const MAX_EDGE = 1600;
 const POLL_MS = 3000;
 /** Generations settle well inside this; past it something is wrong. */
 const GIVE_UP_MS = 3 * 60 * 1000;
 
 type Phase = "idle" | "running" | "done" | "error";
 
-function readFile(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("That file could not be read."));
-    reader.readAsDataURL(file);
+/**
+ * Reads a photo and re-draws it as a JPEG no larger than MAX_EDGE.
+ *
+ * Phone photos are routinely 5–12MB, and two of them as data URLs would blow
+ * past what a server action accepts. Re-drawing also drops the camera's EXIF —
+ * location included — before the photo leaves the device.
+ */
+async function readFile(file: File): Promise<string> {
+  const bitmap = await createImageBitmap(file).catch(() => {
+    throw new Error("That file could not be read as an image.");
   });
+  const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("That file could not be read as an image.");
+  // White under any transparency, since JPEG has none.
+  context.fillStyle = "#fff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  return canvas.toDataURL("image/jpeg", 0.86);
 }
 
 function Drop({
@@ -53,11 +72,11 @@ function Drop({
         onChange={async (event) => {
           const file = event.target.files?.[0];
           if (!file) return;
-          if (file.size > MAX_BYTES) return onPick(null, "That image is larger than 8MB.");
+          if (file.size > MAX_BYTES) return onPick(null, "That image is larger than 20MB.");
           try {
             onPick(await readFile(file));
-          } catch {
-            onPick(null, "That file could not be read.");
+          } catch (error) {
+            onPick(null, error instanceof Error ? error.message : "That file could not be read.");
           }
         }}
       />
@@ -65,7 +84,7 @@ function Drop({
   );
 }
 
-export function Playground({ credits, apiBase }: { credits: number; apiBase: string }) {
+export function Playground({ credits }: { credits: number }) {
   const [person, setPerson] = useState<string | null>(null);
   const [garment, setGarment] = useState<string | null>(null);
   const [title, setTitle] = useState("");
@@ -89,33 +108,41 @@ export function Playground({ credits, apiBase }: { credits: number; apiBase: str
     setMessage("");
     setResult(null);
 
-    const started = await runPlayground({ personImage: person, garmentImage: garment, title });
-    if (started.error || !started.taskId) {
+    const fail = (text: string) => {
       setPhase("error");
-      setMessage(started.error || "That run could not be started.");
-      return;
+      setMessage(text);
+    };
+
+    let started: Awaited<ReturnType<typeof runPlayground>>;
+    try {
+      started = await runPlayground({ personImage: person, garmentImage: garment, title });
+    } catch {
+      return fail("That run could not be started. Check your connection and try again.");
     }
+    if (started.error || !started.taskId) return fail(started.error || "That run could not be started.");
     if (typeof started.creditsLeft === "number") setLeft(started.creditsLeft);
 
+    const runId = started.taskId;
     const deadline = Date.now() + GIVE_UP_MS;
     const check = async () => {
-      const status = await pollPlayground(started.taskId!);
+      let status: Awaited<ReturnType<typeof pollPlayground>>;
+      try {
+        status = await pollPlayground(runId);
+      } catch {
+        // A dropped request is not a failed run; keep trying until the deadline.
+        if (Date.now() > deadline) return fail("Lost contact with the run. Check Generations in a minute.");
+        timer.current = setTimeout(check, POLL_MS);
+        return;
+      }
 
       if (status.status === "success" && "imageToken" in status && status.imageToken) {
-        setResult(`${apiBase}/i/${status.imageToken}`);
+        // Served through this site, so the page only ever talks to its own origin.
+        setResult(`/i/${status.imageToken}`);
         setPhase("done");
         return;
       }
-      if (status.status === "failed") {
-        setPhase("error");
-        setMessage(status.message || "That try-on did not finish.");
-        return;
-      }
-      if (Date.now() > deadline) {
-        setPhase("error");
-        setMessage("This is taking longer than expected. Check Generations in a minute.");
-        return;
-      }
+      if (status.status === "failed") return fail(status.message || "That try-on did not finish.");
+      if (Date.now() > deadline) return fail("This is taking longer than expected. Check Generations in a minute.");
       timer.current = setTimeout(check, POLL_MS);
     };
     timer.current = setTimeout(check, POLL_MS);

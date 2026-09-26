@@ -75,8 +75,10 @@ it deploys as-is.
 
 ## Security notes
 
-- Sessions are HMAC-signed, `HttpOnly`, `SameSite=Strict`, and last 12 hours.
-- Failed logins are throttled per IP and email; an unknown address costs the
+- Sessions are HMAC-signed, `HttpOnly`, `Secure`, `SameSite=Strict`, `__Host-`
+  prefixed in production, and last 8 hours. They are stateless, so signing out
+  clears the cookie but cannot revoke a copied one before it expires.
+- Failed logins are throttled per IP and email, per IP, and globally; an unknown address costs the
   same scrypt as a known one, so the form cannot be used to enumerate accounts.
 - Destructive actions confirm, and deleting a store's data requires typing the
   store's domain.

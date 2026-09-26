@@ -3,6 +3,7 @@ import { authenticate } from "../shopify.server";
 import { clientIpFrom } from "../ratelimit.server";
 import { handleShareRequest } from "../share/sharehandler.server";
 import { logInternalError, newRequestId } from "../requestid.server";
+import { readJsonLimited } from "../bodylimit.server";
 
 // POST /apps/<proxy>/api/tryon/share — turns a finished try-on into a link on
 // our own domain. Identity comes from Shopify's signed app proxy.
@@ -25,7 +26,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         : new URL(request.url).searchParams.get("shop") || "";
     if (!shop) return json({ error: "This request could not be verified.", requestId }, 401);
 
-    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const body = (await readJsonLimited(request)) as Record<string, unknown>;
     const result = await handleShareRequest({ shop, clientIp: clientIpFrom(request), body });
     return result.ok
       ? json({ url: result.url }, 200)

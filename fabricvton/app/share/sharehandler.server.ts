@@ -10,16 +10,48 @@ function clamp(value: unknown, max: number) {
   return typeof value === "string" ? value.slice(0, max) : null;
 }
 
-/** Only a real http(s) link on the store's own page is worth keeping. */
-function safeUrl(value: unknown) {
+/**
+ * The "Shop this item" link, but only if it points at this store.
+ *
+ * The page it lands on carries our brand, so a link to anywhere else would let
+ * a caller mint a convincing page on our domain that sends people to a site of
+ * their choosing. Shopify links are rebuilt on the shop's own domain (which
+ * redirects to its storefront); WooCommerce links must sit under the site URL
+ * the store proved it controls.
+ */
+async function storeProductUrl(shop: string, value: unknown) {
   const text = clamp(value, 600);
   if (!text) return null;
+
+  let url: URL;
   try {
-    const url = new URL(text);
-    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
+    url = new URL(text);
   } catch {
     return null;
   }
+  if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+
+  const config = await db.shopConfig.findUnique({
+    where: { shop },
+    select: { platform: true, siteUrl: true },
+  });
+
+  if (config?.platform === "woocommerce") {
+    if (!config.siteUrl) return null;
+    const site = new URL(config.siteUrl);
+    const base = site.pathname.replace(/\/+$/, "");
+    const underSite = url.pathname === base || url.pathname.startsWith(`${base}/`);
+    return url.origin === site.origin && underSite ? url.toString() : null;
+  }
+
+  // Shopify: keep only a product path, and put it on the shop's own domain.
+  const productPath =
+    /^\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?(?:collections\/[A-Za-z0-9%._~-]+\/)?products\/[A-Za-z0-9%._~-]+\/?$/i;
+  if (!productPath.test(url.pathname)) return null;
+  const rebuilt = new URL(`https://${shop}${url.pathname}`);
+  const variant = url.searchParams.get("variant");
+  if (variant && /^\d{1,20}$/.test(variant)) rebuilt.searchParams.set("variant", variant);
+  return rebuilt.toString();
 }
 
 export async function handleShareRequest(params: {
@@ -48,17 +80,23 @@ export async function handleShareRequest(params: {
   // The generation must belong to the shop this request was authenticated for,
   // so a caller cannot publish another store's try-on under a link of ours.
   const event = await db.tryOnEvent.findFirst({
-    where: { shop, providerTaskId: generationId },
-    select: { id: true, productTitle: true },
+    where: { shop, OR: [{ id: generationId }, { providerTaskId: generationId }] },
+    select: { id: true, productTitle: true, status: true, providerTaskId: true },
   });
-  if (!event) {
+  if (!event || !event.providerTaskId) {
     return { ok: false as const, status: 404, error: "Unknown try-on." };
   }
+  // Only a settled — and so billed — generation can be shared. Sharing used to
+  // be a way to fetch an image without ever polling, which is what settles it.
+  if (event.status !== "success") {
+    return { ok: false as const, status: 409, error: "That try-on is not finished yet." };
+  }
+  const taskId = event.providerTaskId;
 
   // Sharing the same try-on twice should hand back the same page rather than
   // storing a second copy of the identical image.
   const existing = await db.sharedLook.findFirst({
-    where: { shop, generationId, expiresAt: { gt: new Date() } },
+    where: { shop, generationId: { in: [event.id, taskId] }, expiresAt: { gt: new Date() } },
     orderBy: { createdAt: "desc" },
   });
   if (existing) {
@@ -67,23 +105,25 @@ export async function handleShareRequest(params: {
 
   // The image URL is never taken from the request: it is resolved here, from
   // the provider, for this generation only.
-  let imageUrl = cachedResultUrl(generationId);
+  let imageUrl = cachedResultUrl(taskId);
   if (!imageUrl) {
-    const generation = await getGenerationStatus(generationId);
+    const generation = await getGenerationStatus(taskId);
     if (!generation.resultImageUrl) {
       return { ok: false as const, status: 409, error: "That try-on is not finished yet." };
     }
     imageUrl = generation.resultImageUrl;
-    rememberResultUrl(generationId, imageUrl);
+    rememberResultUrl(taskId, imageUrl);
   }
 
   const look = await createSharedLook({
     shop,
-    generationId,
+    generationId: event.id,
     imageUrl,
-    productTitle: clamp(body.productTitle, 200) || event.productTitle,
-    productUrl: safeUrl(body.productUrl),
-    productImage: safeUrl(body.productImage),
+    // The headline comes from our record of the try-on, never from the request:
+    // it is what the page claims, under our name.
+    productTitle: event.productTitle,
+    productUrl: await storeProductUrl(shop, body.productUrl),
+    productImage: null,
   });
 
   return { ok: true as const, status: 200, url: look.url };

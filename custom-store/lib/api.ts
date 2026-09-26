@@ -1,3 +1,5 @@
+import "server-only";
+
 // The portal's link to Clothsy AI.
 //
 // Everything runs server-side: the merchant's portal session travels in the
@@ -89,7 +91,6 @@ export interface Generations {
     productTitle: string | null;
     createdAt: string;
     seconds: number | null;
-    errorCode: string | null;
     rating: string | null;
     imageUrl: string | null;
   }[];
@@ -97,9 +98,12 @@ export interface Generations {
 
 export const api = {
   /** Swaps the one-time handoff token from Shopify for a portal session. */
-  exchange: (token: string) => post<{ shop?: string; email?: string; session: string }>("/api/portal/session", { token }),
+  exchange: (token: string) =>
+    post<{ shop?: string; email?: string; session: string; bind?: string | null }>("/api/portal/session", { token }),
+  /** Ends every session this account holds, not just this browser's cookie. */
+  signOut: (session: string) => post<{ ok: boolean }>("/api/portal/signout", { session }),
   playgroundStart: (session: string, payload: { personImage: string; garmentImage: string; title: string }) =>
-    post<{ taskId: string; token: string; creditsLeft: number }>("/api/portal/playground", {
+    post<{ taskId: string; creditsLeft: number }>("/api/portal/playground", {
       session,
       step: "start",
       ...payload,
@@ -118,7 +122,7 @@ export const api = {
       { session, invoiceId, step: "start" },
     ),
   confirmPayment: (session: string, invoiceId: string, fields: Record<string, string>) =>
-    post<{ ok: boolean; credits: number; message: string }>("/api/portal/pay", {
+    post<{ ok: boolean; credits?: number; message: string; pending?: boolean }>("/api/portal/pay", {
       session,
       invoiceId,
       step: "confirm",

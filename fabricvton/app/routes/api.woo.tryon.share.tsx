@@ -4,6 +4,7 @@ import { handleShareRequest } from "../share/sharehandler.server";
 import { logInternalError, newRequestId } from "../requestid.server";
 import { corsHeaders, errorResponse } from "../tryon.server";
 import { verifyShopperToken, WooAuthError } from "../woo/auth.server";
+import { readJsonLimited } from "../bodylimit.server";
 
 // POST /api/woo/tryon/share — same thing for WooCommerce stores, authenticated
 // by the store-signed shopper token.
@@ -30,7 +31,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   try {
     const { store } = await verifyShopperToken(tokenFrom(request), request.headers.get("Origin"));
-    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const body = (await readJsonLimited(request)) as Record<string, unknown>;
     const result = await handleShareRequest({ shop: store.shop, clientIp: clientIpFrom(request), body });
 
     if (!result.ok) return errorResponse(result.error, result.status, origin, requestId);

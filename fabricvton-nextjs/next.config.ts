@@ -3,13 +3,29 @@ import type { NextConfig } from "next";
 const CLOTHSY = "https://clothsyai.fabricvton.com";
 
 /**
+ * Security headers sent on every route. The CSP is deliberately limited to directives that cannot block scripts,
+ * styles, images or embeds (framing, <base> and plugins only), so it adds protection without breaking the site.
+ */
+const SECURITY_HEADERS = [
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
+  { key: "Content-Security-Policy", value: "frame-ancestors 'self'; base-uri 'self'; object-src 'none'" },
+];
+
+/**
  * Old URLs that search engines indexed before fabricvton.com became the company site. Each one points to the page
  * that now covers the same thing, with a permanent redirect so rankings carry over.
  *
  * Deliberately NOT redirected: /privacy, /tos and /widget-privacy (the Shopify app and WooCommerce plugin link to
- * them directly) and /tgm (a private prospect page, already disallowed in robots.txt).
+ * them directly) and /tgm (a private prospect page, marked noindex on the page itself).
  */
 const nextConfig: NextConfig = {
+  async headers() {
+    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+  },
   async redirects() {
     return [
       // legacy Clothsy product pages that lived on this domain

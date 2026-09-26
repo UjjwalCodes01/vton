@@ -26,19 +26,24 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     const siteUrl = normaliseStoreUrl(data.siteUrl ?? store.siteUrl);
     const verifyUrl = normaliseStoreUrl(data.verifyUrl);
-    // Origin alone is not enough. A store's identity is its origin *and* path
-    // (storeUrlString), so on a WordPress multisite in subdirectories —
-    // example.com/shopA, example.com/shopB — an origin-only check would let one
-    // site answer the challenge for its neighbour and take the neighbour's
-    // store over. The callback must live under the store's own path.
+    // The callback must be exactly the plugin's own verify route for this site —
+    // not merely somewhere under the site's path. A prefix check stopped a
+    // neighbour on a subdirectory multisite (example.com/shopA answering for
+    // example.com/shopB), but not a child claiming its parent: example.com/shopA
+    // could answer for example.com and take that store over. The plugin always
+    // sends rest_url('clothsy-ai/v1/verify'), which is one of two shapes.
     const sitePrefix = storeUrlString(siteUrl);
     const verifyPath = storeUrlString(verifyUrl);
-    if (verifyPath !== sitePrefix && !verifyPath.startsWith(`${sitePrefix}/`)) {
-      throw new UnsafeUrlError("The verify endpoint must be on the store's own site");
-    }
     // normaliseStoreUrl drops the query string, but plain-permalink sites serve
     // the REST API at ?rest_route=..., so that one parameter is carried over.
     const restRoute = typeof data.verifyUrl === "string" ? new URL(data.verifyUrl).searchParams.get("rest_route") : null;
+    const prettyRoute = verifyPath === `${sitePrefix}/wp-json/clothsy-ai/v1/verify` && !restRoute;
+    const plainRoute =
+      restRoute === "/clothsy-ai/v1/verify" &&
+      (verifyPath === sitePrefix || verifyPath === `${sitePrefix}/index.php`);
+    if (!prettyRoute && !plainRoute) {
+      throw new UnsafeUrlError("The verify endpoint must be this plugin's route on the store's own site");
+    }
 
     const challenge = randomBytes(24).toString("base64url");
     const target = new URL(verifyUrl);

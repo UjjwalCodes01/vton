@@ -431,6 +431,9 @@ model Account {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   lastSeenAt DateTime?
+  /// Signing out stamps this; any portal session issued at or before it is
+  /// refused. Sessions are stateless tokens, so this is what makes sign-out real.
+  sessionsRevokedAt DateTime?
 
   stores     AccountStore[]
 

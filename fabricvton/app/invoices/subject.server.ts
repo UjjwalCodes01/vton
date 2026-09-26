@@ -22,6 +22,8 @@ export async function subjectFromSession(token: string | undefined | null): Prom
   if (read.accountId) {
     const account = await db.account.findUnique({ where: { id: read.accountId } });
     if (!account) return null;
+    // Signed out since this session was issued.
+    if (account.sessionsRevokedAt && (read.issuedAt ?? 0) <= account.sessionsRevokedAt.getTime()) return null;
     return { account, stores: await storesFor(account.id) };
   }
 

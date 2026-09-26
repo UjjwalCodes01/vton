@@ -224,9 +224,10 @@
     return viaRest()
       .then(read)
       .catch(function (err) {
-        // Our own "not available" answers are final; anything else (REST
-        // blocked, 401/403 from a firewall, network) gets one retry via ajax.
-        if (err.status === 404 || err.status === 422 || err.status === 503) throw err;
+        // Our own "not available" and "slow down" answers are final; anything
+        // else (REST blocked, 401/403 from a firewall, network) gets one retry
+        // via ajax.
+        if (err.status === 404 || err.status === 422 || err.status === 429 || err.status === 503) throw err;
         return viaAjax().then(read);
       })
       .then(function (data) {
@@ -967,9 +968,9 @@
   /**
    * Turns the result into a link on our own domain before sharing it.
    *
-   * The image URL the panel renders is short-lived and names our provider, so
-   * it is never what gets pasted into a chat: the backend stores a copy and
-   * hands back a branded page that carries the product and a way to buy it.
+   * The image URL the panel renders is short-lived, so it is never what gets
+   * pasted into a chat: the backend keeps a copy for 30 days and hands back a
+   * branded page that carries the product and a way to buy it.
    */
   function shareLook() {
     if (!lastResult) return;
@@ -1050,16 +1051,20 @@
     button.setAttribute("aria-pressed", "true");
     lastResult.rated = true;
 
-    fetch(ctx.backendUrl + "/api/tryon/feedback", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        shop: ctx.shop,
-        sessionId: sessionId,
-        generationId: lastResult.generationId || "",
-        rating: rating
+    var generationId = lastResult.generationId || "";
+    ensureToken(ctx)
+      .then(function (s) {
+        return fetch(s.apiBase + "/api/woo/tryon/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Clothsy-Token": s.token },
+          body: JSON.stringify({
+            sessionId: sessionId,
+            generationId: generationId,
+            rating: rating
+          })
+        });
       })
-    }).catch(function () {});
+      .catch(function () {});
 
     setTimeout(function () {
       els.rate.style.display = "none";

@@ -147,15 +147,24 @@ export async function storeDetail(shop: string) {
     db.adminAuditLog.findMany({ where: { targetShop: shop }, orderBy: { createdAt: "desc" }, take: 10 }),
   ]);
 
+  // Named fields rather than the whole row: the row also holds the WooCommerce
+  // site secret (encrypted), the store's Klaviyo key and billing tokens, none of
+  // which the dashboard needs or should be able to leak.
+  const safeStore: Record<string, unknown> = { ...store };
+  delete safeStore.siteSecretEnc;
+  delete safeStore.klaviyoApiKey;
+  const safeSubscription: Record<string, unknown> | null = subscription ? { ...subscription } : null;
+  if (safeSubscription) delete safeSubscription.checkoutToken;
+
   return {
     store: {
-      ...store,
+      ...safeStore,
       planLabel: planLabelFor(store),
       planCredits: getPlan(store.plan).credits,
       // What they can actually spend this cycle, top-ups included.
       monthlyCredits: allowanceFor(store),
     },
-    subscription,
+    subscription: safeSubscription,
     recentTryOns,
     leadCount,
     looks,

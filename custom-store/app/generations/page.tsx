@@ -17,7 +17,7 @@ export default async function GenerationsPage({
   try {
     [me, data] = await Promise.all([api.me(session), api.generations(session, Number(page) || 1)]);
   } catch (error) {
-    if (error instanceof ApiError && error.status === 401) redirect("/login?expired=1");
+    if (error instanceof ApiError && error.status === 401) redirect("/session/expired");
     throw error;
   }
 

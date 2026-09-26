@@ -11,7 +11,7 @@ export default async function Docs() {
   try {
     data = await api.me(session);
   } catch (error) {
-    if (error instanceof ApiError && error.status === 401) redirect("/login?expired=1");
+    if (error instanceof ApiError && error.status === 401) redirect("/session/expired");
     throw error;
   }
 

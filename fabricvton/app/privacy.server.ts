@@ -12,6 +12,7 @@
 // The merchant-facing half lives in app/routes/app.privacy.tsx.
 
 import db from "./db.server";
+import { deleteSharedLooks } from "./share/share.server";
 import { RETENTION } from "./retention.server";
 
 export interface CustomerDataExport {
@@ -196,10 +197,19 @@ export async function recordCustomerDataRequest(params: {
 export async function eraseCustomerData(shop: string, email: string) {
   const leads = await db.lead.deleteMany({ where: { shop, email } });
 
-  // Keep the try-on rows so analytics stay correct; only the identifier goes.
+  // Keep the try-on rows so analytics stay correct, but cut every route back to
+  // the person's image: the shared looks go, and without the task id neither
+  // the image proxy nor the merchant portal can fetch the result again.
+  const theirs = await db.tryOnEvent.findMany({
+    where: { shop, leadEmail: email },
+    select: { id: true, providerTaskId: true },
+  });
+  const generationIds = theirs.flatMap((row) => (row.providerTaskId ? [row.id, row.providerTaskId] : [row.id]));
+  const looksDeleted = generationIds.length ? await deleteSharedLooks({ shop, generationIds }) : 0;
+
   const tryOns = await db.tryOnEvent.updateMany({
     where: { shop, leadEmail: email },
-    data: { leadEmail: null },
+    data: { leadEmail: null, providerTaskId: null },
   });
 
   // A stored data-request export is a copy of exactly the data being erased,
@@ -215,7 +225,7 @@ export async function eraseCustomerData(shop: string, email: string) {
     },
   });
 
-  return { leadsDeleted: leads.count, tryOnsAnonymized: tryOns.count };
+  return { leadsDeleted: leads.count, tryOnsAnonymized: tryOns.count, looksDeleted };
 }
 
 /** Closes out a request once the merchant has sent the data to the shopper. */

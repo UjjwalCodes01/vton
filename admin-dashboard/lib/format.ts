@@ -26,3 +26,19 @@ export function timeAgo(value: string | Date | null | undefined) {
 }
 
 export const percent = (used: number, of: number) => (of ? Math.min(100, Math.round((used / of) * 100)) : 0);
+
+/**
+ * Upstream error text is stored verbatim by the backend and can quote a URL,
+ * header or key from a failing provider call. Mask anything credential-shaped
+ * before it is rendered, and cap the length.
+ */
+export function redactSecrets(text: string | null | undefined, max = 300) {
+  if (!text) return "";
+  const masked = String(text)
+    .replace(/\b(bearer|basic)\s+[\w.~+/=-]+/gi, "$1 [redacted]")
+    .replace(/\b([\w-]*(?:key|token|secret|signature|sig|password|auth)[\w-]*)(["']?\s*[=:]\s*["']?)[^\s&"',;]+/gi, "$1$2[redacted]")
+    // Long opaque strings, but keep UUIDs: they are request ids support needs.
+    .replace(/\b[A-Za-z0-9_-]{32,}\b/g, (match) =>
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(match) ? match : "[redacted]");
+  return masked.length > max ? `${masked.slice(0, max)}…` : masked;
+}

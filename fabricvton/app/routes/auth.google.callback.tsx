@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs } from "react-router";
 import { accountForGoogle } from "../invoices/account.server";
-import { profileFromCode, stateValid } from "../invoices/google.server";
+import { profileFromCode, readState } from "../invoices/google.server";
 import { mintHandoff, portalBaseUrl } from "../invoices/portal.server";
 
 /**
@@ -29,7 +29,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   // Both checks matter: the signature proves we minted it, and the cookie proves
   // it came back through the browser that started.
-  if (!code || !state || !stateValid(state) || state !== cookieState) return fail("bad_state");
+  const claims = state ? readState(state) : null;
+  if (!code || !claims || state !== cookieState) return fail("bad_state");
 
   try {
     const profile = await profileFromCode(code);
@@ -37,7 +38,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     console.log(`[Platform] ${account.email} signed in with Google`);
 
     const target = new URL(`${portal}/connect`);
-    target.searchParams.set("token", mintHandoff(`account:${account.id}`));
+    target.searchParams.set("token", mintHandoff(`account:${account.id}`, claims.bind));
 
     const headers = new Headers({ Location: target.toString() });
     headers.append("Set-Cookie", "oauth_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0");

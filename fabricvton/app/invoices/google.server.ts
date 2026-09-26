@@ -8,7 +8,8 @@
 // No OAuth library: this is one redirect and one POST, and a dependency that
 // can read the client secret is a dependency worth not having.
 
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { randomBytes, timingSafeEqual } from "node:crypto";
+import { macFor, signFor } from "../signing.server";
 
 const AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
@@ -18,13 +19,6 @@ const USERINFO_ENDPOINT = "https://openidconnect.googleapis.com/v1/userinfo";
 /** How long a sign-in attempt may sit half-finished. */
 const STATE_TTL_MS = 10 * 60 * 1000;
 
-function secret() {
-  return process.env.PORTAL_SIGNING_SECRET || process.env.SHOPIFY_API_SECRET || "";
-}
-
-function sign(value: string) {
-  return createHmac("sha256", secret()).update(value).digest("base64url");
-}
 
 function equal(a: string, b: string) {
   const left = Buffer.from(a);
@@ -49,25 +43,33 @@ export function redirectUri() {
  * started — the defence against someone feeding a victim's browser an
  * attacker's authorization code.
  */
-export function mintState() {
+export function mintState(bind: string | null = null) {
   const payload = Buffer.from(
-    JSON.stringify({ n: randomBytes(12).toString("base64url"), x: Date.now() + STATE_TTL_MS, k: "oauth" }),
+    JSON.stringify({
+      n: randomBytes(12).toString("base64url"),
+      x: Date.now() + STATE_TTL_MS,
+      k: "oauth",
+      ...(bind ? { b: bind } : {}),
+    }),
   ).toString("base64url");
-  return `${payload}.${sign(payload)}`;
+  return `${payload}.${signFor("oauth", payload)}`;
 }
 
-export function stateValid(state: string) {
+/** The state's contents if it is ours and unexpired, else null. */
+export function readState(state: string): { bind: string | null } | null {
   const dot = String(state || "").lastIndexOf(".");
-  if (dot < 1) return false;
+  if (dot < 1) return null;
 
   const payload = state.slice(0, dot);
-  if (!equal(state.slice(dot + 1), sign(payload))) return false;
+  const expected = macFor("oauth", payload);
+  if (!expected || !equal(state.slice(dot + 1), expected)) return null;
 
   try {
     const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-    return data.k === "oauth" && data.x > Date.now();
+    if (data.k !== "oauth" || !(data.x > Date.now())) return null;
+    return { bind: typeof data.b === "string" ? data.b : null };
   } catch {
-    return false;
+    return null;
   }
 }
 

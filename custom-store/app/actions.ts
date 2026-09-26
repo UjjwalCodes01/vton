@@ -12,6 +12,10 @@ import { api, ApiError } from "@/lib/api";
 import { clearPortalSession, getPortalSession } from "@/lib/session";
 
 export async function signOut() {
+  const session = await getPortalSession();
+  // Revoked on the backend first, so a copy of the cookie stops working too.
+  // A failure here must not trap someone signed in, so it is only logged.
+  if (session) await api.signOut(session).catch((error) => console.error("[signout] revoke failed:", error));
   await clearPortalSession();
   redirect("/login");
 }
@@ -65,7 +69,6 @@ export async function confirmPayment(
 export interface RunState {
   error?: string;
   taskId?: string;
-  token?: string;
   creditsLeft?: number;
 }
 

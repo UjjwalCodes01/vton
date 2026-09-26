@@ -6,7 +6,8 @@
 // is parked in our own bucket and served from our own domain, which is also
 // what keeps the generator from ever seeing a URL that is not ours.
 
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { randomBytes, timingSafeEqual } from "node:crypto";
+import { macFor, signFor } from "../signing.server";
 import db from "../db.server";
 import { createTryOn, getGenerationStatus, mapGarmentCategory, uploadCustomerImage } from "../youcam.server";
 import { putObject, shareStorageConfigured } from "../share/storage.server";
@@ -44,10 +45,6 @@ function decodeDataUrl(value: unknown, label: string) {
 
 // ─── Serving the uploaded garment back ─────────────────────────────────────
 
-function secret() {
-  return process.env.SHARE_SIGNING_SECRET || process.env.SHOPIFY_API_SECRET || "";
-}
-
 /**
  * A signed, expiring link to one uploaded garment.
  *
@@ -56,8 +53,7 @@ function secret() {
  */
 export function signGarmentToken(key: string) {
   const payload = Buffer.from(JSON.stringify({ k: key, x: Date.now() + 2 * 3600_000 })).toString("base64url");
-  const mac = createHmac("sha256", secret()).update(payload).digest("base64url");
-  return `${payload}.${mac}`;
+  return `${payload}.${signFor("garment", payload)}`;
 }
 
 export function readGarmentToken(token: string): string | null {
@@ -65,7 +61,8 @@ export function readGarmentToken(token: string): string | null {
   if (dot < 1) return null;
 
   const payload = token.slice(0, dot);
-  const expected = createHmac("sha256", secret()).update(payload).digest("base64url");
+  const expected = macFor("garment", payload);
+  if (!expected) return null;
   const a = Buffer.from(token.slice(dot + 1));
   const b = Buffer.from(expected);
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
@@ -128,17 +125,17 @@ export async function startPlaygroundRun(params: {
       garmentCategory: mapGarmentCategory(title || null),
     });
 
-    const shop = playgroundShop(params.accountId);
-    await db.tryOnEvent.create({
+    const event = await db.tryOnEvent.create({
       data: {
-        shop,
+        shop: playgroundShop(params.accountId),
         status: "pending",
         productTitle: title || "Playground",
         providerTaskId: task.id,
       },
     });
 
-    return { taskId: task.id, token: signImageToken(shop, task.id) };
+    // Our event id goes to the browser; the generator's task id stays here.
+    return { taskId: event.id };
   } catch (error) {
     await refund().catch(() => {});
     if (error instanceof PlaygroundError) throw error;
@@ -147,13 +144,14 @@ export async function startPlaygroundRun(params: {
   }
 }
 
-export async function playgroundRunStatus(accountId: string, taskId: string) {
+export async function playgroundRunStatus(accountId: string, runId: string) {
   const shop = playgroundShop(accountId);
-  const event = await db.tryOnEvent.findFirst({ where: { shop, providerTaskId: taskId } });
-  if (!event) throw new PlaygroundError(404, "Unknown run.");
+  const event = await db.tryOnEvent.findFirst({ where: { shop, id: runId } });
+  if (!event || !event.providerTaskId) throw new PlaygroundError(404, "Unknown run.");
+  const taskId = event.providerTaskId;
 
   if (event.status === "success") {
-    return { status: "success" as const, imageToken: signImageToken(shop, taskId) };
+    return { status: "success" as const, imageToken: signImageToken(event.id) };
   }
   if (event.status === "failed") {
     return { status: "failed" as const, message: "That try-on did not finish. Your credit has been returned." };
@@ -165,15 +163,15 @@ export async function playgroundRunStatus(accountId: string, taskId: string) {
     // Cached so the image proxy can serve it without asking again.
     rememberResultUrl(taskId, generation.resultImageUrl);
     await db.tryOnEvent.updateMany({
-      where: { shop, providerTaskId: taskId, status: "pending" },
+      where: { id: event.id, status: "pending" },
       data: { status: "success" },
     });
-    return { status: "success" as const, imageToken: signImageToken(shop, taskId) };
+    return { status: "success" as const, imageToken: signImageToken(event.id) };
   }
 
   if (generation.status === "FAILED") {
     const { count } = await db.tryOnEvent.updateMany({
-      where: { shop, providerTaskId: taskId, status: "pending" },
+      where: { id: event.id, status: "pending" },
       data: { status: "failed", errorCode: generation.errorCode ?? null },
     });
     // Only the first observer refunds, so a page left polling cannot mint credits.

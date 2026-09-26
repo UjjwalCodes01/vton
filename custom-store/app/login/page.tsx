@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { googleSignInUrl } from "@/lib/api";
 import { getPortalSession } from "@/lib/session";
 
 const MESSAGES: Record<string, string> = {
@@ -53,7 +52,7 @@ export default async function LoginPage({
 
         {message ? <p className="notice bad" style={{ margin: 0 }}>{message}</p> : null}
 
-        <a className="google" href={googleSignInUrl}>
+        <a className="google" href="/login/google">
           <GoogleMark />
           Continue with Google
         </a>

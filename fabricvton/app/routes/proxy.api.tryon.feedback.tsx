@@ -2,6 +2,7 @@ import type { ActionFunctionArgs } from "react-router";
 import { authenticate } from "../shopify.server";
 import { parseRating, recordTryOnRating } from "../feedback.server";
 import { logInternalError, newRequestId } from "../requestid.server";
+import { readJsonLimited } from "../bodylimit.server";
 
 // POST /apps/<proxy>/api/tryon/feedback — the shopper's rating of a try-on.
 //
@@ -28,7 +29,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const shop = verifiedShopFrom(request, context);
     if (!shop) return jsonError(requestId, "This request could not be verified.", 401);
 
-    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const body = (await readJsonLimited(request)) as Record<string, unknown>;
     const rating = parseRating(body.rating);
     const generationId = typeof body.generationId === "string" ? body.generationId.slice(0, 128) : "";
     if (!rating || !generationId) {

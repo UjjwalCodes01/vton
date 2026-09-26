@@ -1,6 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { actorFrom, adminError, adminJson, AdminApiError, requireAdminToken } from "../admin/api.server";
 import { runStoreAction, storeDetail, type AdminAction } from "../admin/dashboard.server";
+import { readJsonLimited } from "../bodylimit.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -16,7 +17,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     requireAdminToken(request);
-    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const body = (await readJsonLimited(request)) as Record<string, unknown>;
     const shop = String(body.shop || "");
     const act = String(body.action || "") as AdminAction;
     if (!shop || !act) throw new AdminApiError(400, "A shop and an action are required.");

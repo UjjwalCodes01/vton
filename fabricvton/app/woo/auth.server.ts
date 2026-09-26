@@ -1,4 +1,5 @@
 import { Prisma, type ShopConfig } from "@prisma/client";
+import { readTextLimited } from "../bodylimit.server";
 import db from "../db.server";
 import { decryptSecret, hmacBase64Url, hmacHex, safeEqual, sha256Hex } from "./crypto.server";
 import { ALLOW_INSECURE_URLS } from "./net.server";
@@ -75,8 +76,8 @@ export async function verifySignedRequest(request: Request): Promise<{ store: Sh
     throw new WooAuthError(401, "Request timestamp is outside the allowed window. Check the server clock.", "stale_request");
   }
 
-  const body = await request.text();
-  if (body.length > MAX_SIGNED_BODY_BYTES) {
+  const body = await readTextLimited(request, MAX_SIGNED_BODY_BYTES);
+  if (body === null) {
     throw new WooAuthError(413, "Request body too large", "too_large");
   }
 

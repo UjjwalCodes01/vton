@@ -37,11 +37,16 @@ export function requireAdminToken(request: Request) {
   }
 }
 
-/** Who to record in the audit log, as claimed by the authenticated dashboard. */
+/**
+ * Who to record in the audit log, as claimed by the authenticated dashboard.
+ *
+ * The header first: the dashboard sets it from its own session, whereas the
+ * body is assembled partly from form fields.
+ */
 export function actorFrom(request: Request, body?: Record<string, unknown>) {
   const claimed =
-    (typeof body?.actor === "string" && body.actor) ||
     request.headers.get("X-Admin-Actor") ||
+    (typeof body?.actor === "string" && body.actor) ||
     "";
   const actor = claimed.slice(0, 120).trim();
   return actor ? `dashboard:${actor}` : "dashboard";

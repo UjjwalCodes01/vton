@@ -21,6 +21,7 @@ class Clothsy_AI_Admin {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
 		add_action( 'admin_notices', array( __CLASS__, 'plugins_screen_notice' ) );
+		add_action( 'admin_notices', array( __CLASS__, 'encryption_notice' ) );
 
 		foreach ( array( 'connect', 'reverify', 'disconnect', 'toggle', 'save_settings', 'leads_csv', 'choose_plan', 'cancel_plan' ) as $action ) {
 			add_action( 'admin_post_clothsy_ai_' . $action, array( __CLASS__, 'handle_' . $action ) );
@@ -62,6 +63,21 @@ class Clothsy_AI_Admin {
 			esc_html__( 'Clothsy AI is installed. Connect your store to show the virtual try-on button.', 'clothsy-ai' ),
 			esc_url( self::page_url() ),
 			esc_html__( 'Connect now', 'clothsy-ai' )
+		);
+	}
+
+	/**
+	 * Explains, on the Plugins screen and the Clothsy AI screen, that the host
+	 * must enable OpenSSL before the store can connect.
+	 */
+	public static function encryption_notice(): void {
+		$screen = get_current_screen();
+		if ( ! $screen || ! in_array( $screen->id, array( 'plugins', 'woocommerce_page_' . self::PAGE ), true ) || ! current_user_can( self::CAPABILITY ) || Clothsy_AI_Settings::can_encrypt() ) {
+			return;
+		}
+		printf(
+			'<div class="notice notice-error"><p>%s</p></div>',
+			esc_html( Clothsy_AI_Settings::encryption_unavailable_message() )
 		);
 	}
 

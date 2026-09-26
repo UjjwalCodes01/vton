@@ -1,4 +1,5 @@
 import type { ActionFunctionArgs } from "react-router";
+import { readTextLimited } from "../bodylimit.server";
 import { Prisma } from "@prisma/client";
 import db from "../db.server";
 import { syncSubscription, webhookSignatureValid } from "../woo/billing.server";
@@ -16,7 +17,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
 
   // The signature covers the raw bytes, so the body must not be parsed first.
-  const raw = await request.text();
+  // Razorpay's payloads are a few kilobytes; nothing unsigned gets to be bigger.
+  const raw = await readTextLimited(request, 256 * 1024);
+  if (raw === null) return new Response("Payload too large", { status: 413 });
   if (!webhookSignatureValid(raw, request.headers.get("X-Razorpay-Signature"))) {
     return new Response("Invalid signature", { status: 400 });
   }

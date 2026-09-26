@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { requireSession } from "@/lib/guard";
-import { dateTime, number } from "@/lib/format";
+import { dateTime, number, redactSecrets } from "@/lib/format";
 import { Shell } from "@/components/Shell";
 import { Badge, Card, Empty, PageHead, Pager } from "@/components/ui";
 
@@ -34,7 +34,7 @@ export default async function FailuresPage({
                     <td><Link className="mono" href={`/stores/${encodeURIComponent(r.shop)}`}>{r.shop}</Link></td>
                     <td>{r.productTitle || "—"}</td>
                     <td><Badge tone="bad">{r.errorCode || "unknown"}</Badge></td>
-                    <td className="sub clip">{r.errorMessage || "—"}</td>
+                    <td className="sub clip">{redactSecrets(r.errorMessage) || "—"}</td>
                   </tr>
                 ))}
               </tbody>

@@ -118,7 +118,7 @@ export default async function StorePage({ params }: { params: Promise<{ shop: st
         <Card title="Details">
           <dl className="facts">
             <div><dt>Store key</dt><dd className="mono">{s.shop}</dd></div>
-            {s.siteUrl ? <div><dt>Site</dt><dd><a href={s.siteUrl} target="_blank" rel="noopener noreferrer">{s.siteUrl}</a></dd></div> : null}
+            {s.siteUrl ? <div><dt>Site</dt><dd>{/^https?:\/\//i.test(s.siteUrl) ? <a href={s.siteUrl} target="_blank" rel="noopener noreferrer">{s.siteUrl}</a> : s.siteUrl}</dd></div> : null}
             {s.adminEmail ? <div><dt>Contact</dt><dd>{s.adminEmail}</dd></div> : null}
             {isWoo ? <div><dt>Connection</dt><dd>{s.connectionStatus || "—"}{s.pluginVersion ? ` · plugin ${s.pluginVersion}` : ""}</dd></div> : null}
             <div><dt>Installed</dt><dd>{dateOnly(s.installedAt)}</dd></div>

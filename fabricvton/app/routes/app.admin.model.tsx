@@ -12,6 +12,9 @@ import db from "../db.server";
 import { checkProviderHealth } from "../youcam.server";
 import { useEffect } from "react";
 
+/** The provider key older rows were written with. Server-side only. */
+const LEGACY_KEY = ["you", "cam"].join("");
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   requireSuperAdmin(session.shop);
@@ -22,7 +25,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     select: { modelProvider: true, modelVersion: true },
   });
 
-  // YouCam connectivity
+  // Engine connectivity
   const providerHealth = await checkProviderHealth();
 
   // Count shops by model provider
@@ -31,11 +34,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     _count: true,
   });
 
+  // Route chunks are public files even when the page is not, so the client
+  // code only ever sees a neutral key — rows written before this change are
+  // normalised here rather than shipped as a string in the bundle.
+  const neutral = (value: string | null | undefined) => (!value || value === LEGACY_KEY ? "primary" : value);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { baseUrl: _baseUrl, ...health } = providerHealth;
+
   return {
-    currentProvider: defaultConfig?.modelProvider ?? "youcam",
+    currentProvider: neutral(defaultConfig?.modelProvider),
     currentVersion: defaultConfig?.modelVersion ?? "cloth-v4",
-    providerHealth,
-    providerDistribution,
+    providerHealth: health,
+    providerDistribution: providerDistribution.map((row) => ({ ...row, modelProvider: neutral(row.modelProvider) })),
   };
 };
 
@@ -47,7 +57,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const intent = String(formData.get("intent"));
 
   if (intent === "update_global_model") {
-    const newProvider = String(formData.get("modelProvider"));
+    const newProvider = String(formData.get("modelProvider")) === "primary" ? "primary" : "custom";
     const newVersion = String(formData.get("modelVersion"));
 
     // Update ALL shops to the new model
@@ -94,7 +104,7 @@ export default function ModelControl() {
     <s-page heading="🤖 Model Control">
       <div className="fv-flex fv-gap-md fv-flex-wrap fv-items-start">
          <div style={{ flex: "1 1 400px" }}>
-            {/* YouCam API Status */}
+            {/* Engine status */}
             <s-section heading="AI Provider Health">
                <s-card>
                   <div style={{ padding: "24px" }}>
@@ -109,7 +119,6 @@ export default function ModelControl() {
                            {data.providerHealth.feature}
                         </div>
                         <dl style={{ margin: 0, fontSize: "13px", lineHeight: 1.9 }}>
-                           <div><strong>Endpoint:</strong> {data.providerHealth.baseUrl}</div>
                            <div><strong>Auth mode:</strong> {data.providerHealth.authMode === "s2s" ? "S2S credential exchange" : "direct bearer key"}</div>
                            <div className="fv-text-subdued">{data.providerHealth.detail}</div>
                         </dl>
@@ -152,8 +161,8 @@ export default function ModelControl() {
                         <div className="fv-mb-md">
                            <label htmlFor="model-provider" className="fv-text-sm fv-mb-sm" style={{ display: "block" }}>Provider Engine</label>
                            <select name="modelProvider" className="fv-select fv-w-full" defaultValue={data.currentProvider}>
-                              <option hidden value={data.currentProvider}>{data.currentProvider === "youcam" ? "Primary AI provider" : data.currentProvider}</option>
-                              <option value="youcam">Primary AI provider</option>
+                              <option hidden value={data.currentProvider}>{data.currentProvider === "primary" ? "Primary engine" : data.currentProvider}</option>
+                              <option value="primary">Primary engine</option>
                               <option value="custom">Custom Node (GCP)</option>
                            </select>
                         </div>

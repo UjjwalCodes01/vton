@@ -3,6 +3,7 @@ import db from "../db.server";
 import { adminJson } from "../admin/api.server";
 import { subjectFromSession } from "../invoices/subject.server";
 import { signImageToken } from "../share/imageproxy.server";
+import { readJsonLimited } from "../bodylimit.server";
 
 const PAGE_SIZE = 20;
 
@@ -13,7 +14,7 @@ const PAGE_SIZE = 20;
  * the generator returned — the same rule the storefront widget follows.
  */
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const body = (await request.json().catch(() => ({}))) as { session?: string; page?: number; shop?: string };
+  const body = (await readJsonLimited(request)) as { session?: string; page?: number; shop?: string };
   const subject = await subjectFromSession(body.session);
   if (!subject) return adminJson({ error: "Session expired." }, 401);
 
@@ -34,7 +35,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       take: PAGE_SIZE,
       select: {
         id: true, shop: true, status: true, productTitle: true, createdAt: true,
-        processingMs: true, errorCode: true, rating: true, providerTaskId: true,
+        processingMs: true, rating: true, providerTaskId: true,
       },
     }),
     db.tryOnEvent.count({ where: { shop: { in: scope } } }),
@@ -51,11 +52,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       productTitle: row.productTitle,
       createdAt: row.createdAt,
       seconds: row.processingMs ? Math.round(row.processingMs / 100) / 10 : null,
-      errorCode: row.errorCode,
       rating: row.rating,
       imageUrl:
         row.status === "success" && row.providerTaskId
-          ? `/i/${signImageToken(row.shop, row.providerTaskId)}`
+          ? `/i/${signImageToken(row.id)}`
           : null,
     })),
   });

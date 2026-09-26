@@ -21,6 +21,12 @@ class Clothsy_AI_Rest {
 	/** How long a shopper token stays valid. */
 	const TOKEN_TTL = 600;
 
+	/** Tokens one visitor address may mint per throttle window. */
+	const MINT_LIMIT = 30;
+
+	/** Length of the throttle window, in seconds. */
+	const MINT_WINDOW = 600;
+
 	public static function init(): void {
 		add_action( 'rest_api_init', array( __CLASS__, 'register_routes' ) );
 		add_action( 'wp_ajax_clothsy_ai_session', array( __CLASS__, 'ajax_session' ) );
@@ -122,7 +128,7 @@ class Clothsy_AI_Rest {
 		}
 
 		$product = $product_id ? wc_get_product( $product_id ) : null;
-		if ( ! $product || 'publish' !== $product->get_status() || ! Clothsy_AI_Product_Meta::is_enabled_for( $product ) ) {
+		if ( ! $product || ! self::shopper_can_see( $product ) || ! Clothsy_AI_Product_Meta::is_enabled_for( $product ) ) {
 			return new WP_Error( 'clothsy_ai_no_product', __( 'Virtual try-on is not available for this product.', 'clothsy-ai' ), array( 'status' => 404 ) );
 		}
 
@@ -132,7 +138,7 @@ class Clothsy_AI_Rest {
 			$variation = wc_get_product( $variation_id );
 			// The variation must belong to this product, or a shopper could mix
 			// one product's title with another's image.
-			if ( ! $variation || $variation->get_parent_id() !== $product->get_id() ) {
+			if ( ! $variation || $variation->get_parent_id() !== $product->get_id() || 'publish' !== $variation->get_status() ) {
 				return new WP_Error( 'clothsy_ai_bad_variation', __( 'That product option could not be found.', 'clothsy-ai' ), array( 'status' => 404 ) );
 			}
 			$image_id = (int) $variation->get_image_id();
@@ -143,6 +149,12 @@ class Clothsy_AI_Rest {
 		$image_url = Clothsy_AI_Product_Meta::image_url( $image_id );
 		if ( ! $image_url ) {
 			return new WP_Error( 'clothsy_ai_no_image', __( 'This product has no image to try on.', 'clothsy-ai' ), array( 'status' => 422 ) );
+		}
+
+		// Counted only once a token is about to be issued, so the checks above
+		// stay cheap to fail and don't eat into a real shopper's allowance.
+		if ( ! self::within_mint_limit() ) {
+			return new WP_Error( 'clothsy_ai_rate_limited', __( 'Too many try-on requests from your connection. Please wait a few minutes and try again.', 'clothsy-ai' ), array( 'status' => 429 ) );
 		}
 
 		$claims = array(
@@ -162,6 +174,58 @@ class Clothsy_AI_Rest {
 			'apiBase'   => untrailingslashit( CLOTHSY_AI_API_BASE ),
 			'expiresIn' => self::TOKEN_TTL,
 		);
+	}
+
+	/**
+	 * Whether a logged-out shopper could open this product's page: published,
+	 * not hidden from the catalog, and not password-protected. Anything else
+	 * (drafts, private or scheduled products, hidden ones) never gets a token.
+	 *
+	 * @param WC_Product $product Product.
+	 */
+	private static function shopper_can_see( WC_Product $product ): bool {
+		if ( 'publish' !== $product->get_status() ) {
+			return false;
+		}
+		if ( 'hidden' === $product->get_catalog_visibility() ) {
+			return false;
+		}
+		return ! post_password_required( $product->get_id() );
+	}
+
+	/**
+	 * Cheap per-address throttle on minting, so one visitor can't script the
+	 * endpoint to burn through the store's allowance. Counts are kept in a
+	 * transient keyed on a hash of the address; the address itself is never
+	 * stored. Fixed window: the count resets MINT_WINDOW seconds after the
+	 * first mint in it.
+	 *
+	 * A site behind a proxy that doesn't pass the visitor's address through
+	 * sees every shopper as one address; such sites can raise the limit with
+	 * the clothsy_ai_mint_limit filter.
+	 */
+	private static function within_mint_limit(): bool {
+		$address = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+		if ( '' === $address ) {
+			return true;
+		}
+		$key    = 'clothsy_ai_mint_' . substr( hash_hmac( 'sha256', $address, wp_salt( 'nonce' ) ), 0, 32 );
+		$bucket = get_transient( $key );
+		$now    = time();
+
+		if ( ! is_array( $bucket ) || ! isset( $bucket['n'], $bucket['until'] ) || $bucket['until'] <= $now ) {
+			$bucket = array(
+				'n'     => 0,
+				'until' => $now + self::MINT_WINDOW,
+			);
+		}
+		$limit = (int) apply_filters( 'clothsy_ai_mint_limit', self::MINT_LIMIT );
+		if ( $limit > 0 && $bucket['n'] >= $limit ) {
+			return false;
+		}
+		++$bucket['n'];
+		set_transient( $key, $bucket, max( 1, $bucket['until'] - $now ) );
+		return true;
 	}
 
 	/**

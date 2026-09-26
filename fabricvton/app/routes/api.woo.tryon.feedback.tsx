@@ -3,6 +3,7 @@ import { parseRating, recordTryOnRating } from "../feedback.server";
 import { logInternalError, newRequestId } from "../requestid.server";
 import { corsHeaders, errorResponse } from "../tryon.server";
 import { verifyShopperToken, WooAuthError } from "../woo/auth.server";
+import { readJsonLimited } from "../bodylimit.server";
 
 // POST /api/woo/tryon/feedback — the shopper's rating of a finished try-on.
 //
@@ -35,7 +36,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     const { store } = await verifyShopperToken(tokenFrom(request), request.headers.get("Origin"));
 
-    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const body = (await readJsonLimited(request)) as Record<string, unknown>;
     const rating = parseRating(body.rating);
     const generationId = typeof body.generationId === "string" ? body.generationId.slice(0, 128) : "";
     if (!rating || !generationId) {

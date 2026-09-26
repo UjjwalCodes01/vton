@@ -1,5 +1,6 @@
 import db from "./db.server";
 import { rememberResultUrl, signImageToken } from "./share/imageproxy.server";
+import { readBodyLimited } from "./bodylimit.server";
 
 /** Where the backend itself answers, for links it hands to a shopper's browser. */
 function publicBaseUrl() {
@@ -31,6 +32,8 @@ import {
   declaredBodyTooLarge,
   ImageTooLargeError,
   InvalidImageError,
+  MAX_REQUEST_BYTES,
+  sniffImageType,
   MAX_IMAGE_BYTES,
   ALLOWED_IMAGE_MIME_TYPES,
   sanitizeEmail,
@@ -184,45 +187,61 @@ export async function handleTryOnLoader(request: Request, verifiedShop: string) 
       );
     }
 
-    // A generationId is an opaque provider task id, not a capability: knowing one
-    // must not be enough to read its result or, worse, to settle its billing
-    // against whichever shop owns it. So the event is looked up scoped to the
+    // The id the widget holds is our own event id. It is not a capability:
+    // knowing one must not be enough to read its result or, worse, to settle its
+    // billing against whichever shop owns it — so the lookup is scoped to the
     // shop this signed request came from, and a miss is indistinguishable from a
-    // generation that never existed.
+    // generation that never existed. Ids handed out before this change were the
+    // generator's task id, so those still resolve while they age out.
     const tryOnEvent = await db.tryOnEvent.findFirst({
-      where: { shop: verifiedShop, providerTaskId: generationId },
-      select: { id: true, shop: true, status: true, overageAmount: true },
+      where: {
+        shop: verifiedShop,
+        OR: [{ id: generationId }, { providerTaskId: generationId }],
+      },
+      select: { id: true, shop: true, status: true, overageAmount: true, providerTaskId: true },
     });
 
     if (!tryOnEvent) {
       return errorResponse("Unknown generation.", 404, origin, requestId);
     }
 
-    try {
-      const gen = await getGenerationStatus(generationId);
-      await syncGenerationOutcome(
-        tryOnEvent,
-        generationId,
-        gen.status,
-        gen.errorCode ?? null
-      );
-
-      if (gen.resultImageUrl) rememberResultUrl(generationId, gen.resultImageUrl);
-
-      return jsonResponse(
+    const done = (status: "COMPLETED" | "FAILED" | "PROCESSING", errorMessage: string | null = null) =>
+      jsonResponse(
         {
-          status: gen.status,
-          resultImageUrl: gen.resultImageUrl
-            ? `${publicBaseUrl()}/i/${signImageToken(verifiedShop, generationId)}`
-            : null,
-          // Only our own error table is ever surfaced — never the provider's raw
-          // message, which can name endpoints and task internals.
-          errorMessage: gen.errorCode ? describeYouCamError(gen.errorCode) : null,
+          status,
+          resultImageUrl:
+            status === "COMPLETED" ? `${publicBaseUrl()}/i/${signImageToken(tryOnEvent.id)}` : null,
+          errorMessage,
           requestId,
         },
         200,
-        origin
+        origin,
       );
+
+    // Settled already: answer from our own record. A generation that was failed
+    // or reclaimed — and so refunded — is never served, whatever the generator
+    // still holds.
+    if (tryOnEvent.status === "success") return done("COMPLETED");
+    if (tryOnEvent.status === "failed") {
+      return done("FAILED", "This try-on could not be completed. Please try again.");
+    }
+    if (!tryOnEvent.providerTaskId) return done("PROCESSING");
+
+    try {
+      const taskId = tryOnEvent.providerTaskId;
+      const gen = await getGenerationStatus(taskId);
+      await syncGenerationOutcome(tryOnEvent, tryOnEvent.id, gen.status, gen.errorCode ?? null);
+
+      if (gen.status === "COMPLETED" && gen.resultImageUrl) {
+        rememberResultUrl(taskId, gen.resultImageUrl);
+        return done("COMPLETED");
+      }
+      if (gen.status === "FAILED") {
+        // Only our own error table is ever surfaced — never the generator's raw
+        // message, which can name endpoints and task internals.
+        return done("FAILED", gen.errorCode ? describeYouCamError(gen.errorCode) : null);
+      }
+      return done("PROCESSING");
     } catch (err) {
       logInternalError(requestId, "status poll", err);
       return errorResponse(
@@ -285,8 +304,18 @@ function parseConsentAt(value: unknown): Date | null {
  * Throws the image errors from tryon-input.server; map them with
  * parseErrorResponse.
  */
-export async function parseTryOnBody(request: Request): Promise<ParsedTryOnBody> {
-  const contentType = request.headers.get("Content-Type") || "";
+export async function parseTryOnBody(incoming: Request): Promise<ParsedTryOnBody> {
+  const contentType = incoming.headers.get("Content-Type") || "";
+
+  // Content-Length was already checked, but a chunked upload declares none —
+  // so the body is read under the same cap before anything parses it.
+  const raw = await readBodyLimited(incoming, MAX_REQUEST_BYTES);
+  if (!raw) throw new ImageTooLargeError();
+  const request = new Request(incoming.url, {
+    method: "POST",
+    headers: { "Content-Type": contentType },
+    body: new Blob([raw as Uint8Array<ArrayBuffer>]),
+  });
 
   let email: string | null = null;
   let productId: string | null = null;
@@ -326,7 +355,10 @@ export async function parseTryOnBody(request: Request): Promise<ParsedTryOnBody>
 
       const customerImage = formData.get("personImage");
       if (customerImage instanceof Blob) {
-        personImage = customerImage;
+        const bytes = new Uint8Array(await customerImage.arrayBuffer());
+        const sniffed = sniffImageType(bytes);
+        if (!sniffed) throw new InvalidImageError("That file is not a JPEG, PNG or WebP image");
+        personImage = new Blob([bytes], { type: sniffed });
       }
     }
 
@@ -652,7 +684,7 @@ export async function runTryOn(input: TryOnRequest): Promise<Response> {
         productTitle,
         leadEmail: email,
         status: "pending",
-        modelUsed: `youcam/${config.modelVersion}`,
+        modelUsed: `primary/${config.modelVersion}`,
         overageAmount: reservation.overageAmount,
         consentVersion,
         consentAt,
@@ -705,12 +737,13 @@ export async function runTryOn(input: TryOnRequest): Promise<Response> {
     });
 
     console.log(
-      `[TryOn API][${requestId}] Started YouCam task ${generationId} for ${shop} ` +
+      `[TryOn API][${requestId}] Started task ${generationId} for ${shop} ` +
         `(${garmentCategory}, billed as ${reservation.billedAs})`
     );
 
     // The reservation now belongs to the pending event; the catch-all below must
     // not release it, or a settled generation would double-refund.
+    const eventId = pendingEventId;
     reservedOverage = null;
     pendingEventId = null;
 
@@ -721,7 +754,8 @@ export async function runTryOn(input: TryOnRequest): Promise<Response> {
     // ── Return generationId for client-side polling ──
     // The widget then polls for the result: Shopify via the app proxy
     // (/apps/fabricvton/api/tryon), WooCommerce via /api/woo/tryon.
-    return jsonResponse({ generationId, status: "PENDING", requestId }, 202, origin);
+    // Our event id, not the generator's task id: this goes to the browser.
+    return jsonResponse({ generationId: eventId, status: "PENDING", requestId }, 202, origin);
   } catch (err: unknown) {
     logInternalError(requestId, "unhandled route", err);
 

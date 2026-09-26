@@ -1,4 +1,5 @@
 import type { ActionFunctionArgs } from "react-router";
+import { readTextLimited } from "../bodylimit.server";
 import db from "../db.server";
 import { checkRateLimits, clientIpFrom } from "../ratelimit.server";
 import { clampText, sanitizeEmail } from "../tryon-input.server";
@@ -25,13 +26,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const ip = clientIpFrom(request) ?? "unknown";
     const limit = await checkRateLimits([
       { scope: `woo:register:${ip}`, limit: 10, windowMs: HOUR, label: "store registration" },
+      // Across everyone: registration is the one unauthenticated way to create
+      // rows and, once verified, free credits. A burst far past organic signups
+      // is abuse whatever addresses it comes from.
+      { scope: "woo:register:all", limit: 60, windowMs: HOUR, label: "store registration (global)" },
     ]);
     if (!limit.allowed) {
       throw new WooAuthError(429, "Too many connection attempts. Please try again later.", "rate_limited");
     }
 
-    const text = await request.text();
-    if (text.length > 16 * 1024) throw new WooAuthError(413, "Request body too large", "too_large");
+    const text = await readTextLimited(request, 16 * 1024);
+    if (text === null) throw new WooAuthError(413, "Request body too large", "too_large");
     let data: Record<string, unknown>;
     try {
       data = JSON.parse(text);
@@ -40,6 +45,20 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     const siteUrl = normaliseStoreUrl(data.siteUrl);
+
+    // Per registrable domain, so one wildcard DNS entry cannot mint a free store
+    // for every subdomain it answers for.
+    const domainLimit = await checkRateLimits([
+      {
+        scope: `woo:register:domain:${registrableDomain(siteUrl.hostname)}`,
+        limit: 3,
+        windowMs: HOUR,
+        label: "store registration (domain)",
+      },
+    ]);
+    if (!domainLimit.allowed) {
+      throw new WooAuthError(429, "Too many stores registered for this domain recently. Please try again later.", "rate_limited");
+    }
     const storeId = generateId("woo_");
     const secret = generateSecret();
 
@@ -64,3 +83,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export const loader = () => methodNotAllowed();
+
+/** Second-level labels under which registrars sell names (example.co.uk). */
+const SECOND_LEVEL = new Set(["co", "com", "net", "org", "gov", "edu", "ac", "ltd", "plc", "nic", "gen", "firm", "ind"]);
+
+/**
+ * The name someone actually registers — example.com, example.co.uk — rather
+ * than the full host. An approximation of the public suffix list, which is fine
+ * for a rate-limit key: an unusual suffix only makes the key more specific.
+ */
+function registrableDomain(hostname: string) {
+  const labels = hostname.toLowerCase().replace(/\.$/, "").split(".");
+  if (labels.length <= 2) return labels.join(".");
+  const [sld, tld] = labels.slice(-2);
+  const take = tld.length === 2 && SECOND_LEVEL.has(sld) ? 3 : 2;
+  return labels.slice(-take).join(".");
+}

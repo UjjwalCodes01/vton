@@ -28,7 +28,10 @@ export async function recordTryOnRating(params: {
   rating: TryOnRating;
 }) {
   const { count } = await db.tryOnEvent.updateMany({
-    where: { shop: params.shop, providerTaskId: params.generationId },
+    where: {
+      shop: params.shop,
+      OR: [{ id: params.generationId }, { providerTaskId: params.generationId }],
+    },
     data: { rating: params.rating, ratedAt: new Date() },
   });
 

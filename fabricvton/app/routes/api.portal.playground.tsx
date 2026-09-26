@@ -8,6 +8,7 @@ import {
   startPlaygroundRun,
 } from "../invoices/playground.server";
 import { checkRateLimits } from "../ratelimit.server";
+import { readJsonLimited, IMAGE_JSON_LIMIT } from "../bodylimit.server";
 
 /** Where uploaded garments are served from, for the generator to fetch. */
 function publicBase() {
@@ -16,7 +17,7 @@ function publicBase() {
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
-    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const body = (await readJsonLimited(request, IMAGE_JSON_LIMIT)) as Record<string, unknown>;
     const subject = await subjectFromSession(body.session as string);
     if (!subject) return adminJson({ error: "Session expired." }, 401);
 

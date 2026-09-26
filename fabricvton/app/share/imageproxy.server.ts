@@ -6,39 +6,42 @@
 // addressed by a signed token of ours instead, and the bytes are streamed
 // through the backend.
 
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { timingSafeEqual } from "node:crypto";
+import { macFor, signFor } from "../signing.server";
 
-function signingSecret() {
-  const secret = process.env.SHARE_SIGNING_SECRET || process.env.SHOPIFY_API_SECRET || "";
-  if (!secret) throw new Error("No signing secret configured for image links.");
-  return secret;
+/** Long enough for a session of browsing; short enough that a copied link dies. */
+const IMAGE_TOKEN_TTL_MS = 24 * 3600 * 1000;
+
+/**
+ * `<base64url(eventId.expiry)>.<mac>`.
+ *
+ * Names our own event id, never the generator's task id: the payload is
+ * readable by anyone holding the link, so it must not carry anything that
+ * identifies where the image was made. The event id is a unique key, so the
+ * token cannot be pointed at another store's generation either.
+ */
+export function signImageToken(eventId: string) {
+  const expiry = Math.floor((Date.now() + IMAGE_TOKEN_TTL_MS) / 1000);
+  const payload = Buffer.from(`${eventId}.${expiry}`).toString("base64url");
+  return `${payload}.${signFor("image", payload).slice(0, 27)}`;
 }
 
-function digest(value: string) {
-  return createHmac("sha256", signingSecret()).update(value).digest("base64url").slice(0, 27);
-}
-
-/** `<base64url(shop|taskId)>.<mac>` — opaque, and useless on another shop. */
-export function signImageToken(shop: string, taskId: string) {
-  const payload = Buffer.from(`${shop}|${taskId}`).toString("base64url");
-  return `${payload}.${digest(payload)}`;
-}
-
-export function verifyImageToken(token: string): { shop: string; taskId: string } | null {
+export function verifyImageToken(token: string): { eventId: string } | null {
   const dot = token.lastIndexOf(".");
   if (dot < 1) return null;
 
   const payload = token.slice(0, dot);
   const mac = token.slice(dot + 1);
-  const expected = digest(payload);
+  const expected = macFor("image", payload)?.slice(0, 27);
+  if (!expected) return null;
 
   // Same-length compare, so a mismatch cannot be timed character by character.
   if (mac.length !== expected.length) return null;
   if (!timingSafeEqual(Buffer.from(mac), Buffer.from(expected))) return null;
 
-  const [shop, taskId] = Buffer.from(payload, "base64url").toString("utf8").split("|");
-  if (!shop || !taskId) return null;
-  return { shop, taskId };
+  const [eventId, expiry] = Buffer.from(payload, "base64url").toString("utf8").split(".");
+  if (!eventId || !expiry || Number(expiry) * 1000 < Date.now()) return null;
+  return { eventId };
 }
 
 /**

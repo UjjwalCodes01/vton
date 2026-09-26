@@ -83,6 +83,15 @@ class Clothsy_AI_Settings {
 		if ( null === $secret ) {
 			return null;
 		}
+		// Older versions stored the secret merely encoded on hosts without
+		// OpenSSL. Once encryption is available, replace that copy.
+		if ( str_starts_with( (string) $stored['secret'], 'p1:' ) ) {
+			$encrypted = self::encrypt( $secret );
+			if ( null !== $encrypted ) {
+				$stored['secret'] = $encrypted;
+				update_option( self::CONNECTION_OPTION, $stored, false );
+			}
+		}
 		return array(
 			'store_id' => (string) $stored['store_id'],
 			'secret'   => $secret,
@@ -101,23 +110,47 @@ class Clothsy_AI_Settings {
 	}
 
 	/**
-	 * Saves the connection. The secret is encrypted before it is stored.
+	 * Saves the connection. The secret is encrypted before it is stored, and
+	 * nothing is saved when this server can't encrypt it.
 	 *
 	 * @param string $store_id Store id issued by Clothsy AI.
 	 * @param string $secret   Signing secret issued by Clothsy AI.
 	 * @param string $status   pending | connected.
+	 * @return bool Whether the connection was saved.
 	 */
-	public static function save_connection( string $store_id, string $secret, string $status ): void {
+	public static function save_connection( string $store_id, string $secret, string $status ): bool {
+		$encrypted = self::encrypt( $secret );
+		if ( null === $encrypted ) {
+			return false;
+		}
 		update_option(
 			self::CONNECTION_OPTION,
 			array(
 				'store_id' => $store_id,
-				'secret'   => self::encrypt( $secret ),
+				'secret'   => $encrypted,
 				'site_url' => home_url(),
 				'status'   => $status,
 			),
 			false
 		);
+		return true;
+	}
+
+	/**
+	 * Whether this server can encrypt the secret (PHP's OpenSSL extension with
+	 * AES-256-GCM). Without it the plugin refuses to connect rather than keep
+	 * the secret readable in the database.
+	 */
+	public static function can_encrypt(): bool {
+		return function_exists( 'openssl_encrypt' )
+			&& function_exists( 'openssl_decrypt' )
+			&& function_exists( 'openssl_get_cipher_methods' )
+			&& in_array( 'aes-256-gcm', array_map( 'strtolower', openssl_get_cipher_methods() ), true );
+	}
+
+	/** Message shown when can_encrypt() is false. */
+	public static function encryption_unavailable_message(): string {
+		return __( 'Clothsy AI can\'t connect because this server can\'t encrypt the store\'s secret: PHP\'s OpenSSL extension (with AES-256-GCM) is not available. Ask your web host to enable OpenSSL for PHP, then connect again.', 'clothsy-ai' );
 	}
 
 	/**
@@ -145,18 +178,26 @@ class Clothsy_AI_Settings {
 		return hash( 'sha256', wp_salt( 'auth' ) . '|clothsy-ai', true );
 	}
 
-	private static function encrypt( string $plain ): string {
-		if ( ! function_exists( 'openssl_encrypt' ) ) {
-			// No OpenSSL is rare; store encoded rather than refuse to work.
-			return 'p1:' . base64_encode( $plain ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+	/**
+	 * @param string $plain Secret to encrypt.
+	 * @return string|null Null when this server can't encrypt.
+	 */
+	private static function encrypt( string $plain ): ?string {
+		if ( ! self::can_encrypt() ) {
+			return null;
 		}
 		$iv     = random_bytes( 12 );
 		$tag    = '';
 		$cipher = openssl_encrypt( $plain, 'aes-256-gcm', self::key(), OPENSSL_RAW_DATA, $iv, $tag );
+		if ( false === $cipher || 16 !== strlen( $tag ) ) {
+			return null;
+		}
 		return 'v1:' . base64_encode( $iv . $tag . $cipher ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 	}
 
 	private static function decrypt( string $stored ): ?string {
+		// Read-only support for secrets saved encoded by older versions; they
+		// are re-encrypted by connection() and never written any more.
 		if ( str_starts_with( $stored, 'p1:' ) ) {
 			$plain = base64_decode( substr( $stored, 3 ), true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
 			return false === $plain ? null : $plain;

@@ -4,8 +4,6 @@ import { requirePortalSession } from "@/lib/session";
 import { PageHead, Shell } from "@/components/Shell";
 import { Playground } from "@/components/Playground";
 
-const API_BASE = (process.env.CLOTHSY_API_BASE || "https://fabricvton-api.onrender.com").replace(/\/+$/, "");
-
 export default async function PlaygroundPage() {
   const session = await requirePortalSession();
 
@@ -13,7 +11,7 @@ export default async function PlaygroundPage() {
   try {
     data = await api.me(session);
   } catch (error) {
-    if (error instanceof ApiError && error.status === 401) redirect("/login?expired=1");
+    if (error instanceof ApiError && error.status === 401) redirect("/session/expired");
     throw error;
   }
 
@@ -23,7 +21,7 @@ export default async function PlaygroundPage() {
         title="Playground"
         subtitle="Try the engine on any photo and any product, without touching a store."
       />
-      <Playground credits={data.account.credits} apiBase={API_BASE} />
+      <Playground credits={data.account.credits} />
     </Shell>
   );
 }

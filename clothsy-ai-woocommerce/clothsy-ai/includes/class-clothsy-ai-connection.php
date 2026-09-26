@@ -23,6 +23,12 @@ class Clothsy_AI_Connection {
 	 * @return true|WP_Error
 	 */
 	public static function connect() {
+		// Checked before registering, so no store is created that this site
+		// couldn't keep the secret for.
+		if ( ! Clothsy_AI_Settings::can_encrypt() ) {
+			return new WP_Error( 'clothsy_ai_no_encryption', Clothsy_AI_Settings::encryption_unavailable_message() );
+		}
+
 		$registered = Clothsy_AI_Api_Client::post_public(
 			'/api/woo/register',
 			array(
@@ -39,7 +45,9 @@ class Clothsy_AI_Connection {
 			return new WP_Error( 'clothsy_ai_bad_response', __( 'Clothsy AI returned an unexpected response. Please try again.', 'clothsy-ai' ) );
 		}
 
-		Clothsy_AI_Settings::save_connection( (string) $registered['storeId'], (string) $registered['secret'], 'pending' );
+		if ( ! Clothsy_AI_Settings::save_connection( (string) $registered['storeId'], (string) $registered['secret'], 'pending' ) ) {
+			return new WP_Error( 'clothsy_ai_no_encryption', Clothsy_AI_Settings::encryption_unavailable_message() );
+		}
 		return self::verify();
 	}
 
@@ -64,7 +72,9 @@ class Clothsy_AI_Connection {
 		// statistics and plan), under that store's id and this connection's secret.
 		$connection = Clothsy_AI_Settings::connection();
 		if ( $connection && ! empty( $result['storeId'] ) && $result['storeId'] !== $connection['store_id'] ) {
-			Clothsy_AI_Settings::save_connection( (string) $result['storeId'], $connection['secret'], 'connected' );
+			if ( ! Clothsy_AI_Settings::save_connection( (string) $result['storeId'], $connection['secret'], 'connected' ) ) {
+				return new WP_Error( 'clothsy_ai_no_encryption', Clothsy_AI_Settings::encryption_unavailable_message() );
+			}
 		} else {
 			Clothsy_AI_Settings::set_connection_status( 'connected' );
 		}

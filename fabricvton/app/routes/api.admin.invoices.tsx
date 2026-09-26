@@ -10,6 +10,7 @@ import {
   razorpayConfigured,
   sendInvoice,
 } from "../invoices/invoice.server";
+import { readJsonLimited } from "../bodylimit.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -27,7 +28,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     requireAdminToken(request);
-    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const body = (await readJsonLimited(request)) as Record<string, unknown>;
     const actor = actorFrom(request, body);
     const action = String(body.action || "create");
 

@@ -10,6 +10,7 @@
 // shopper-initiated, and the shopper privacy notice says so.
 
 import { randomBytes } from "node:crypto";
+import { stripImageMetadata } from "./imagemeta.server";
 import db from "../db.server";
 import { RETENTION } from "../retention.server";
 import { deleteObject, putObject, shareStorageConfigured } from "./storage.server";
@@ -54,18 +55,23 @@ export async function createSharedLook(params: {
     throw new Error("Sharing is not configured.");
   }
 
-  const res = await fetch(params.imageUrl);
+  const res = await fetch(params.imageUrl, { signal: AbortSignal.timeout(20_000) });
   if (!res.ok) throw new Error("The try-on image could not be fetched.");
-
-  const contentType = (res.headers.get("content-type") || "image/jpeg").split(";")[0].trim();
-  const extension = ALLOWED_TYPES[contentType];
-  if (!extension) throw new Error("That try-on image is not an image we can share.");
 
   const declared = Number(res.headers.get("content-length") || 0);
   if (declared > MAX_IMAGE_BYTES) throw new Error("That try-on image is too large to share.");
 
-  const body = Buffer.from(await res.arrayBuffer());
-  if (body.byteLength > MAX_IMAGE_BYTES) throw new Error("That try-on image is too large to share.");
+  const raw = new Uint8Array(await res.arrayBuffer());
+  if (raw.byteLength > MAX_IMAGE_BYTES) throw new Error("That try-on image is too large to share.");
+
+  // Stored without whatever metadata the generator embedded: this copy is
+  // public for as long as the look lives.
+  const clean = stripImageMetadata(raw);
+  if (!clean) throw new Error("That try-on image is not an image we can share.");
+  const contentType = clean.type;
+  const extension = ALLOWED_TYPES[contentType];
+  if (!extension) throw new Error("That try-on image is not an image we can share.");
+  const body = Buffer.from(clean.bytes);
 
   const id = newToken();
   const now = new Date();
@@ -123,4 +129,32 @@ export async function purgeExpiredLooks(now: Date = new Date()) {
     }
   }
   return { deleted, found: expired.length };
+}
+
+/**
+ * Deletes shared looks now, image first, for an erasure rather than on expiry.
+ *
+ * Objects that fail to delete keep their row, so the ordinary expiry purge
+ * retries them instead of losing track of an image.
+ */
+export async function deleteSharedLooks(where: { shop: string; generationIds?: string[] }) {
+  const looks = await db.sharedLook.findMany({
+    where: {
+      shop: where.shop,
+      ...(where.generationIds ? { generationId: { in: where.generationIds } } : {}),
+    },
+    select: { id: true, imageKey: true },
+  });
+
+  let deleted = 0;
+  for (const look of looks) {
+    try {
+      await deleteObject(look.imageKey);
+      await db.sharedLook.delete({ where: { id: look.id } });
+      deleted++;
+    } catch (error) {
+      console.error(`[privacy] could not delete shared look ${look.id}:`, error);
+    }
+  }
+  return deleted;
 }

@@ -13,6 +13,7 @@
 // requests cannot both read the same pre-increment count.
 
 import db from "./db.server";
+import { isIP } from "node:net";
 
 export interface RateLimitRule {
   /** Stable key for this bucket, e.g. `tryon:shop:example.myshopify.com` */
@@ -283,24 +284,35 @@ export function shareRules(params: {
 }
 
 /**
- * Client IP from the proxy chain — best effort, and treated as such.
+ * Client IP — trustworthy for direct traffic, best effort through Shopify.
  *
- * Only X-Forwarded-For is read. CF-Connecting-IP, Fly-Client-IP, True-Client-IP
- * and X-Real-IP used to be preferred over it, but nothing in this deployment
- * sets them: the app sits behind Render's load balancer, not Cloudflare or Fly.
- * They were therefore pure caller input, and reading them first meant one header
- * defeated every per-IP bucket in the system.
+ * Render serves onrender.com through Cloudflare (responses carry
+ * `server: cloudflare`), and Cloudflare overwrites CF-Connecting-IP with the
+ * address that actually connected. A caller can put anything in the header;
+ * Cloudflare replaces it. So for requests that come straight from a browser —
+ * WooCommerce storefronts, the portal, registration — it is the real shopper.
  *
- * X-Forwarded-For is not trustworthy either. Render appends the real peer, so
- * the right-most entry is honest — but on Shopify traffic that peer is Shopify's
- * own edge, shared by every storefront, so bucketing on it would throttle
- * unrelated shoppers. The left-most entry attributes better and can be forged.
- *
- * So this value is a convenience, never a gate. The limits that actually hold
- * are keyed on the signed shop (see tryOnGenerationRules), which no caller can
- * rotate.
+ * X-Forwarded-For is the opposite: Render keeps whatever the caller sent and
+ * only appends, so its left-most entry is forgeable. It is used only for
+ * Shopify app-proxy traffic (/proxy/…), where the connecting address is
+ * Shopify's own edge, shared by every storefront — bucketing on that would
+ * throttle unrelated shoppers together, so the left-most entry (the one Shopify
+ * reports) is the better, if forgeable, attribution. On that path the limits
+ * that actually hold are keyed on the signed shop, which no caller can rotate.
  */
 export function clientIpFrom(request: Request): string | null {
+  let viaShopify = false;
+  try {
+    viaShopify = new URL(request.url).pathname.startsWith("/proxy/");
+  } catch {
+    // An unparseable URL is not a Shopify proxy request.
+  }
+
+  if (!viaShopify) {
+    const edge = request.headers.get("CF-Connecting-IP")?.trim();
+    if (edge && isIP(edge)) return edge;
+  }
+
   const ip = request.headers.get("X-Forwarded-For")?.split(",")[0]?.trim();
   // Cap the length so a hostile header cannot bloat a scope key (and with it the
   // index entry) to an arbitrary size.

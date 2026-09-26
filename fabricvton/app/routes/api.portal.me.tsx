@@ -6,6 +6,7 @@ import { getPlan, isBillingCycleDue } from "../billing.server";
 import { planLabelFor } from "../customplan.server";
 import { subjectFromSession } from "../invoices/subject.server";
 import { invoicesForMerchant, razorpayConfigured, razorpayKeyId } from "../invoices/invoice.server";
+import { readJsonLimited } from "../bodylimit.server";
 
 /**
  * Everything the platform shows a signed-in account: who they are, what they
@@ -15,7 +16,7 @@ import { invoicesForMerchant, razorpayConfigured, razorpayKeyId } from "../invoi
  * and referrers.
  */
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const body = (await request.json().catch(() => ({}))) as { session?: string };
+  const body = (await readJsonLimited(request)) as { session?: string };
   const subject = await subjectFromSession(body.session);
   if (!subject) return adminJson({ error: "Session expired." }, 401);
 
