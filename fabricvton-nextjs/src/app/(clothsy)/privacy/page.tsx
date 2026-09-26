@@ -102,7 +102,7 @@ export default function PrivacyPolicy() {
               <h2>9. Legal</h2>
               <p>
                 <strong>Publisher:</strong> FabricVTON<br />
-                <strong>Address:</strong> Near Shiv Mandir, Kendua Bazar Hatia Patti, Kenduadih, Dhanbad, Jharkhand 828116, India.<br />
+                <strong>Address:</strong> New Delhi, India.<br />
                 <strong>Hosting:</strong> Vercel Inc., Covina, CA, USA.
               </p>
             </div>

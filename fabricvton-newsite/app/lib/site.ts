@@ -15,12 +15,8 @@ export const PRODUCT_HUNT_BADGE =
 
 export const BOOK_DEMO_URL = "https://cal.com/fabricvton-hz9xbt/demo";
 
-/** Registered address, shown in the footer. */
-export const ADDRESS = [
-  "Near Shiv Mandir, Kendua Bazar Hatia Patti",
-  "Kenduadih, Dhanbad",
-  "Jharkhand 828116, India",
-] as const;
+/** Where we are, shown in the footer. City and country only. */
+export const ADDRESS = ["New Delhi, India"] as const;
 
 export const CONTACT_EMAIL = "contact@fabricvton.com";
 export const CONTACT_HREF = `mailto:${CONTACT_EMAIL}`;

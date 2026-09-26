@@ -40,10 +40,8 @@ const ORGANIZATION_JSON_LD = {
   email: CONTACT_EMAIL,
   address: {
     "@type": "PostalAddress",
-    streetAddress: "Near Shiv Mandir, Kendua Bazar Hatia Patti, Kenduadih",
-    addressLocality: "Dhanbad",
-    addressRegion: "Jharkhand",
-    postalCode: "828116",
+    addressLocality: "New Delhi",
+    addressRegion: "Delhi",
     addressCountry: "IN",
   },
   sameAs: SOCIALS.map((s) => s.href),

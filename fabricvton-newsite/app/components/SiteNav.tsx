@@ -4,7 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowRight } from "./icons";
+import { ArrowUpRight } from "./icons";
+import { SHOPIFY_URL, WOO_URL } from "../lib/site";
 
 const links = [
   { href: "/#how", label: "Features" },
@@ -47,9 +48,12 @@ export default function SiteNav() {
           </nav>
 
           <div className="nav-actions">
-            <Link className="btn btn-dark btn-sm" href="/#demo">
-              Try Now <ArrowRight className="btn-arrow" />
-            </Link>
+            <a className="btn btn-dark btn-sm nav-install" href={SHOPIFY_URL} target="_blank" rel="noopener noreferrer">
+              Install on Shopify <ArrowUpRight className="btn-arrow" />
+            </a>
+            <a className="btn btn-ghost btn-sm nav-install" href={WOO_URL} target="_blank" rel="noopener noreferrer">
+              Install on WooCommerce <ArrowUpRight className="btn-arrow" />
+            </a>
             <button
               className={`nav-burger${open ? " is-open" : ""}`}
               type="button"
@@ -70,9 +74,12 @@ export default function SiteNav() {
               {link.label}
             </Link>
           ))}
-          <Link className="btn btn-dark" href="/#demo" onClick={() => setOpen(false)}>
-            Try Now <ArrowRight className="btn-arrow" />
-          </Link>
+          <a className="btn btn-dark" href={SHOPIFY_URL} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}>
+            Install on Shopify <ArrowUpRight className="btn-arrow" />
+          </a>
+          <a className="btn btn-ghost" href={WOO_URL} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}>
+            Install on WooCommerce <ArrowUpRight className="btn-arrow" />
+          </a>
         </div>
       </div>
     </header>

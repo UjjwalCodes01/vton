@@ -40,12 +40,8 @@ export const LEGAL = [
   { label: "Shopper privacy", href: "/widget-privacy" },
 ] as const;
 
-/** Registered address, shown in the footer. */
-export const ADDRESS = [
-  "Near Shiv Mandir, Kendua Bazar Hatia Patti",
-  "Kenduadih, Dhanbad",
-  "Jharkhand 828116, India",
-] as const;
+/** Where we are, shown in the footer. City and country only. */
+export const ADDRESS = ["New Delhi, India"] as const;
 
 /** Official channels (shared with clothsyai.fabricvton.com). Add GitHub / YouTube here once they exist. */
 export const SOCIALS = [

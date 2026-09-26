@@ -93,7 +93,7 @@ export default function TermsOfService() {
 
               <h2>9. Governing Law</h2>
               <p>
-                These Terms shall be governed by and construed in accordance with the laws of India. Any disputes arising from these Terms shall be subject to the exclusive jurisdiction of the courts located in Uttar Pradesh, India.
+                These Terms shall be governed by and construed in accordance with the laws of India. Any disputes arising from these Terms shall be subject to the exclusive jurisdiction of the courts located in New Delhi, India.
               </p>
 
               <h2>10. Changes to Terms</h2>
@@ -105,9 +105,7 @@ export default function TermsOfService() {
               <p>If you have any questions about these Terms, please contact us at:</p>
               <p>
                 <strong>FabricVTON</strong><br />
-                Near Shiv Mandir, Kendua Bazar Hatia Patti<br />
-                Kenduadih, Dhanbad<br />
-                Jharkhand 828116, India<br />
+                New Delhi, India<br />
                 Email: contact@fabricvton.com
               </p>
             </div>

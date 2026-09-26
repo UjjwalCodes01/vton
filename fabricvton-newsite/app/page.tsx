@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import HeroVisual from "./components/HeroVisual";
+import AboutVisual from "./components/AboutVisual";
 import HowFlow from "./components/HowFlow";
 import { ArrowRight, ArrowUpRight, Bag, Eye, Wand } from "./components/icons";
 import StoreDemo from "./components/StoreDemo";
@@ -76,13 +77,7 @@ export default function Home() {
       <section className="section about-section" id="about">
         <div className="shell about">
           <div className="about-visual">
-            <Image
-              src="/mantryon-cutout.png"
-              alt="Before and after: the same model shown in his own photo and in an AI-generated try-on"
-              width={1536}
-              height={1024}
-              sizes="(max-width: 900px) 100vw, 56vw"
-            />
+            <AboutVisual />
           </div>
 
           <div className="about-copy">

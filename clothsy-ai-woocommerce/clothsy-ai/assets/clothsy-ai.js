@@ -36,6 +36,11 @@
   var selectedFile = null;
   var photoDataUrl = ""; // the chosen photo, as the shopper sees it
   var lastResult = null; // { url, title, image, at, generationId }
+  // The photo each try-on was made from, for the before/after slider. Held in
+  // memory for this page only — never written to storage with the history,
+  // which other scripts on the page can read.
+  var beforeById = {};
+  var sentPhoto = ""; // the compressed photo the current try-on was sent
   var progressTimer = null;
   var cameraStream = null; // live MediaStream while the camera step is open
   var session = null; // { token, apiBase, expiresAt, key }
@@ -254,6 +259,8 @@
   // ── Icons ────────────────────────────────────────────────
 
   var ICONS = {
+    compare:
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l-6 6 6 6"/><path d="M15 6l6 6-6 6"/></svg>',
     clock:
       '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 1.8"/></svg>',
     close:
@@ -367,7 +374,15 @@
 
       // 5. Result
       '  <div class="clothsy-ai-step" data-step="result">',
-      '    <div class="clothsy-ai-result"><img alt="Your virtual try-on" data-role="result" /></div>',
+      '    <div class="clothsy-ai-result">',
+      '     <div class="clothsy-ai-compare" data-role="compare">',
+      '      <img alt="Your virtual try-on" data-role="result" />',
+      '      <img alt="" aria-hidden="true" class="clothsy-ai-before" data-role="before" />',
+      '      <span class="clothsy-ai-tag clothsy-ai-tag-before" aria-hidden="true">Before</span>',
+      '      <span class="clothsy-ai-tag clothsy-ai-tag-after" aria-hidden="true">After</span>',
+      '      <span class="clothsy-ai-handle" data-role="handle" role="slider" tabindex="0" aria-label="Compare your photo with the try-on" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-valuetext="Half and half"><i>' + ICONS.compare + "</i></span>",
+      "     </div>",
+      "    </div>",
       '    <button type="button" class="clothsy-ai-product" data-action="view-product">',
       '      <span data-role="result-thumb"></span>',
       "      <div><b data-role=\"result-title\"></b><em data-role=\"result-date\"></em></div>",
@@ -426,6 +441,9 @@
       pct: root.querySelector('[data-role="pct"]'),
       tip: root.querySelector('[data-role="tip"]'),
       result: root.querySelector('[data-role="result"]'),
+      before: root.querySelector('[data-role="before"]'),
+      compare: root.querySelector('[data-role="compare"]'),
+      handle: root.querySelector('[data-role="handle"]'),
       resultThumb: root.querySelector('[data-role="result-thumb"]'),
       resultTitle: root.querySelector('[data-role="result-title"]'),
       resultDate: root.querySelector('[data-role="result-date"]'),
@@ -440,6 +458,7 @@
     };
 
     root.addEventListener("click", onPanelClick);
+    bindCompare();
     els.file.addEventListener("change", function () { onFileChosen(els.file); });
     els.cameraFile.addEventListener("change", function () { onFileChosen(els.cameraFile); });
     document.addEventListener("keydown", function (event) {
@@ -832,6 +851,7 @@
 
     compress(photoDataUrl)
       .then(function (compressed) {
+        sentPhoto = compressed;
         return startGeneration(compressed, true);
       })
       .then(function (data) {
@@ -885,6 +905,7 @@
               at: new Date().toISOString()
             };
             rememberTryOn(entry);
+            if (sentPhoto) beforeById[generationId] = sentPhoto;
             showResult(entry, false);
           } else if (data.status === "FAILED") {
             showError(data.errorMessage || "The try-on failed. Please try another photo.");
@@ -904,6 +925,16 @@
     lastResult = entry;
     backTarget = null;
     els.result.src = entry.url;
+    // A try-on from an earlier page load has no photo to compare against; the
+    // result then shows on its own, exactly as before.
+    var before = entry.generationId ? beforeById[entry.generationId] : "";
+    els.compare.setAttribute("data-comparing", before ? "true" : "false");
+    if (before) {
+      els.before.src = before;
+      setCompare(50);
+    } else {
+      els.before.removeAttribute("src");
+    }
     els.resultThumb.style.backgroundImage = entry.image ? 'url("' + entry.image + '")' : "";
     els.resultTitle.textContent = entry.title || "Your try-on";
     els.resultDate.textContent = formatDate(entry.at);
@@ -914,6 +945,58 @@
     // door to the same room; the arrow goes back where the shopper came from.
     showStep("result", { title: "Your Try-Ons", subtitle: "Results", back: true, hideHistory: true });
     backTarget = fromHistory ? "history" : "intro";
+  }
+
+  // ── Before / after ───────────────────────────────────────
+  // The try-on sits underneath and the shopper's own photo on top, clipped to
+  // the left of the handle. Dragging anywhere on the image moves it; the handle
+  // is also a keyboard slider. touch-action: pan-y keeps vertical swipes
+  // scrolling the panel on phones — only sideways drags move the split.
+
+  function setCompare(pos) {
+    pos = Math.max(0, Math.min(100, pos));
+    els.compare.style.setProperty("--ca-split", pos + "%");
+    els.handle.setAttribute("aria-valuenow", String(Math.round(pos)));
+    els.handle.setAttribute(
+      "aria-valuetext",
+      pos <= 2 ? "Showing the try-on" : pos >= 98 ? "Showing your photo" : Math.round(pos) + "% your photo"
+    );
+  }
+
+  function bindCompare() {
+    var dragging = false;
+
+    function fromPointer(event) {
+      var box = els.result.getBoundingClientRect();
+      if (!box.width) return;
+      setCompare(((event.clientX - box.left) / box.width) * 100);
+    }
+
+    els.compare.addEventListener("pointerdown", function (event) {
+      if (els.compare.getAttribute("data-comparing") !== "true") return;
+      dragging = true;
+      if (els.compare.setPointerCapture) els.compare.setPointerCapture(event.pointerId);
+      fromPointer(event);
+    });
+    els.compare.addEventListener("pointermove", function (event) {
+      if (dragging) fromPointer(event);
+    });
+    function stop() { dragging = false; }
+    els.compare.addEventListener("pointerup", stop);
+    els.compare.addEventListener("pointercancel", stop);
+
+    els.handle.addEventListener("keydown", function (event) {
+      var now = Number(els.handle.getAttribute("aria-valuenow")) || 50;
+      var step = event.shiftKey ? 25 : 5;
+      var next =
+        event.key === "ArrowLeft" || event.key === "ArrowDown" ? now - step :
+        event.key === "ArrowRight" || event.key === "ArrowUp" ? now + step :
+        event.key === "Home" ? 0 :
+        event.key === "End" ? 100 : null;
+      if (next === null) return;
+      event.preventDefault();
+      setCompare(next);
+    });
   }
 
   function addToCart() {

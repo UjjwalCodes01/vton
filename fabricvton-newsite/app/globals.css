@@ -359,8 +359,13 @@ main [id] {
 .nav-actions {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 10px;
   flex: none;
+}
+
+/* Two install buttons: the Shopify one leads, WooCommerce sits beside it. */
+.nav-install.btn-ghost {
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .nav-icon {
@@ -863,13 +868,235 @@ main [id] {
   margin-left: calc(var(--gutter) * -1);
 }
 
-.about-visual img {
-  display: block;
-  width: 100%;
-  height: auto;
-  max-height: 82svh;
+/* The artwork's own box, at its own 3:2 shape, so every overlay placed in
+   percentages lands on the same pixels at any size. Capped at 82svh tall. */
+.about-art {
+  position: relative;
+  width: min(100%, calc(82svh * 1.5));
+  aspect-ratio: 3 / 2;
+}
+
+.about-art img {
   object-fit: contain;
-  object-position: left center;
+}
+
+.motion .about-art {
+  animation: aboutFloat 6.4s ease-in-out infinite;
+}
+
+@keyframes aboutFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+/* One 4.8s story, shared by every piece below: scan the Before photo (0–30%),
+   resolve the After photo (26–52%), ping its label (56–72%), rest. */
+
+.about-scan {
+  position: absolute;
+  left: 13.8%;
+  top: 50.6%;
+  width: 20.05%;
+  height: 38.5%;
+  overflow: hidden;
+  border-radius: 6% / 4.5%;
+  pointer-events: none;
+}
+
+.about-scan::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 22%;
+  background: linear-gradient(180deg, rgba(124, 77, 255, 0) 0%, rgba(124, 77, 255, 0.28) 78%, rgba(160, 120, 255, 0.95) 100%);
+  box-shadow: 0 2px 14px rgba(124, 77, 255, 0.6);
+  transform: translateY(-110%);
+  opacity: 0;
+}
+
+.motion .about-scan::before {
+  animation: aboutScan 4.8s ease-in-out infinite;
+}
+
+@keyframes aboutScan {
+  0% {
+    opacity: 0;
+    transform: translateY(-110%);
+  }
+  4% {
+    opacity: 1;
+  }
+  28% {
+    opacity: 1;
+    transform: translateY(460%);
+  }
+  32%,
+  100% {
+    opacity: 0;
+    transform: translateY(460%);
+  }
+}
+
+.about-after-live {
+  position: absolute;
+  left: 71.22%;
+  top: 22.46%;
+  width: 23.31%;
+  height: 44.92%;
+  overflow: hidden;
+  border-radius: 7% 7% 0 0 / 5.5% 5.5% 0 0;
+  /* Fades out at the bottom, so the blur never shows a seam above the label. */
+  -webkit-mask-image: linear-gradient(180deg, #000 86%, transparent);
+  mask-image: linear-gradient(180deg, #000 86%, transparent);
+  pointer-events: none;
+}
+
+.about-after-live img {
+  object-fit: cover;
+}
+
+.motion .about-after-live img {
+  animation: aboutResolve 4.8s ease-in-out infinite;
+}
+
+@keyframes aboutResolve {
+  0%,
+  26% {
+    filter: blur(10px) saturate(0.8) brightness(0.92);
+    transform: scale(1.05);
+  }
+  52%,
+  88% {
+    filter: blur(0) saturate(1) brightness(1);
+    transform: scale(1);
+  }
+  100% {
+    filter: blur(10px) saturate(0.8) brightness(0.92);
+    transform: scale(1.05);
+  }
+}
+
+.about-after-live::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 32%, rgba(255, 255, 255, 0.6) 50%, transparent 68%);
+  transform: translateX(-130%);
+  opacity: 0;
+}
+
+.motion .about-after-live::after {
+  animation: aboutShimmer 4.8s ease-in-out infinite;
+}
+
+@keyframes aboutShimmer {
+  0%,
+  40% {
+    opacity: 0;
+    transform: translateX(-130%);
+  }
+  42% {
+    opacity: 0.85;
+    transform: translateX(-130%);
+  }
+  58%,
+  100% {
+    opacity: 0;
+    transform: translateX(130%);
+  }
+}
+
+.about-chip {
+  position: absolute;
+  left: 50%;
+  top: 7%;
+  transform: translate(-50%, -4px);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(22, 19, 28, 0.82);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+}
+
+.about-chip svg {
+  width: 12px;
+  height: 12px;
+}
+
+.motion .about-chip {
+  animation: aboutChip 4.8s ease-in-out infinite;
+}
+
+@keyframes aboutChip {
+  0%,
+  24% {
+    opacity: 0;
+    transform: translate(-50%, -4px);
+  }
+  30%,
+  44% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  52%,
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -4px);
+  }
+}
+
+/* A ring around the printed "After" label when the look lands. */
+.about-after-ping {
+  position: absolute;
+  left: 71.94%;
+  top: 67.4%;
+  width: 10.87%;
+  height: 6.84%;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.motion .about-after-ping {
+  animation: aboutPing 4.8s ease-in-out infinite;
+}
+
+@keyframes aboutPing {
+  0%,
+  54% {
+    box-shadow: 0 0 0 0 rgba(91, 33, 232, 0);
+  }
+  60% {
+    box-shadow: 0 0 0 8px rgba(91, 33, 232, 0.22);
+  }
+  72%,
+  100% {
+    box-shadow: 0 0 0 16px rgba(91, 33, 232, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .about-art,
+  .about-scan::before,
+  .about-after-live img,
+  .about-after-live::after,
+  .about-chip,
+  .about-after-ping {
+    animation: none !important;
+  }
 }
 
 .about-copy h2 {
@@ -2142,9 +2369,9 @@ main [id] {
     margin-right: calc(var(--gutter) * -1);
   }
 
-  .about-visual img {
-    max-height: none;
-    object-position: center;
+  .about-art {
+    width: 100%;
+    margin: 0 auto;
   }
 
   .about-section,
@@ -2302,6 +2529,14 @@ main [id] {
   .nav-burger {
     width: 40px;
     height: 40px;
+  }
+}
+
+/* Below this the two install buttons no longer fit beside the logo; they live
+   in the menu instead. */
+@media (max-width: 760px) {
+  .nav-actions .nav-install {
+    display: none;
   }
 }
 

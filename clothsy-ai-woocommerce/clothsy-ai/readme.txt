@@ -99,6 +99,7 @@ The service is provided by Clothsy AI: [Terms of Service](https://www.fabricvton
 == Changelog ==
 
 = 0.2.5 =
+* New: a before-and-after slider on the result, so shoppers can drag between their own photo and the try-on.
 * Security hardening and accurate privacy text; rating button fixed.
 
 = 0.2.4 =
