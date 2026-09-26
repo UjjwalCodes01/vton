@@ -3,7 +3,7 @@
 // Everything here runs before a single byte is decoded or forwarded upstream.
 // Two things matter:
 //
-//   * The garment URL is handed to YouCam as `ref_file_url`, i.e. we ask a third
+//   * The garment URL is handed to the engine as a reference URL, i.e. we ask a third
 //     party to fetch a URL a storefront caller chose. Unconstrained, that is a
 //     request-forgery primitive pointed at someone else's egress, and it also
 //     lets a caller use our paid provider quota to process arbitrary images. Only
@@ -30,7 +30,7 @@ export const MAX_REQUEST_BYTES = Math.ceil(MAX_IMAGE_BYTES * 1.4);
 /** Ceiling for the base64 payload of a data URL, before decoding. */
 export const MAX_BASE64_CHARS = Math.ceil(MAX_IMAGE_BYTES / 3) * 4 + 1024;
 
-// YouCam accepts jpg and png only. The widget canvas-encodes everything to JPEG
+// The engine accepts jpg and png only. The widget canvas-encodes everything to JPEG
 // before upload, so this only narrows the direct multipart path.
 export const ALLOWED_IMAGE_MIME_TYPES = new Set([
   "image/jpeg",

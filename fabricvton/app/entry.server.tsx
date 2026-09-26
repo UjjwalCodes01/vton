@@ -15,6 +15,10 @@ export default async function handleRequest(
   reactRouterContext: EntryContext
 ) {
   addDocumentResponseHeaders(request, responseHeaders);
+  // The API's pages — the Shopify app, its sign-in form — are for merchants who
+  // arrive from Shopify, never for search results.
+  responseHeaders.set("X-Robots-Tag", "noindex, nofollow");
+  responseHeaders.set("X-Content-Type-Options", "nosniff");
   const userAgent = request.headers.get("user-agent");
   const callbackName = isbot(userAgent ?? '')
     ? "onAllReady"

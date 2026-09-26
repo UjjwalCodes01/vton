@@ -4,7 +4,7 @@ import db from "../db.server";
 import { checkRateLimits, shareRules } from "../ratelimit.server";
 import { createSharedLook, shareBaseUrl, shareConfigured } from "./share.server";
 import { cachedResultUrl, rememberResultUrl } from "./imageproxy.server";
-import { getGenerationStatus } from "../youcam.server";
+import { getGenerationStatus } from "../engine.server";
 
 function clamp(value: unknown, max: number) {
   return typeof value === "string" ? value.slice(0, max) : null;

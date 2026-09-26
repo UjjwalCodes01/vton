@@ -46,10 +46,10 @@ import {
   createTryOn,
   getGenerationStatus,
   mapGarmentCategory,
-  describeYouCamError,
+  describeEngineError,
   SHOPPER_FIXABLE_ERROR_CODES,
-  YouCamError,
-} from "./youcam.server";
+  EngineError,
+} from "./engine.server";
 
 // ─── CORS ───────────────────────────────────────────────
 
@@ -107,12 +107,12 @@ export function errorResponse(
  * accident.
  */
 function classifyTryOnError(error: unknown, stage: "upload" | "create" | "general") {
-  if (error instanceof YouCamError) {
+  if (error instanceof EngineError) {
     // Photo problems the shopper can actually fix — 422 so the widget shows the
     // provider's specific guidance rather than a generic server error. These
-    // messages come from our own describeYouCamError table, not from upstream.
+    // messages come from our own describeEngineError table, not from upstream.
     if (SHOPPER_FIXABLE_ERROR_CODES.has(error.code)) {
-      return { status: 422, message: describeYouCamError(error.code) };
+      return { status: 422, message: describeEngineError(error.code) };
     }
 
     if (error.code === "InvalidAccessToken" || error.httpStatus === 401) {
@@ -130,7 +130,7 @@ function classifyTryOnError(error: unknown, stage: "upload" | "create" | "genera
       };
     }
 
-    return { status: 502, message: describeYouCamError(error.code) };
+    return { status: 502, message: describeEngineError(error.code) };
   }
 
   return {
@@ -239,7 +239,7 @@ export async function handleTryOnLoader(request: Request, verifiedShop: string) 
       if (gen.status === "FAILED") {
         // Only our own error table is ever surfaced — never the generator's raw
         // message, which can name endpoints and task internals.
-        return done("FAILED", gen.errorCode ? describeYouCamError(gen.errorCode) : null);
+        return done("FAILED", gen.errorCode ? describeEngineError(gen.errorCode) : null);
       }
       return done("PROCESSING");
     } catch (err) {
@@ -693,7 +693,7 @@ export async function runTryOn(input: TryOnRequest): Promise<Response> {
     });
     pendingEventId = pendingEvent.id;
 
-    // ── Upload customer photo to YouCam ──
+    // ── Upload customer photo to the engine ──
     let customerFileId: string;
     try {
       const uploadResult = await uploadCustomerImage(personImage);
@@ -795,7 +795,7 @@ async function failPendingEvent(
     where: { id: eventId, status: "pending" },
     data: {
       status: "failed",
-      errorCode: err instanceof YouCamError ? err.code : null,
+      errorCode: err instanceof EngineError ? err.code : null,
       errorMessage: err instanceof Error ? err.message : "Unknown error",
     },
   });
@@ -877,7 +877,7 @@ async function syncGenerationOutcome(
         status: "failed",
         errorCode,
         errorMessage: errorCode
-          ? describeYouCamError(errorCode)
+          ? describeEngineError(errorCode)
           : "The image-processing provider could not generate this try-on.",
       },
     });

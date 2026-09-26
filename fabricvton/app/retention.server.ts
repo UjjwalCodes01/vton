@@ -8,8 +8,8 @@
 // What we hold, and for how long:
 //
 //   Shopper photos / generated images  Never stored by us. The photo is streamed
-//                                      to YouCam for processing and the result is
-//                                      served from YouCam's URL; neither is
+//                                      to the engine for processing and the result is
+//                                      served from the engine's URL; neither is
 //                                      written to our database or disk.
 //   Lead emails (Lead)                 Held until the merchant deletes them, the
 //                                      shop is redacted, or a customers/redact

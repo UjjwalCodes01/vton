@@ -2,7 +2,7 @@ import type { LoaderFunctionArgs } from "react-router";
 import db from "../db.server";
 import { cachedResultUrl, rememberResultUrl, verifyImageToken } from "../share/imageproxy.server";
 import { stripImageMetadata } from "../share/imagemeta.server";
-import { getGenerationStatus } from "../youcam.server";
+import { getGenerationStatus } from "../engine.server";
 import { logInternalError, newRequestId } from "../requestid.server";
 
 // GET /i/<token> — a try-on result, served from our domain.

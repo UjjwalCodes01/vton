@@ -9,7 +9,7 @@ import db from "../db.server";
 import { getPlan, PLANS } from "../billing.server";
 import { allowanceFor } from "../credits.server";
 import { creditsFor, planLabelFor, setCustomPlan } from "../customplan.server";
-import { checkProviderHealth } from "../youcam.server";
+import { checkProviderHealth } from "../engine.server";
 import { AdminApiError } from "./api.server";
 
 const PAGE_SIZE = 25;

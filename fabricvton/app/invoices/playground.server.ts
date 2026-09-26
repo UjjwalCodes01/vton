@@ -9,7 +9,7 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { macFor, signFor } from "../signing.server";
 import db from "../db.server";
-import { createTryOn, getGenerationStatus, mapGarmentCategory, uploadCustomerImage } from "../youcam.server";
+import { createTryOn, getGenerationStatus, mapGarmentCategory, uploadCustomerImage } from "../engine.server";
 import { putObject, shareStorageConfigured } from "../share/storage.server";
 import { rememberResultUrl, signImageToken } from "../share/imageproxy.server";
 

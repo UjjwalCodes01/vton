@@ -13,6 +13,10 @@ const SECURITY_HEADERS = [
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
   { key: "Content-Security-Policy", value: "frame-ancestors 'self'; base-uri 'self'; object-src 'none'" },
+  // Vercel answers every request with "Access-Control-Allow-Origin: *" unless
+  // told otherwise. Nothing here is meant to be read by other sites' scripts,
+  // so the only origin allowed is this one.
+  { key: "Access-Control-Allow-Origin", value: "https://www.fabricvton.com" },
 ];
 
 /**

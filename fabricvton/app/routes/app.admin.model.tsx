@@ -9,11 +9,9 @@ import { requireSuperAdmin } from "../admin.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import db from "../db.server";
-import { checkProviderHealth } from "../youcam.server";
+import { checkProviderHealth } from "../engine.server";
 import { useEffect } from "react";
 
-/** The provider key older rows were written with. Server-side only. */
-const LEGACY_KEY = ["you", "cam"].join("");
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -34,10 +32,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     _count: true,
   });
 
-  // Route chunks are public files even when the page is not, so the client
-  // code only ever sees a neutral key — rows written before this change are
-  // normalised here rather than shipped as a string in the bundle.
-  const neutral = (value: string | null | undefined) => (!value || value === LEGACY_KEY ? "primary" : value);
+  // Anything that is not a custom model reads as the primary engine.
+  const neutral = (value: string | null | undefined) => (value === "custom" ? "custom" : "primary");
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { baseUrl: _baseUrl, ...health } = providerHealth;
 

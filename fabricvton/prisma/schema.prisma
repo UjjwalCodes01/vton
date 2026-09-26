@@ -86,7 +86,7 @@ model ShopConfig {
   klaviyoListId       String?
 
   // Model settings
-  modelProvider       String   @default("youcam") // youcam | custom
+  modelProvider       String   @default("primary") // primary | custom
   modelVersion        String   @default("cloth-v4")
 
   // ── Platform ──
@@ -216,9 +216,9 @@ model TryOnEvent {
   productTitle    String?
   leadEmail       String?
   status          String   @default("success") // pending | success | failed
-  modelUsed       String   @default("youcam/cloth-v4")
+  modelUsed       String   @default("primary/cloth-v4")
   processingMs    Int?
-  providerTaskId  String?  // YouCam task_id for polling
+  providerTaskId  String?  // the engine's task id, for polling — never sent to clients
   errorCode       String?  // Provider error code, e.g. error_pose
   errorMessage    String?  // Store error details for debugging
   // Every `pending` event holds exactly one reserved credit, plus this many USD

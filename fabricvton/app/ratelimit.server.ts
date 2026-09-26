@@ -1,6 +1,6 @@
 // Fixed-window rate limiting for the public storefront API.
 //
-// Try-on generation costs real money per call (YouCam) and real latency, and the
+// Try-on generation costs real money per call and real latency, and the
 // storefront endpoint is by definition reachable by anyone who can load a
 // product page. Without limits a single shopper — or a script pointed at one
 // store — can burn a merchant's whole allowance and then their approved usage

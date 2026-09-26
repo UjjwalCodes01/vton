@@ -4,7 +4,7 @@ import { authenticate } from "../shopify.server";
 import { requireSuperAdmin } from "../admin.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import db from "../db.server";
-import { checkProviderHealth } from "../youcam.server";
+import { checkProviderHealth } from "../engine.server";
 import { getPlan } from "../billing.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -21,7 +21,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       db.tryOnEvent.count({ where: { status: "failed" } }),
     ]);
 
-  // YouCam provider connectivity (no credit-balance endpoint exists)
+  // Engine connectivity (no credit-balance endpoint exists)
   const providerHealth = await checkProviderHealth();
 
   // Revenue estimate (sum of overage charges across all shops)
@@ -97,7 +97,7 @@ export default function SuperAdminDashboard() {
 
       <s-section>
         <div className="fv-flex fv-gap-md fv-flex-wrap" style={{ alignItems: "stretch" }}>
-          {/* YouCam API Health */}
+          {/* Engine health */}
           <div style={{ flex: "1 1 300px" }}>
               <s-card>
                 <div style={{ padding: "32px 24px", display: "flex", flexDirection: "column", height: "100%", background: "linear-gradient(145deg, #ffffff, #f9fafb)" }}>

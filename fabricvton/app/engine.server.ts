@@ -1,5 +1,8 @@
-// YouCam (Perfect Corp) AI Clothes Virtual Try-On API client
-// Docs: https://docs.perfectcorp.com/reference/ai_clothes
+// Try-on engine client.
+//
+// Configured entirely from the environment (ENGINE_BASE_URL, ENGINE_API_KEY,
+// ENGINE_API_SECRET, and optionally ENGINE_FEATURE and
+// ENGINE_DEFAULT_GARMENT_CATEGORY), so no endpoint is named in the code.
 //
 // Flow:
 //   1. POST /s2s/v1.0/client/auth             — exchange client credentials for an access token
@@ -13,36 +16,38 @@
 
 import { constants, publicEncrypt } from "node:crypto";
 
-const RAW_BASE_URL =
-  process.env.YOUCAM_BASE_URL || "https://yce-api-01.makeupar.com";
-const BASE_URL = RAW_BASE_URL.replace(/\/$/, "");
+const BASE_URL = (process.env.ENGINE_BASE_URL || "").replace(/\/$/, "");
 
-const API_KEY = process.env.YOUCAM_API_KEY || "";
-const API_SECRET = process.env.YOUCAM_API_SECRET || "";
+const API_KEY = process.env.ENGINE_API_KEY || "";
+const API_SECRET = process.env.ENGINE_API_SECRET || "";
 
 // cloth-v4 adds outerwear + "auto" category. Override to cloth-v3 / cloth if needed.
-const CLOTH_FEATURE = process.env.YOUCAM_CLOTH_FEATURE || "cloth-v4";
+const CLOTH_FEATURE = process.env.ENGINE_FEATURE || "cloth-v4";
 
 // If "auto" is rejected by your plan, set this to upper_body.
-const DEFAULT_GARMENT_CATEGORY =
-  process.env.YOUCAM_DEFAULT_GARMENT_CATEGORY || "auto";
+const DEFAULT_GARMENT_CATEGORY = process.env.ENGINE_DEFAULT_GARMENT_CATEGORY || "auto";
+
+if (!BASE_URL || !API_KEY) {
+  // Loud at boot rather than a mystery on the first shopper's try-on.
+  console.error("[Engine] ENGINE_BASE_URL and ENGINE_API_KEY must be set; try-ons will fail until they are.");
+}
 
 // ─── Types ────────────────────────────────────────────────
 
-export type YouCamStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+export type EngineStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
 
-export interface YouCamUpload {
+export interface EngineUpload {
   fileId: string;
 }
 
-export interface YouCamTaskStart {
+export interface EngineTaskStart {
   id: string;
-  status: YouCamStatus;
+  status: EngineStatus;
 }
 
-export interface YouCamGeneration {
+export interface EngineGeneration {
   taskId: string;
-  status: YouCamStatus;
+  status: EngineStatus;
   resultImageUrl?: string;
   /** Stable code from the documented error tables, e.g. error_pose */
   errorCode?: string;
@@ -52,13 +57,13 @@ export interface YouCamGeneration {
 }
 
 /** Thrown so callers can branch on a documented error code rather than a message. */
-export class YouCamError extends Error {
+export class EngineError extends Error {
   readonly code: string;
   readonly httpStatus: number;
 
   constructor(message: string, code: string, httpStatus: number) {
     super(message);
-    this.name = "YouCamError";
+    this.name = "EngineError";
     this.code = code;
     this.httpStatus = httpStatus;
   }
@@ -94,14 +99,14 @@ function buildIdToken(): string {
 /**
  * Returns a bearer token.
  *
- * With YOUCAM_API_SECRET set we run the S2S credential exchange and cache the
- * result. Without it we treat YOUCAM_API_KEY as a ready-to-use bearer token,
+ * With ENGINE_API_SECRET set we run the S2S credential exchange and cache the
+ * result. Without it we treat ENGINE_API_KEY as a ready-to-use bearer token,
  * which is what the v2.0 Bearer-only accounts issue.
  */
 export async function getAccessToken(forceRefresh = false): Promise<string> {
   if (!API_KEY) {
-    throw new YouCamError(
-      "YOUCAM_API_KEY is not configured.",
+    throw new EngineError(
+      "ENGINE_API_KEY is not configured.",
       "missing_credentials",
       500
     );
@@ -122,8 +127,8 @@ export async function getAccessToken(forceRefresh = false): Promise<string> {
 
   const raw = await res.text().catch(() => "");
   if (!res.ok) {
-    throw new YouCamError(
-      `YouCam auth failed (${res.status}) at ${endpoint}: ${raw || res.statusText}`,
+    throw new EngineError(
+      `Engine auth failed (${res.status}) at ${endpoint}: ${raw || res.statusText}`,
       "auth_failed",
       res.status
     );
@@ -133,8 +138,8 @@ export async function getAccessToken(forceRefresh = false): Promise<string> {
   try {
     parsed = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
   } catch {
-    throw new YouCamError(
-      `YouCam auth returned a non-JSON body: ${raw.slice(0, 200)}`,
+    throw new EngineError(
+      `Engine auth returned a non-JSON body: ${raw.slice(0, 200)}`,
       "auth_failed",
       502
     );
@@ -149,8 +154,8 @@ export async function getAccessToken(forceRefresh = false): Promise<string> {
         : "";
 
   if (!token) {
-    throw new YouCamError(
-      "YouCam auth succeeded but no access_token was returned.",
+    throw new EngineError(
+      "Engine auth succeeded but no access_token was returned.",
       "auth_failed",
       502
     );
@@ -169,10 +174,10 @@ export async function getAccessToken(forceRefresh = false): Promise<string> {
 
 // ─── Request helpers ──────────────────────────────────────
 
-async function readError(res: Response): Promise<YouCamError> {
+async function readError(res: Response): Promise<EngineError> {
   const raw = await res.text().catch(() => "");
   let code = "unknown_error";
-  let message = raw || res.statusText || "Unknown YouCam error";
+  let message = raw || res.statusText || "Unknown engine error";
 
   try {
     const parsed = JSON.parse(raw) as Partial<{
@@ -186,7 +191,7 @@ async function readError(res: Response): Promise<YouCamError> {
     // Non-JSON body — keep the raw text.
   }
 
-  return new YouCamError(message, code, res.status);
+  return new EngineError(message, code, res.status);
 }
 
 /**
@@ -232,7 +237,7 @@ function normalizeContentType(type: string): string {
 export async function uploadCustomerImage(
   file: Blob,
   filename = "customer-photo.jpg"
-): Promise<YouCamUpload> {
+): Promise<EngineUpload> {
   const contentType = normalizeContentType(file.type);
   const bytes = Buffer.from(await file.arrayBuffer());
 
@@ -270,8 +275,8 @@ export async function uploadCustomerImage(
   const uploadRequest = entry?.requests?.[0];
 
   if (!fileId || !uploadRequest?.url) {
-    throw new YouCamError(
-      "YouCam file reservation did not return a file_id and upload URL.",
+    throw new EngineError(
+      "Engine file reservation did not return a file_id and upload URL.",
       "upload_reserve_failed",
       502
     );
@@ -288,8 +293,8 @@ export async function uploadCustomerImage(
 
   if (!putRes.ok) {
     const detail = await putRes.text().catch(() => "");
-    throw new YouCamError(
-      `YouCam image upload failed (${putRes.status}): ${detail.slice(0, 200)}`,
+    throw new EngineError(
+      `Engine image upload failed (${putRes.status}): ${detail.slice(0, 200)}`,
       "upload_failed",
       putRes.status
     );
@@ -334,7 +339,7 @@ export async function createTryOn(params: {
   /** Public garment image URL (Shopify CDN) */
   garmentImageUrl: string;
   garmentCategory?: string;
-}): Promise<YouCamTaskStart> {
+}): Promise<EngineTaskStart> {
   const body: Record<string, unknown> = {
     src_file_id: params.customerFileId,
     ref_file_url: params.garmentImageUrl,
@@ -353,8 +358,8 @@ export async function createTryOn(params: {
   const taskId = payload.data?.task_id;
 
   if (!taskId) {
-    throw new YouCamError(
-      "YouCam task creation succeeded but no task_id was returned.",
+    throw new EngineError(
+      "Engine task creation succeeded but no task_id was returned.",
       "missing_task_id",
       502
     );
@@ -365,7 +370,7 @@ export async function createTryOn(params: {
 
 // ─── Step 6-7: Poll ───────────────────────────────────────
 
-function normalizeStatus(status: unknown): YouCamStatus {
+function normalizeStatus(status: unknown): EngineStatus {
   const s = typeof status === "string" ? status.toLowerCase() : "";
   // The docs only document "success", but accept the usual synonyms — treating a
   // finished task as PENDING would make the widget poll until it times out.
@@ -382,7 +387,7 @@ function normalizeStatus(status: unknown): YouCamStatus {
 /**
  * Pulls the result image URL out of the status payload.
  *
- * Documented shape is `results: { url }`, but sibling Perfect Corp endpoints nest
+ * Documented shape is `results: { url }`, but sibling endpoints nest
  * it as `results: [{ data: [{ url }] }]`. Walk the plausible shapes rather than
  * silently returning undefined, which would read as "not finished yet".
  */
@@ -420,7 +425,7 @@ function extractResultUrl(value: unknown, depth = 0): string | undefined {
 
 export async function getGenerationStatus(
   taskId: string
-): Promise<YouCamGeneration> {
+): Promise<EngineGeneration> {
   const res = await apiFetch(
     `/s2s/v2.0/task/${CLOTH_FEATURE}/${encodeURIComponent(taskId)}`,
     { method: "GET", headers: { "Content-Type": "application/json" } }
@@ -434,7 +439,7 @@ export async function getGenerationStatus(
       polling_interval?: number;
       error?: string | null;
       error_code?: string | null;
-      // Shape varies across Perfect Corp endpoints — resolved by extractResultUrl.
+      // Shape varies across endpoints — resolved by extractResultUrl.
       results?: unknown;
     };
   };
@@ -447,10 +452,10 @@ export async function getGenerationStatus(
   // the shopper as an unexplained timeout — log the raw body so they're diagnosable.
   if ((status === "COMPLETED" && !resultImageUrl) || status === "PENDING") {
     console.log(
-      `[YouCam][${taskId}] status=${String(data.task_status)} mapped=${status} url=${resultImageUrl ? "yes" : "no"} raw=${JSON.stringify(payload).slice(0, 500)}`
+      `[Engine][${taskId}] status=${String(data.task_status)} mapped=${status} url=${resultImageUrl ? "yes" : "no"} raw=${JSON.stringify(payload).slice(0, 500)}`
     );
   } else {
-    console.log(`[YouCam][${taskId}] status=${String(data.task_status)} mapped=${status}`);
+    console.log(`[Engine][${taskId}] status=${String(data.task_status)} mapped=${status}`);
   }
 
   // On failure the reason arrives in `data.error` as a bare code
@@ -462,7 +467,7 @@ export async function getGenerationStatus(
     data.error_code ??
     (rawError && /^[A-Za-z][A-Za-z0-9_.-]*$/.test(rawError) ? rawError : undefined);
   const errorMessage = errorCode
-    ? describeYouCamError(errorCode)
+    ? describeEngineError(errorCode)
     : (rawError ?? undefined);
 
   return {
@@ -484,7 +489,7 @@ export async function getGenerationStatus(
  * Shopper-facing copy for the documented preprocess/engine error codes.
  * Anything unmapped falls through to a generic retry message.
  */
-export function describeYouCamError(code: string): string {
+export function describeEngineError(code: string): string {
   switch (code) {
     case "error_pose":
       return "We couldn't detect a clear pose in your photo. Please stand facing the camera, upright, with your shoulders visible.";
@@ -515,7 +520,7 @@ export function describeYouCamError(code: string): string {
 
 // ─── Health ───────────────────────────────────────────────
 
-export interface YouCamHealth {
+export interface EngineHealth {
   ok: boolean;
   /** Human-readable status for the super-admin dashboard */
   detail: string;
@@ -527,18 +532,18 @@ export interface YouCamHealth {
 /**
  * Verifies credentials and reachability by forcing a fresh token exchange.
  *
- * YouCam does not expose a credit-balance endpoint in the AI Clothes API, so
- * this reports connection health only — quota is visible in the YouCam console.
+ * Engine does not expose a credit-balance endpoint in the AI Clothes API, so
+ * this reports connection health only — quota is visible in the Engine console.
  */
-export async function checkProviderHealth(): Promise<YouCamHealth> {
-  const base: Omit<YouCamHealth, "ok" | "detail"> = {
+export async function checkProviderHealth(): Promise<EngineHealth> {
+  const base: Omit<EngineHealth, "ok" | "detail"> = {
     feature: CLOTH_FEATURE,
     baseUrl: BASE_URL,
     authMode: API_SECRET ? "s2s" : "bearer",
   };
 
   if (!API_KEY) {
-    return { ...base, ok: false, detail: "YOUCAM_API_KEY is not set." };
+    return { ...base, ok: false, detail: "ENGINE_API_KEY is not set." };
   }
 
   try {
