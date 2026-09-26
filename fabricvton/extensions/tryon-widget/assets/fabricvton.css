@@ -408,6 +408,80 @@
   object-fit: contain;
 }
 
+/* Before / after. The frame shrinks to the try-on image itself, so the split,
+   the tags and every pixel of a drag land on the picture rather than on the
+   letterbox around it. The shopper's photo is laid exactly over it and clipped
+   to the left of the split. */
+.fabricvton-result { display: flex; justify-content: center; }
+.fabricvton-compare {
+  --fv-split: 50%;
+  position: relative;
+  max-width: 100%;
+  line-height: 0;
+  touch-action: pan-y;
+}
+.fabricvton-result .fabricvton-compare img[data-role="result"] { width: auto; max-width: 100%; }
+.fabricvton-result .fabricvton-before {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  object-fit: cover;
+  clip-path: inset(0 calc(100% - var(--fv-split)) 0 0);
+  pointer-events: none;
+}
+.fabricvton-result img { user-select: none; -webkit-user-drag: none; }
+.fabricvton-tag,
+.fabricvton-handle { display: none; }
+.fabricvton-compare[data-comparing="true"] { cursor: ew-resize; }
+.fabricvton-compare[data-comparing="true"] .fabricvton-tag,
+.fabricvton-compare[data-comparing="true"] .fabricvton-handle { display: flex; }
+.fabricvton-compare[data-comparing="false"] .fabricvton-before { display: none; }
+
+.fabricvton-tag {
+  position: absolute;
+  line-height: 1.4;
+  top: 10px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.62);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+.fabricvton-tag-before { left: 10px; }
+.fabricvton-tag-after { right: 10px; }
+
+.fabricvton-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--fv-split);
+  width: 2px;
+  margin-left: -1px;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12);
+  justify-content: center;
+  align-items: center;
+  outline: none;
+}
+.fabricvton-handle i {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #fff;
+  color: #111;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
+}
+.fabricvton-handle:focus-visible i { box-shadow: 0 0 0 3px var(--fv-accent, #5b21e8), 0 2px 10px rgba(0, 0, 0, 0.22); }
+
 .fabricvton-product {
   display: flex;
   align-items: center;
