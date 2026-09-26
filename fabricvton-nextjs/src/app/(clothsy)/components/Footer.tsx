@@ -57,7 +57,9 @@ export default function Footer() {
               AI-powered virtual try-on for Shopify stores. Boost conversions, cut returns.
             </p>
             <div className="footer-address">
-              New Delhi, India
+              Near Shiv Mandir, Kendua Bazar Hatia Patti<br />
+              Kenduadih, Dhanbad<br />
+              Jharkhand 828116, India
             </div>
             {/* Social links */}
             <div className="footer-socials">

@@ -123,7 +123,7 @@ export default function TermsOfService() {
             <h2>9. Governing Law</h2>
             <p>
               These Terms shall be governed by and construed in accordance with the laws of India. Any disputes arising from these Terms shall be subject to the exclusive
-              jurisdiction of the courts located in New Delhi, India.
+              jurisdiction of the courts located in Uttar Pradesh, India.
             </p>
 
             <h2>10. Changes to Terms</h2>
@@ -137,7 +137,11 @@ export default function TermsOfService() {
             <p>
               <strong>FabricVTON</strong>
               <br />
-              New Delhi, India
+              Near Shiv Mandir, Kendua Bazar Hatia Patti
+              <br />
+              Kenduadih, Dhanbad
+              <br />
+              Jharkhand 828116, India
               <br />
               Email: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
             </p>
