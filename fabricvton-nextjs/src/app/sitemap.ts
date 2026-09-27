@@ -17,6 +17,7 @@ const PAGES = [
   "/company",
   "/careers",
   "/contact",
+  "/investors",
   "/privacy",
   "/tos",
   "/widget-privacy",

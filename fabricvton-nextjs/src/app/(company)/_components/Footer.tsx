@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { CookieSettingsButton } from "../../_shared/CookieConsent";
-import { ADDRESS, CLOTHSY_URL, CONTACT_EMAIL, CONTACT_HREF, CONTACT_MAILTO, LEGAL, RESEARCH_FORM_URL, SITE_NAME, SOCIALS } from "../_lib/site";
+import { ADDRESS, CLOTHSY_URL, CONTACT_EMAIL, CONTACT_HREF, CONTACT_MAILTO, INVESTORS_HREF, LEGAL, RESEARCH_FORM_URL, SITE_NAME, SOCIALS } from "../_lib/site";
 
 const ICONS: Record<string, React.ReactNode> = {
   LinkedIn: (
@@ -92,6 +92,9 @@ export default function Footer() {
               </li>
               <li>
                 <Link href="/careers">Careers</Link>
+              </li>
+              <li>
+                <Link href={INVESTORS_HREF}>Investors</Link>
               </li>
               <li>
                 <a href={CONTACT_HREF}>Contact</a>

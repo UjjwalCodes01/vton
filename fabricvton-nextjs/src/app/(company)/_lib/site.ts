@@ -24,6 +24,10 @@ export const CONTACT_HREF = "/contact";
  */
 export const CONTACT_FORM_ID = "BzN6Q5";
 
+/** Investor enquiries (Tally), embedded on /investors and linked from the footer. */
+export const INVESTOR_FORM_ID = "XxXPlO";
+export const INVESTORS_HREF = "/investors";
+
 /** Clothsy AI on Product Hunt (the listing itself is titled "Clothys AI"). */
 export const PRODUCT_HUNT_URL = "https://www.producthunt.com/products/clothys-ai";
 
