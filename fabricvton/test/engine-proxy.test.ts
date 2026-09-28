@@ -1,0 +1,55 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+process.env.CLOTHES_PROXY_BASE = "https://proxy.example.test";
+process.env.CLOTHES_PROXY_CLIENT_ID = "clothing-site";
+process.env.CLOTHES_PROXY_TOKEN = "test-client-token";
+
+const calls: Array<{ url: string; method: string; headers: Headers }> = [];
+let registration = 0;
+let creation = 0;
+const originalFetch = globalThis.fetch;
+
+test("proxy retries a complete pinned upload workflow after quota exhaustion", async () => {
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    const headers = new Headers(init?.headers);
+    calls.push({ url, method: init?.method ?? "GET", headers });
+    if (url.endsWith("/v1/file")) {
+      registration++;
+      return new Response(JSON.stringify({
+        data: { files: [{ file_id: `file-${registration}`, requests: [{
+          method: "PUT", url: `https://uploads.example.test/${registration}`,
+          headers: { "Content-Type": "image/jpeg", "x-amz-meta-test": "signed" },
+        }] }] },
+      }), { status: 200, headers: { "x-key-session": `00000000-0000-0000-0000-00000000000${registration}` } });
+    }
+    if (url.startsWith("https://uploads.example.test/")) return new Response(null, { status: 200 });
+    if (url.endsWith("/v1/request")) {
+      creation++;
+      if (creation === 1) return new Response(JSON.stringify({ error: "workflow_key_exhausted_restart_upload" }), { status: 409 });
+      return new Response(JSON.stringify({ data: { task_id: "task-ok" } }), { status: 200 });
+    }
+    throw new Error(`Unexpected URL ${url}`);
+  };
+
+  try {
+    const { createTryOnWithImage } = await import("../app/engine.server");
+    const task = await createTryOnWithImage({
+      personImage: new Blob([new Uint8Array([1, 2, 3])], { type: "image/jpeg" }),
+      garmentImageUrl: "https://images.example.test/garment.jpg",
+      garmentCategory: "full_body",
+    });
+    assert.equal(task.id, "task-ok");
+    assert.equal(registration, 2);
+    assert.equal(creation, 2);
+    assert.equal(calls.filter((call) => call.method === "PUT").length, 2);
+    assert.equal(calls[1]?.headers.get("x-amz-meta-test"), "signed");
+    assert.equal(calls[2]?.headers.get("x-key-session"), "00000000-0000-0000-0000-000000000001");
+    assert.equal(calls[5]?.headers.get("x-key-session"), "00000000-0000-0000-0000-000000000002");
+    assert.equal(calls[0]?.headers.get("x-client-id"), "clothing-site");
+    assert.equal(calls[0]?.headers.get("x-client-token"), "test-client-token");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

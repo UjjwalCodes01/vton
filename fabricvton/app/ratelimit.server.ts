@@ -64,8 +64,8 @@ export const LIMITS = {
   /** Widget-open analytics pings are writes too, so they get their own bucket. */
   pingPerMinute: envInt("TRYON_LIMIT_PING_PER_MINUTE", 30),
   /**
-   * Status polls per shopper. The widget polls every 3s for up to 3 minutes, so
-   * one generation costs ~20 polls/minute; this leaves room for a shopper with a
+   * Status polls per shopper. The widget polls every 12s for up to 5 minutes, so
+   * one generation costs ~5 polls/minute; this leaves room for a shopper with a
    * couple of tabs open without ever throttling a legitimate try-on.
    */
   pollPerMinute: envInt("TRYON_LIMIT_POLL_PER_MINUTE", 60),

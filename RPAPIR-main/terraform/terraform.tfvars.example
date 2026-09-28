@@ -1,0 +1,25 @@
+aws_region       = "us-east-1"
+project_name     = "api-key-pool"
+provider_name    = "provider-x"
+upstream_base_url = "https://api.example.com"
+upstream_path     = "/v1/request"
+secret_prefix     = "api-key-pool/providers"
+
+# Safety / capacity
+lambda_reserved_concurrency = -1 # unreserved; raise the account quota before setting a positive reservation
+api_rate_limit_rps          = 0.7
+api_burst_limit             = 2
+
+# Strong B2B mode (recommended)
+# custom_domain_name         = "api.example.com"
+# acm_certificate_arn       = "arn:aws:acm:REGION:ACCOUNT:certificate/ID"
+# mtls_truststore_uri        = "s3://YOUR-BUCKET/truststore.pem"
+# mtls_truststore_version    = "VERSION-ID"
+# disable_execute_api_endpoint = true
+# route53_zone_id            = "ZONE-ID"
+
+# Google Sheet inventory sync (see README section 12)
+# sheet_sync_enabled  = true
+# sheet_id            = "THE-LONG-ID-FROM-THE-SHEET-URL"
+# sheet_range         = "Keys"
+# sheet_sync_schedule = "rate(15 minutes)"

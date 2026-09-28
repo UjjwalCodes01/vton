@@ -4,7 +4,7 @@ Tags: virtual try-on, try on, fitting room, fashion, woocommerce
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.2.5
+Stable tag: 0.2.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -97,6 +97,9 @@ Try-on images are generated with an AI image-processing sub-processor that Cloth
 The service is provided by Clothsy AI: [Terms of Service](https://www.fabricvton.com/tos), [Privacy Policy](https://www.fabricvton.com/privacy), [Shopper privacy notice](https://www.fabricvton.com/widget-privacy).
 
 == Changelog ==
+
+= 0.2.6 =
+* Pace try-on status checks for the shared provider proxy capacity.
 
 = 0.2.5 =
 * New: a before-and-after slider on the result, so shoppers can drag between their own photo and the try-on.

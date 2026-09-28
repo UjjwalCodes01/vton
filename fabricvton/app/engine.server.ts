@@ -1,8 +1,7 @@
 // Try-on engine client.
 //
-// Configured entirely from the environment (ENGINE_BASE_URL, ENGINE_API_KEY,
-// ENGINE_API_SECRET, and optionally ENGINE_FEATURE and
-// ENGINE_DEFAULT_GARMENT_CATEGORY), so no endpoint is named in the code.
+// Configured from server-side environment. CLOTHES_PROXY_* routes provider calls
+// through the key pool; ENGINE_* retains the direct provider mode.
 //
 // Flow:
 //   1. POST /s2s/v1.0/client/auth             — exchange client credentials for an access token
@@ -20,6 +19,13 @@ const BASE_URL = (process.env.ENGINE_BASE_URL || "").replace(/\/$/, "");
 
 const API_KEY = process.env.ENGINE_API_KEY || "";
 const API_SECRET = process.env.ENGINE_API_SECRET || "";
+const PROXY_BASE_URL = (process.env.CLOTHES_PROXY_BASE || "").replace(/\/$/, "");
+const PROXY_CLIENT_ID = process.env.CLOTHES_PROXY_CLIENT_ID || "";
+const PROXY_TOKEN = process.env.CLOTHES_PROXY_TOKEN || "";
+
+if (PROXY_BASE_URL && (new URL(PROXY_BASE_URL).protocol !== "https:" || !PROXY_CLIENT_ID || !PROXY_TOKEN)) {
+  throw new Error("CLOTHES_PROXY_BASE must use HTTPS and proxy client credentials must be configured");
+}
 
 // cloth-v4 adds outerwear + "auto" category. Override to cloth-v3 / cloth if needed.
 const CLOTH_FEATURE = process.env.ENGINE_FEATURE || "cloth-v4";
@@ -27,7 +33,7 @@ const CLOTH_FEATURE = process.env.ENGINE_FEATURE || "cloth-v4";
 // If "auto" is rejected by your plan, set this to upper_body.
 const DEFAULT_GARMENT_CATEGORY = process.env.ENGINE_DEFAULT_GARMENT_CATEGORY || "auto";
 
-if (!BASE_URL || !API_KEY) {
+if (!PROXY_BASE_URL && (!BASE_URL || !API_KEY)) {
   // Loud at boot rather than a mystery on the first shopper's try-on.
   console.error("[Engine] ENGINE_BASE_URL and ENGINE_API_KEY must be set; try-ons will fail until they are.");
 }
@@ -38,6 +44,7 @@ export type EngineStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
 
 export interface EngineUpload {
   fileId: string;
+  keySession?: string;
 }
 
 export interface EngineTaskStart {
@@ -185,7 +192,7 @@ async function readError(res: Response): Promise<EngineError> {
       error_code: string;
       message: string;
     }>;
-    code = parsed.error_code || code;
+    code = parsed.error_code || parsed.error || code;
     message = parsed.message || parsed.error || message;
   } catch {
     // Non-JSON body — keep the raw text.
@@ -201,8 +208,29 @@ async function readError(res: Response): Promise<EngineError> {
 async function apiFetch(
   path: string,
   init: RequestInit = {},
-  allowRetry = true
+  allowRetry = true,
+  keySession?: string
 ): Promise<Response> {
+  if (PROXY_BASE_URL) {
+    const filePath = path === "/s2s/v2.0/file";
+    const taskPrefix = `/s2s/v2.0/task/${CLOTH_FEATURE}`;
+    if (!filePath && path !== taskPrefix && !path.startsWith(`${taskPrefix}/`)) {
+      throw new EngineError("Unsupported proxy operation", "proxy_operation_invalid", 500);
+    }
+    const proxyPath = filePath ? "/v1/file" : path === taskPrefix
+      ? "/v1/request" : `/v1/request/${path.slice(taskPrefix.length + 1)}`;
+    return fetch(`${PROXY_BASE_URL}${proxyPath}`, {
+      ...init,
+      headers: {
+        ...(init.headers as Record<string, string> | undefined),
+        "x-client-id": PROXY_CLIENT_ID,
+        "x-client-token": PROXY_TOKEN,
+        ...(keySession ? { "x-key-session": keySession } : {}),
+      },
+      redirect: "error",
+      signal: init.signal ?? AbortSignal.timeout(20_000),
+    });
+  }
   const token = await getAccessToken();
   const res = await fetch(`${BASE_URL}${path}`, {
     ...init,
@@ -281,14 +309,24 @@ export async function uploadCustomerImage(
       502
     );
   }
+  if (new URL(uploadRequest.url).protocol !== "https:") {
+    throw new EngineError("Engine upload URL must use HTTPS", "upload_url_insecure", 502);
+  }
 
-  // Echo back the content type the reservation was made with. Content-Length is
-  // a forbidden fetch header — undici derives it from the body, which is exact
-  // because we send the same buffer we measured.
+  // A signed upload can require provider-supplied headers. Node calculates
+  // Content-Length from these exact bytes; preserve every other signed header.
+  if (uploadRequest.method && uploadRequest.method.toUpperCase() !== "PUT") {
+    throw new EngineError("Engine upload method must be PUT", "upload_method_invalid", 502);
+  }
+  const uploadHeaders = new Headers(uploadRequest.headers ?? {});
+  uploadHeaders.delete("Content-Length");
+  if (!uploadHeaders.has("Content-Type")) uploadHeaders.set("Content-Type", contentType);
   const putRes = await fetch(uploadRequest.url, {
-    method: uploadRequest.method || "PUT",
-    headers: { "Content-Type": contentType },
+    method: "PUT",
+    headers: uploadHeaders,
     body: new Uint8Array(bytes),
+    redirect: "error",
+    signal: AbortSignal.timeout(20_000),
   });
 
   if (!putRes.ok) {
@@ -300,7 +338,11 @@ export async function uploadCustomerImage(
     );
   }
 
-  return { fileId };
+  const keySession = reserveRes.headers.get("x-key-session") ?? undefined;
+  if (PROXY_BASE_URL && !keySession) {
+    throw new EngineError("Proxy did not return an upload session", "proxy_session_missing", 502);
+  }
+  return { fileId, keySession };
 }
 
 // ─── Garment category ─────────────────────────────────────
@@ -339,6 +381,7 @@ export async function createTryOn(params: {
   /** Public garment image URL (Shopify CDN) */
   garmentImageUrl: string;
   garmentCategory?: string;
+  keySession?: string;
 }): Promise<EngineTaskStart> {
   const body: Record<string, unknown> = {
     src_file_id: params.customerFileId,
@@ -350,7 +393,7 @@ export async function createTryOn(params: {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-  });
+  }, true, params.keySession);
 
   if (!res.ok) throw await readError(res);
 
@@ -366,6 +409,34 @@ export async function createTryOn(params: {
   }
 
   return { id: taskId, status: "PENDING" };
+}
+
+/** Starts one try-on, re-uploading the photo if a pinned provider key fails.
+ * A provider file ID cannot be moved to another key, so the entire file
+ * registration and task creation sequence must restart together.
+ */
+export async function createTryOnWithImage(params: {
+  personImage: Blob;
+  filename?: string;
+  garmentImageUrl: string;
+  garmentCategory?: string;
+}): Promise<EngineTaskStart> {
+  for (let attempt = 0; ; attempt++) {
+    const upload = await uploadCustomerImage(params.personImage, params.filename);
+    try {
+      return await createTryOn({
+        customerFileId: upload.fileId,
+        keySession: upload.keySession,
+        garmentImageUrl: params.garmentImageUrl,
+        garmentCategory: params.garmentCategory,
+      });
+    } catch (err) {
+      const restart = err instanceof EngineError && err.httpStatus === 409 &&
+        (err.code === "workflow_key_exhausted_restart_upload" ||
+         err.code === "workflow_key_unavailable_restart_upload");
+      if (!restart || attempt >= 3) throw err;
+    }
+  }
 }
 
 // ─── Step 6-7: Poll ───────────────────────────────────────
@@ -395,7 +466,7 @@ function extractResultUrl(value: unknown, depth = 0): string | undefined {
   if (!value || depth > 4) return undefined;
 
   if (typeof value === "string") {
-    return value.startsWith("http") ? value : undefined;
+    return value.startsWith("https://") ? value : undefined;
   }
 
   if (Array.isArray(value)) {
@@ -410,7 +481,7 @@ function extractResultUrl(value: unknown, depth = 0): string | undefined {
     const record = value as Record<string, unknown>;
     for (const key of ["url", "download_url", "downloadUrl", "resultImageUrl"]) {
       const candidate = record[key];
-      if (typeof candidate === "string" && candidate.startsWith("http")) {
+      if (typeof candidate === "string" && candidate.startsWith("https://")) {
         return candidate;
       }
     }
@@ -536,6 +607,15 @@ export interface EngineHealth {
  * this reports connection health only — quota is visible in the Engine console.
  */
 export async function checkProviderHealth(): Promise<EngineHealth> {
+  if (PROXY_BASE_URL) {
+    return {
+      ok: Boolean(PROXY_CLIENT_ID && PROXY_TOKEN),
+      detail: "Proxy configured. Live provider health requires a separate operational check.",
+      feature: CLOTH_FEATURE,
+      baseUrl: PROXY_BASE_URL,
+      authMode: "bearer",
+    };
+  }
   const base: Omit<EngineHealth, "ok" | "detail"> = {
     feature: CLOTH_FEATURE,
     baseUrl: BASE_URL,

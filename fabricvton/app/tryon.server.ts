@@ -42,8 +42,7 @@ import {
   validateGarmentImageUrl,
 } from "./tryon-input.server";
 import {
-  uploadCustomerImage,
-  createTryOn,
+  createTryOnWithImage,
   getGenerationStatus,
   mapGarmentCategory,
   describeEngineError,
@@ -122,11 +121,17 @@ function classifyTryOnError(error: unknown, stage: "upload" | "create" | "genera
       };
     }
 
-    if (error.httpStatus === 402 || error.httpStatus === 429) {
+    if (error.httpStatus === 429) {
       return {
-        status: 402,
-        message:
-          "Virtual try-on credits have run out. The store owner needs to top up their Clothsy AI plan.",
+        status: 503,
+        message: "Virtual try-on is busy right now. Please try again shortly.",
+      };
+    }
+
+    if (error.httpStatus === 402) {
+      return {
+        status: 503,
+        message: "Virtual try-on is temporarily unavailable. Please try again shortly.",
       };
     }
 
@@ -243,6 +248,11 @@ export async function handleTryOnLoader(request: Request, verifiedShop: string) 
       }
       return done("PROCESSING");
     } catch (err) {
+      // A proxy gateway throttle or temporary upstream outage does not mean
+      // the provider task failed. Let the existing shopper session poll again.
+      if (err instanceof EngineError && [429, 502, 503, 504].includes(err.httpStatus)) {
+        return done("PROCESSING");
+      }
       logInternalError(requestId, "status poll", err);
       return errorResponse(
         "Could not check the try-on status. Please try again.",
@@ -694,33 +704,18 @@ export async function runTryOn(input: TryOnRequest): Promise<Response> {
     pendingEventId = pendingEvent.id;
 
     // ── Upload customer photo to the engine ──
-    let customerFileId: string;
-    try {
-      const uploadResult = await uploadCustomerImage(personImage);
-      customerFileId = uploadResult.fileId;
-    } catch (err) {
-      logInternalError(requestId, "upload stage", err);
-      await failPendingEvent(pendingEventId, shop, reservation.overageAmount, err);
-      reservedOverage = null;
-      pendingEventId = null;
-      const classified = classifyTryOnError(err, "upload");
-      return errorResponse(classified.message, classified.status, origin, requestId);
-    }
-
-    // ── Start Try-On generation (ASYNC — returns generationId immediately) ──
+    // Keep one event and one credit reservation across provider key failover.
     let generationId: string;
-    // A category chosen by the merchant (WooCommerce product setting) beats
-    // guessing from the title.
     const garmentCategory = product.category ?? mapGarmentCategory(productTitle);
     try {
-      const tryOnResult = await createTryOn({
-        customerFileId,
+      const task = await createTryOnWithImage({
+        personImage,
         garmentImageUrl: productImageUrl,
         garmentCategory,
       });
-      generationId = tryOnResult.id;
+      generationId = task.id;
     } catch (err) {
-      logInternalError(requestId, "create stage", err);
+      logInternalError(requestId, "upload or create stage", err);
       await failPendingEvent(pendingEventId, shop, reservation.overageAmount, err);
       reservedOverage = null;
       pendingEventId = null;

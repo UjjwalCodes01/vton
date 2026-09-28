@@ -9,7 +9,7 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { macFor, signFor } from "../signing.server";
 import db from "../db.server";
-import { createTryOn, getGenerationStatus, mapGarmentCategory, uploadCustomerImage } from "../engine.server";
+import { createTryOnWithImage, getGenerationStatus, mapGarmentCategory } from "../engine.server";
 import { putObject, shareStorageConfigured } from "../share/storage.server";
 import { rememberResultUrl, signImageToken } from "../share/imageproxy.server";
 
@@ -114,13 +114,9 @@ export async function startPlaygroundRun(params: {
 
     const garmentUrl = `${params.publicBase}/g/${signGarmentToken(key)}`;
 
-    const upload = await uploadCustomerImage(
-      new Blob([new Uint8Array(person.bytes)], { type: person.contentType }),
-      "playground.jpg",
-    );
-
-    const task = await createTryOn({
-      customerFileId: upload.fileId,
+    const task = await createTryOnWithImage({
+      personImage: new Blob([new Uint8Array(person.bytes)], { type: person.contentType }),
+      filename: "playground.jpg",
       garmentImageUrl: garmentUrl,
       garmentCategory: mapGarmentCategory(title || null),
     });

@@ -13,9 +13,9 @@ import { pollPlayground, runPlayground } from "@/app/actions";
 const MAX_BYTES = 20 * 1024 * 1024;
 /** Longest edge after resizing — ample for try-on, small enough to upload fast. */
 const MAX_EDGE = 1600;
-const POLL_MS = 3000;
+const POLL_MS = 12000;
 /** Generations settle well inside this; past it something is wrong. */
-const GIVE_UP_MS = 3 * 60 * 1000;
+const GIVE_UP_MS = 5 * 60 * 1000;
 
 type Phase = "idle" | "running" | "done" | "error";
 

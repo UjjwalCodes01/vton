@@ -16,8 +16,8 @@
   if (window.__clothsyAIReady) return;
   window.__clothsyAIReady = true;
 
-  var MAX_POLL_ATTEMPTS = 60; // 60 x 3s = 3 minutes
-  var POLL_INTERVAL_MS = 3000;
+  var MAX_POLL_ATTEMPTS = 25; // 25 x 12s = 5 minutes
+  var POLL_INTERVAL_MS = 12000;
   var MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
   var MAX_IMAGE_EDGE = 1024;
   // Wording of the consent shown to the shopper. Bump this whenever the text
