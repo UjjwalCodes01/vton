@@ -1,0 +1,27 @@
+# Safety checks for the current Perfect Corp try-on
+
+The backend now checks the person and product images **before** creating a provider task. It checks the generated image before marking a run successful, before serving `/i/...`, before saving a shared look, and when serving an existing shared look. An output blocked during status polling fails the run and releases the reserved merchant or Playground credit. A result that changes after approval is withheld when fetched. If Rekognition is unavailable, new runs stop with a temporary error and completed runs remain pending. Checks apply to Shopify, WooCommerce, and the Playground.
+
+## Configure before deploying
+
+1. In this AWS account, resolve the Rekognition data-use setting before sending customer photos. This account is currently standalone; AWS Organizations AI services opt-out policies cannot be applied until it is part of an organization. Review Rekognition and Perfect Corp data processing terms and the storefront privacy notice.
+2. Deploy `../safety-aws/terraform` in `us-east-1`. It creates a safety Lambda with only the four Rekognition actions and read access to the existing RPAPIR client table. It does not change RPAPIR or its key rotation. The Lambda runtime includes AWS SDK v3; if the runtime packaging changes, bundle the SDK modules with the function.
+3. In the **Render `fabricvton-api` service secret store**, set `SAFETY_PROXY_BASE` to the Terraform `safety_api_base` output. Keep the existing `CLOTHES_PROXY_CLIENT_ID`, `CLOTHES_PROXY_TOKEN`, and `CLOTHES_PROXY_BASE` values. No AWS access key or secret is needed in Render. Do not put the proxy token in Shopify themes, WooCommerce, the portal, Git, or client code.
+4. Deploy the FabricVTON backend and portal, release the Shopify theme extension containing the new adult/permission consent text, and publish WooCommerce plugin `0.2.7` from `clothsy-ai-woocommerce/clothsy-ai`. The backend requires consent version `2026-09-29.v3`; old widget builds will receive HTTP 403 until updated. The Playground now requires its own checkbox. Deploy these as one coordinated release. Prepare the WordPress SVN trunk and `tags/0.2.7` from that source only when ready to publish.
+5. Test a consented adult photo and a normal product image in a test shop. Verify a successful result, an expected refusal for a revealing product title, and a temporary 503 when Rekognition credentials are deliberately absent in a staging environment. Do not use children's or sexual images for smoke tests. Keep the screening IAM user isolated from the RPAPIR provider-key account where possible.
+
+Rekognition accepts JPEG or PNG bytes up to [5 MB](https://docs.aws.amazon.com/rekognition/latest/APIReference/API_Image.html); this integration limits images to 4 MiB so base64 plus the API event fits Lambda's 6 MB invocation limit. The current widgets redraw uploads as JPEG before sending them. The backend pins a publicly resolved IPv4 address when downloading remote product and result images, and refuses redirects and private addresses.
+
+## What this release enforces
+
+- An adult/permission attestation is required on each storefront request; the Playground requires an explicit checkbox. A new consent version asks existing widget users again.
+- Titles/categories describing lingerie, swimwear, underwear, sheer and similar garments are blocked. Product images are also checked with Rekognition moderation.
+- Person images must show exactly one high-confidence face, with a conservative Rekognition age range; celebrity matches, nudity and swimwear/underwear labels are blocked. Outputs undergo face and moderation checks again. [AWS moderation taxonomy](https://docs.aws.amazon.com/rekognition/latest/dg/moderation-api.html) and [face API](https://docs.aws.amazon.com/rekognition/latest/APIReference/API_DetectFaces.html).
+- Missing `SAFETY_PROXY_BASE`, a failed safety API, or a failed checker causes a closed failure. Signed result URLs and raw Rekognition responses are not logged by these checks.
+- The widget, Playground, and shared page label results as AI-generated previews. The downloaded image bytes still have no embedded provenance label.
+
+Approved output checks are cached in each backend process for 30 minutes by the image bytes' SHA-256 and `SAFETY_POLICY_VERSION`. Change that version when tightening output rules so an older approval cannot be reused.
+
+## Still required before calling the full guardrails complete
+
+This is the document's immediate **stopgap**, not all eleven guardrails. Rekognition age estimates are fallible and no second age estimator is connected. There is no PhotoDNA/PDQ match or reporting integration, garment validity classifier, body-coverage comparison, anti-undressing model, visible label embedded in downloaded images, C2PA manifest, watermark, formal abuse strike/review queue, or dedicated takedown workflow. Consent is an attestation; the backend cannot prove ownership of a photo. Get access to the required hash services, choose licensed models and a provenance tool, complete the policy and legal review, and validate on consented test data before wider launch.

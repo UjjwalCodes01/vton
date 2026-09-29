@@ -5,6 +5,7 @@ import { checkRateLimits, shareRules } from "../ratelimit.server";
 import { createSharedLook, shareBaseUrl, shareConfigured } from "./share.server";
 import { cachedResultUrl, rememberResultUrl } from "./imageproxy.server";
 import { getGenerationStatus } from "../engine.server";
+import { SafetyBlockError, SafetyUnavailableError } from "../safety.server";
 
 function clamp(value: unknown, max: number) {
   return typeof value === "string" ? value.slice(0, max) : null;
@@ -115,16 +116,26 @@ export async function handleShareRequest(params: {
     rememberResultUrl(taskId, imageUrl);
   }
 
-  const look = await createSharedLook({
-    shop,
-    generationId: event.id,
-    imageUrl,
-    // The headline comes from our record of the try-on, never from the request:
-    // it is what the page claims, under our name.
-    productTitle: event.productTitle,
-    productUrl: await storeProductUrl(shop, body.productUrl),
-    productImage: null,
-  });
+  let look;
+  try {
+    look = await createSharedLook({
+      shop,
+      generationId: event.id,
+      imageUrl,
+      // The headline comes from our record of the try-on, never from the request.
+      productTitle: event.productTitle,
+      productUrl: await storeProductUrl(shop, body.productUrl),
+      productImage: null,
+    });
+  } catch (error) {
+    if (error instanceof SafetyBlockError) {
+      return { ok: false as const, status: 422, error: "This result cannot be shared." };
+    }
+    if (error instanceof SafetyUnavailableError) {
+      return { ok: false as const, status: 503, error: "Sharing is temporarily unavailable." };
+    }
+    throw error;
+  }
 
   return { ok: true as const, status: 200, url: look.url };
 }

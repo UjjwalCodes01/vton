@@ -1,4 +1,5 @@
 import db from "./db.server";
+import { checkGarmentTitle, fetchScreenedResult, SAFETY_CONSENT_VERSION, SafetyBlockError, SafetyUnavailableError, screenGarmentUrl, screenPersonImage } from "./safety.server";
 import { rememberResultUrl, signImageToken } from "./share/imageproxy.server";
 import { readBodyLimited } from "./bodylimit.server";
 
@@ -235,7 +236,19 @@ export async function handleTryOnLoader(request: Request, verifiedShop: string) 
     try {
       const taskId = tryOnEvent.providerTaskId;
       const gen = await getGenerationStatus(taskId);
-      await syncGenerationOutcome(tryOnEvent, tryOnEvent.id, gen.status, gen.errorCode ?? null);
+      if (gen.status === "COMPLETED" && gen.resultImageUrl) {
+        try {
+          await fetchScreenedResult(gen.resultImageUrl);
+        } catch (error) {
+          if (error instanceof SafetyUnavailableError) return done("PROCESSING");
+          if (error instanceof SafetyBlockError) {
+            await syncGenerationOutcome(tryOnEvent, tryOnEvent.id, "FAILED", error.code);
+            return done("FAILED", "This try-on could not be completed safely.");
+          }
+          throw error;
+        }
+      }
+      await syncGenerationOutcome(tryOnEvent, tryOnEvent.id, gen.status === "COMPLETED" && !gen.resultImageUrl ? "PROCESSING" : gen.status, gen.errorCode ?? null);
 
       if (gen.status === "COMPLETED" && gen.resultImageUrl) {
         rememberResultUrl(taskId, gen.resultImageUrl);
@@ -529,6 +542,10 @@ export async function runTryOn(input: TryOnRequest): Promise<Response> {
     return errorResponse("Unsupported image format. Please upload a JPG or PNG.", 415, origin, requestId);
   }
 
+  if (consentVersion !== SAFETY_CONSENT_VERSION || !consentAt) {
+    return errorResponse("Please confirm you are an adult and have permission to use this photo.", 403, origin, requestId);
+  }
+
   // Reservation state, so the catch-all can release a hold if anything after
   // reservation throws.
   let reservedOverage: number | null = null;
@@ -627,6 +644,16 @@ export async function runTryOn(input: TryOnRequest): Promise<Response> {
         requestId,
         { "Retry-After": "15" }
       );
+    }
+
+    // Screen before charging the merchant or uploading any customer image.
+    try {
+      checkGarmentTitle(productTitle, product.category);
+      await Promise.all([screenPersonImage(personImage), screenGarmentUrl(productImageUrl)]);
+    } catch (error) {
+      if (error instanceof SafetyBlockError) return errorResponse(error.message, 422, origin, requestId);
+      if (error instanceof SafetyUnavailableError) return errorResponse(error.message, 503, origin, requestId);
+      throw error;
     }
 
     // ── Reserve the credit BEFORE any provider work ──

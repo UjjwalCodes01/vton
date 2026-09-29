@@ -4,6 +4,7 @@ import { cachedResultUrl, rememberResultUrl, verifyImageToken } from "../share/i
 import { stripImageMetadata } from "../share/imagemeta.server";
 import { getGenerationStatus } from "../engine.server";
 import { logInternalError, newRequestId } from "../requestid.server";
+import { fetchScreenedResult } from "../safety.server";
 
 // GET /i/<token> — a try-on result, served from our domain.
 //
@@ -12,8 +13,6 @@ import { logInternalError, newRequestId } from "../requestid.server";
 // their embedded metadata before they leave.
 
 const NOT_FOUND = () => new Response("Not found", { status: 404 });
-/** Results are a few megabytes; anything far past that is not one. */
-const MAX_RESULT_BYTES = 25 * 1024 * 1024;
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   const requestId = newRequestId();
@@ -38,13 +37,7 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
       rememberResultUrl(taskId, url);
     }
 
-    const upstream = await fetch(url, { signal: AbortSignal.timeout(20_000) });
-    if (!upstream.ok) return NOT_FOUND();
-    const declared = Number(upstream.headers.get("content-length"));
-    if (Number.isFinite(declared) && declared > MAX_RESULT_BYTES) return NOT_FOUND();
-
-    const raw = new Uint8Array(await upstream.arrayBuffer());
-    if (raw.byteLength > MAX_RESULT_BYTES) return NOT_FOUND();
+    const raw = await fetchScreenedResult(url);
 
     const clean = stripImageMetadata(raw);
     if (!clean) {
@@ -57,9 +50,8 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
       status: 200,
       headers: {
         "Content-Type": clean.type,
-        // Private: this is one shopper's own likeness, not something a shared
-        // cache should hold for anyone else who asks.
-        "Cache-Control": "private, max-age=1800",
+        // Keep each request behind the safety check and avoid caching a likeness.
+        "Cache-Control": "no-store",
         "Content-Disposition": "inline",
         "X-Content-Type-Options": "nosniff",
       },

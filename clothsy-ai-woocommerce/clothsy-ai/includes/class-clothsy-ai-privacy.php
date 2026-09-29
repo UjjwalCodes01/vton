@@ -85,7 +85,7 @@ class Clothsy_AI_Privacy {
 			$items[] = array(
 				'group_id'          => 'clothsy-ai-try-ons',
 				'group_label'       => __( 'Virtual try-on: history', 'clothsy-ai' ),
-				'group_description' => __( 'Products tried on in the virtual try-on window. Uploaded photos are not kept. A generated try-on image is kept only if the shopper chooses to share it, and then for 30 days.', 'clothsy-ai' ),
+				'group_description' => __( 'Products tried on in the virtual try-on window. Uploaded photos are processed by Clothsy AI and its AI and safety services. A generated try-on image is kept by Clothsy AI only if the shopper chooses to share it, and then for 30 days.', 'clothsy-ai' ),
 				'item_id'           => 'clothsy-ai-try-on-' . $i,
 				'data'              => array(
 					array( 'name' => __( 'Product', 'clothsy-ai' ), 'value' => (string) ( $try_on['productTitle'] ?? '' ) ),
@@ -149,7 +149,7 @@ class Clothsy_AI_Privacy {
 		}
 		$content  = '<p class="privacy-policy-tutorial">' . esc_html__( 'Suggested text for stores using the Clothsy AI virtual try-on. Adjust it to match your settings.', 'clothsy-ai' ) . '</p>';
 		$content .= '<strong class="privacy-policy-tutorial">' . esc_html__( 'Suggested text:', 'clothsy-ai' ) . ' </strong>';
-		$content .= '<p>' . esc_html__( 'Our product pages offer a virtual try-on, provided by Clothsy AI. Before anything is sent, you are asked to tick a box agreeing to your photo being processed and confirming that you are 18 or older, or have your guardian\'s consent; the date of that agreement is recorded. If you use the try-on, the photo you upload and the product you are trying on are sent to Clothsy AI to create the try-on image. Your photo is processed only to create that image; it is not kept and is not used to train AI models. The try-on image is not kept either, unless you choose to share it: a shared look keeps a copy of the image on a Clothsy AI page for 30 days, after which it is deleted.', 'clothsy-ai' ) . '</p>';
+		$content .= '<p>' . esc_html__( 'Our product pages offer a virtual try-on, provided by Clothsy AI. Before a photo is sent, you are asked to agree to its processing and confirm that you are 18 or older and that the photo is yours or you have the person\'s permission; the date of that agreement is recorded. If you use the try-on, the photo and product image are sent to Clothsy AI, which uses AI and image-safety services to create and check the preview. Your WordPress site does not store the uploaded photo. A generated image is kept by Clothsy AI for 30 days only if you choose to share the look. See the Clothsy AI shopper privacy notice for processing details.', 'clothsy-ai' ) . '</p>';
 		$content .= '<p>' . esc_html__( 'If we ask for your email address before a try-on, it is stored by Clothsy AI on our behalf together with the products you tried on, and we may use it to contact you about those products. You can withdraw your consent at any time, and ask us to export or delete this data, by contacting us.', 'clothsy-ai' ) . '</p>';
 		$content .= '<p>' . sprintf(
 			/* translators: %s: link to the Clothsy AI shopper privacy notice. */

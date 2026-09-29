@@ -10,6 +10,7 @@
 // shopper-initiated, and the shopper privacy notice says so.
 
 import { randomBytes } from "node:crypto";
+import { fetchScreenedResult } from "../safety.server";
 import { stripImageMetadata } from "./imagemeta.server";
 import db from "../db.server";
 import { RETENTION } from "../retention.server";
@@ -55,14 +56,7 @@ export async function createSharedLook(params: {
     throw new Error("Sharing is not configured.");
   }
 
-  const res = await fetch(params.imageUrl, { signal: AbortSignal.timeout(20_000) });
-  if (!res.ok) throw new Error("The try-on image could not be fetched.");
-
-  const declared = Number(res.headers.get("content-length") || 0);
-  if (declared > MAX_IMAGE_BYTES) throw new Error("That try-on image is too large to share.");
-
-  const raw = new Uint8Array(await res.arrayBuffer());
-  if (raw.byteLength > MAX_IMAGE_BYTES) throw new Error("That try-on image is too large to share.");
+  const raw = await fetchScreenedResult(params.imageUrl, MAX_IMAGE_BYTES);
 
   // Stored without whatever metadata the generator embedded: this copy is
   // public for as long as the look lives.

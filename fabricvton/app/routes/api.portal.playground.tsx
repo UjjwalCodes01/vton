@@ -46,6 +46,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         personImage: body.personImage,
         garmentImage: body.garmentImage,
         title: body.title,
+        consent: body.consent === true,
         publicBase: base,
       });
 

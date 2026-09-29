@@ -23,7 +23,7 @@
   // Wording of the consent shown to the shopper. Bump this whenever the text
   // changes: a stored consent always points at what was actually agreed to,
   // and a bump re-asks everyone who agreed to the old wording.
-  var CONSENT_VERSION = "2026-09-22.v2";
+  var CONSENT_VERSION = "2026-09-29.v3";
   var PRIVACY_URL = "https://www.fabricvton.com/widget-privacy";
   var HISTORY_LIMIT = 12;
 
@@ -255,9 +255,9 @@
       '    <h3 class="fabricvton-title">Before your first try-on</h3>',
       '    <p class="fabricvton-sub">Here\'s what happens with your photo. We only ask once.</p>',
       '    <ul class="fabricvton-points">',
-      "      <li>" + ICONS.sparkle + "<span>Your photo is sent to our secure AI service, only to create your try-on preview. It is never stored.</span></li>",
+      "      <li>" + ICONS.sparkle + "<span>Your photo is sent to our AI and safety services to create and check your try-on. A shared look is saved only if you choose to share it.</span></li>",
       "      <li>" + ICONS.chart + "<span>We keep basic usage data, like your number of try-ons, to run this service.</span></li>",
-      "      <li>" + ICONS.shield + "<span>You are 18 or older, or have your guardian’s consent. You can withdraw consent at any time.</span></li>",
+      "      <li>" + ICONS.shield + "<span>You are 18 or older. This is your photo, or you have the person’s permission to use it for AI try-on. You can withdraw consent at any time.</span></li>",
       "    </ul>",
       '    <p class="fabricvton-legal" style="margin-top:0;margin-bottom:14px;">By continuing you agree to the <a href="' + PRIVACY_URL + '" target="_blank" rel="noopener">Privacy notice</a></p>',
       '    <button type="button" class="fabricvton-btn fabricvton-btn-dark" data-action="agree">Agree and continue</button>',
@@ -307,6 +307,7 @@
       '      <span class="fabricvton-handle" data-role="handle" role="slider" tabindex="0" aria-label="Compare your photo with the try-on" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-valuetext="Half and half"><i>' + ICONS.compare + "</i></span>",
       "     </div>",
       "    </div>",
+      '    <p class="fabricvton-legal">AI-generated preview. It may differ from the real garment.</p>',
       '    <button type="button" class="fabricvton-product" data-action="view-product">',
       '      <span data-role="result-thumb"></span>',
       "      <div><b data-role=\"result-title\"></b><em data-role=\"result-date\"></em></div>",

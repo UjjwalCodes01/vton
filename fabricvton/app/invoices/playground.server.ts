@@ -12,6 +12,7 @@ import db from "../db.server";
 import { createTryOnWithImage, getGenerationStatus, mapGarmentCategory } from "../engine.server";
 import { putObject, shareStorageConfigured } from "../share/storage.server";
 import { rememberResultUrl, signImageToken } from "../share/imageproxy.server";
+import { checkGarmentTitle, fetchScreenedResult, SafetyBlockError, SafetyUnavailableError, screenGarmentImage, screenPersonImage } from "../safety.server";
 
 export class PlaygroundError extends Error {
   constructor(
@@ -84,6 +85,7 @@ export async function startPlaygroundRun(params: {
   garmentImage: unknown;
   title: unknown;
   publicBase: string;
+  consent: boolean;
 }) {
   if (!shareStorageConfigured()) {
     throw new PlaygroundError(503, "The Playground is not available right now.");
@@ -92,6 +94,18 @@ export async function startPlaygroundRun(params: {
   const person = decodeDataUrl(params.personImage, "photo of a person");
   const garment = decodeDataUrl(params.garmentImage, "product image");
   const title = typeof params.title === "string" ? params.title.trim().slice(0, 120) : "";
+  if (!params.consent) throw new PlaygroundError(403, "Confirm that you are an adult and have permission to use this photo.");
+  try {
+    checkGarmentTitle(title, null);
+    await Promise.all([
+      screenPersonImage(new Blob([person.bytes], { type: person.contentType })),
+      screenGarmentImage(garment.bytes),
+    ]);
+  } catch (error) {
+    if (error instanceof SafetyBlockError) throw new PlaygroundError(422, error.message);
+    if (error instanceof SafetyUnavailableError) throw new PlaygroundError(503, error.message);
+    throw error;
+  }
 
   // Spend the credit first, conditionally, so two tabs cannot both spend the
   // last one. It goes back if the run never starts.
@@ -156,6 +170,20 @@ export async function playgroundRunStatus(accountId: string, runId: string) {
   const generation = await getGenerationStatus(taskId);
 
   if (generation.status === "COMPLETED" && generation.resultImageUrl) {
+    try {
+      await fetchScreenedResult(generation.resultImageUrl);
+    } catch (error) {
+      if (error instanceof SafetyUnavailableError) return { status: "pending" as const };
+      if (error instanceof SafetyBlockError) {
+        const { count } = await db.tryOnEvent.updateMany({
+          where: { id: event.id, status: "pending" },
+          data: { status: "failed", errorCode: error.code },
+        });
+        if (count > 0) await db.$executeRaw`UPDATE "Account" SET "credits" = "credits" + 1 WHERE "id" = ${accountId}`;
+        return { status: "failed" as const, message: "That try-on did not pass safety screening. Your credit has been returned." };
+      }
+      throw error;
+    }
     // Cached so the image proxy can serve it without asking again.
     rememberResultUrl(taskId, generation.resultImageUrl);
     await db.tryOnEvent.updateMany({

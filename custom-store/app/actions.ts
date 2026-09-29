@@ -83,6 +83,7 @@ export async function runPlayground(payload: {
   personImage: string;
   garmentImage: string;
   title: string;
+  consent: boolean;
 }): Promise<RunState> {
   const session = await getPortalSession();
   if (!session) return { error: "Your session ended. Sign in again." };

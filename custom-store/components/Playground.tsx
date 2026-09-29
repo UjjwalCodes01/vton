@@ -88,6 +88,7 @@ export function Playground({ credits }: { credits: number }) {
   const [person, setPerson] = useState<string | null>(null);
   const [garment, setGarment] = useState<string | null>(null);
   const [title, setTitle] = useState("");
+  const [consent, setConsent] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<string | null>(null);
@@ -98,6 +99,11 @@ export function Playground({ credits }: { credits: number }) {
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
   async function start() {
+    if (!consent) {
+      setMessage("Confirm that you are an adult and have permission to use the photo.");
+      setPhase("error");
+      return;
+    }
     if (!person || !garment) {
       setMessage("Add both a photo and a product image.");
       setPhase("error");
@@ -115,7 +121,7 @@ export function Playground({ credits }: { credits: number }) {
 
     let started: Awaited<ReturnType<typeof runPlayground>>;
     try {
-      started = await runPlayground({ personImage: person, garmentImage: garment, title });
+      started = await runPlayground({ personImage: person, garmentImage: garment, title, consent });
     } catch {
       return fail("That run could not be started. Check your connection and try again.");
     }
@@ -201,14 +207,21 @@ export function Playground({ credits }: { credits: number }) {
                 Rendering — usually under fifteen seconds.
               </div>
             ) : result ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={result} alt="Try-on result" />
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={result} alt="AI-generated try-on preview" />
+                <p className="hint">AI-generated preview. It may differ from the real garment.</p>
+              </>
             ) : (
               <p className="result-idle">Your try-on appears here.</p>
             )}
           </div>
 
-          <button className="btn violet wide" style={{ marginTop: 14 }} onClick={start} disabled={busy || left <= 0}>
+          <label style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 14 }}>
+            <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />
+            <span>I am 18 or older, and this is my photo or I have the person’s permission to use it for AI try-on.</span>
+          </label>
+          <button className="btn violet wide" style={{ marginTop: 14 }} onClick={start} disabled={busy || left <= 0 || !consent}>
             {busy ? "Running…" : left <= 0 ? "No credits left" : "Run try-on"}
           </button>
 

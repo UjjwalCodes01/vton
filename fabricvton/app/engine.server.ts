@@ -519,11 +519,10 @@ export async function getGenerationStatus(
   const status = normalizeStatus(data.task_status);
   const resultImageUrl = extractResultUrl(data.results);
 
-  // A COMPLETED task with no URL, or a status we don't recognise, both surface to
-  // the shopper as an unexplained timeout — log the raw body so they're diagnosable.
+  // Log only status metadata. The raw response can contain a signed result URL.
   if ((status === "COMPLETED" && !resultImageUrl) || status === "PENDING") {
     console.log(
-      `[Engine][${taskId}] status=${String(data.task_status)} mapped=${status} url=${resultImageUrl ? "yes" : "no"} raw=${JSON.stringify(payload).slice(0, 500)}`
+      `[Engine][${taskId}] status=${String(data.task_status)} mapped=${status} url=${resultImageUrl ? "yes" : "no"}`
     );
   } else {
     console.log(`[Engine][${taskId}] status=${String(data.task_status)} mapped=${status}`);

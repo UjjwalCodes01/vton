@@ -90,7 +90,7 @@ export function renderLookPage(look: SharedLook, baseUrl: string) {
     <img class="shot" src="${escapeHtml(imageUrl)}" alt="A virtual try-on" />
     <div class="body">
       <p class="name">${escapeHtml(look.productTitle || "This look")}</p>
-      <p class="sub">Tried on virtually with ${BRAND}. AI can make mistakes.</p>
+      <p class="sub">AI-generated try-on preview from ${BRAND}. It may differ from the real garment.</p>
       ${
         productUrl
           ? `<a class="btn" href="${escapeHtml(productUrl)}" rel="noopener">Shop this item</a>`

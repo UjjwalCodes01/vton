@@ -87,6 +87,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       sessionId: body.sessionId,
       email: body.email,
       personImage: body.personImage,
+      consentVersion: body.consentVersion,
+      consentAt: body.consentAt,
       product: { id: claims.p, title: claims.t, imageUrl: claims.i, category: claims.c },
     });
   } catch (error) {

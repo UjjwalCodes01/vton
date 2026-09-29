@@ -2,6 +2,7 @@ import type { LoaderFunctionArgs } from "react-router";
 import { getSharedLook } from "../share/share.server";
 import { getObject } from "../share/storage.server";
 import { logInternalError, newRequestId } from "../requestid.server";
+import { screenResultImage } from "../safety.server";
 
 // GET /look/<id>/image — the stored image behind a shared link.
 //
@@ -20,13 +21,14 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
     const object = await getObject(look.imageKey);
     if (!object || !object.body) return NOT_FOUND;
 
-    return new Response(object.body, {
+    const raw = new Uint8Array(await object.arrayBuffer());
+    await screenResultImage(raw);
+    return new Response(new Blob([raw]), {
       status: 200,
       headers: {
         "Content-Type": look.contentType,
-        // Public, because a chat app's unfurl service fetches this without the
-        // viewer's session — but only for as long as the link itself lives.
-        "Cache-Control": "public, max-age=3600",
+        // A chat app may fetch this without a session; screen each retrieval.
+        "Cache-Control": "no-store",
         "X-Content-Type-Options": "nosniff",
       },
     });

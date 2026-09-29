@@ -4,7 +4,7 @@ Tags: virtual try-on, try on, fitting room, fashion, woocommerce
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.2.6
+Stable tag: 0.2.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,7 +51,7 @@ To change a product's settings, open it in the editor and use the **Clothsy AI**
 
 = Do shopper photos get stored? =
 
-No. Photos are processed to create the try-on image and are not kept by Clothsy AI or by your site. The generated try-on image is not kept either, unless the shopper chooses to share it: a shared look keeps a copy of the image on a Clothsy AI page for 30 days, then it is deleted.
+Your WordPress site does not store the uploaded photo. Clothsy AI sends it to its AI and safety-processing services to create and check the preview. A generated image is saved by Clothsy AI for 30 days only if the shopper chooses to share the look. See the shopper privacy notice for processing details.
 
 = Do shoppers have to agree before their photo is used? =
 
@@ -90,13 +90,17 @@ This plugin relies on the Clothsy AI service (hosted at fabricvton-api.onrender.
 * **When you choose or cancel a plan:** your store ID and the chosen plan. You pay on a Clothsy AI checkout page, where payments are handled by a payment processor that Clothsy AI uses; card details are never sent to your site or to Clothsy AI.
 * **When an admin runs Export or Erase Personal Data for an email address:** that email address, so Clothsy AI can return or delete the data it holds for it.
 * **When you delete the plugin:** your store ID, so Clothsy AI disconnects the store.
-* **When a shopper uses the try-on:** nothing is sent until the shopper agrees, in a card explaining what happens to their photo, that they are 18 or older (or have their guardian's consent). Only then does the browser send the photo, an anonymous session ID, the product's name and image URL, and a record of the consent they gave. Shoppers are never asked for an email address. When the try-on window opens, an anonymous "opened" event is sent for your statistics; if a shopper rates a result, that rating is sent too. If a shopper chooses to share a look, the try-on's ID and the product's name, link and image are sent, and Clothsy AI keeps a copy of that try-on image on the shared page for 30 days.
+* **When a shopper uses the try-on:** nothing is sent until the shopper agrees, in a card explaining what happens to their photo, that they are 18 or older, and that they own the photo or have the person's permission. Only then does the browser send the photo, an anonymous session ID, the product's name and image URL, and a record of the consent they gave. Shoppers are never asked for an email address. When the try-on window opens, an anonymous "opened" event is sent for your statistics; if a shopper rates a result, that rating is sent too. If a shopper chooses to share a look, the try-on's ID and the product's name, link and image are sent, and Clothsy AI keeps a copy of that try-on image on the shared page for 30 days.
 
-Try-on images are generated with an AI image-processing sub-processor that Clothsy AI uses. Photos are processed only to produce the result, are not kept, and are not used to train AI models. Generated images are not kept unless the shopper shares the look, in which case the shared copy is deleted after 30 days.
+Try-on images are generated with an AI image-processing sub-processor and checked by an image-safety service. Uploaded shopper photos are not stored on your WordPress server. Generated images are kept by Clothsy AI only when the shopper shares a look; that shared copy is deleted after 30 days. See the shopper privacy notice for the subprocessors' handling of uploaded photos.
 
 The service is provided by Clothsy AI: [Terms of Service](https://www.fabricvton.com/tos), [Privacy Policy](https://www.fabricvton.com/privacy), [Shopper privacy notice](https://www.fabricvton.com/widget-privacy).
 
 == Changelog ==
+
+= 0.2.7 =
+* Require an adult and photo-permission consent before try-on and explain AI safety screening.
+* Label results as AI-generated previews.
 
 = 0.2.6 =
 * Pace try-on status checks for the shared provider proxy capacity.

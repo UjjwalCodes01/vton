@@ -102,7 +102,7 @@ export const api = {
     post<{ shop?: string; email?: string; session: string; bind?: string | null }>("/api/portal/session", { token }),
   /** Ends every session this account holds, not just this browser's cookie. */
   signOut: (session: string) => post<{ ok: boolean }>("/api/portal/signout", { session }),
-  playgroundStart: (session: string, payload: { personImage: string; garmentImage: string; title: string }) =>
+  playgroundStart: (session: string, payload: { personImage: string; garmentImage: string; title: string; consent: boolean }) =>
     post<{ taskId: string; creditsLeft: number }>("/api/portal/playground", {
       session,
       step: "start",
