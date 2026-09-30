@@ -9,6 +9,7 @@ export type Img = { src: string; width: number; height: number };
 
 export const NAV_LINKS = [
   { label: "Research", href: "/research" },
+  { label: "Docs", href: "/docs" },
   { label: "Products", href: "/products" },
   { label: "Journal", href: "/journal" },
   { label: "Company", href: "/company" },
