@@ -4,6 +4,7 @@ import { adminJson } from "../admin/api.server";
 import { subjectFromSession } from "../invoices/subject.server";
 import { signImageToken } from "../share/imageproxy.server";
 import { readJsonLimited } from "../bodylimit.server";
+import { playgroundShop } from "../invoices/playground.server";
 
 const PAGE_SIZE = 20;
 
@@ -18,10 +19,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const subject = await subjectFromSession(body.session);
   if (!subject) return adminJson({ error: "Session expired." }, 401);
 
-  const shops = subject.stores.map((store) => store.shop);
-  if (shops.length === 0) {
-    return adminJson({ page: 1, pages: 1, total: 0, generations: [] });
-  }
+  const shops = [...subject.stores.map((store) => store.shop), playgroundShop(subject.account.id)];
 
   // A shop filter is only honoured for stores this account actually manages.
   const scope = body.shop && shops.includes(body.shop) ? [body.shop] : shops;

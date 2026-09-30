@@ -3,6 +3,7 @@ import { api, ApiError } from "@/lib/api";
 import { requirePortalSession } from "@/lib/session";
 import { count, day } from "@/lib/format";
 import { PageHead, Shell } from "@/components/Shell";
+import { StoreConnect } from "@/components/StoreConnect";
 
 export default async function Settings() {
   const session = await requirePortalSession();
@@ -50,24 +51,7 @@ export default async function Settings() {
         </div>
       </div>
 
-      <div className="card" style={{ marginBottom: 14 }}>
-        <div className="card-head"><h2>Connect another store</h2></div>
-        <div className="card-body">
-          <p className="sub" style={{ marginBottom: 14 }}>
-            Stores connect from inside their own admin, so nobody can attach a store they do not
-            run. It takes one click.
-          </p>
-          <ol className="steps">
-            <li>Open that store&apos;s Shopify admin.</li>
-            <li>Go to <b>Apps → Clothsy AI → Credits</b>.</li>
-            <li>Click <b>Open the billing portal</b>.</li>
-          </ol>
-          <p className="hint">
-            Signed in with the same Google address the store uses? It joins this account
-            automatically. On WooCommerce, reply to your invoice email and we will link it for you.
-          </p>
-        </div>
-      </div>
+      <StoreConnect />
 
       <div className="card">
         <div className="card-head"><h2>Account</h2></div>
@@ -89,8 +73,8 @@ export default async function Settings() {
             <div>
               <span className="stat-label">Account credits</span>
               <p style={{ margin: "6px 0 0", fontSize: 14.5 }}>
-                {count(account.credits)}{" "}
-                <span className="sub">— used by the Playground when it arrives</span>
+                  {count(account.credits)}{" "}
+                  <span className="sub">— shared by the Playground and Developer API</span>
               </p>
             </div>
           </div>

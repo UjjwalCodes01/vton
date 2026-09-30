@@ -21,6 +21,7 @@ function Icon({ name }: { name: string }) {
 
 const MAIN: [string, string, string][] = [
   ["/", "Overview", "overview"],
+  ["/api-keys", "Developer API", "docs"],
   ["/playground", "Playground", "playground"],
   ["/generations", "Generations", "generations"],
   ["/billing", "Billing", "billing"],

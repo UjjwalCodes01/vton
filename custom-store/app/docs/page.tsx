@@ -76,7 +76,7 @@ export default async function Docs() {
               <Link href="/generations">Generations</Link> with its outcome, so we can usually find
               it straight away.
             </p>
-            <p className="hint">The Playground and a developer API are on the way.</p>
+            <p className="hint">Create a server-side API key under <Link href="/api-keys">Developer API</Link>. Account credits are shared with the Playground.</p>
           </div>
         </div>
       </div>

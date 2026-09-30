@@ -47,7 +47,7 @@ export default async function Overview() {
           <span className="figure-label">Account credits</span>
           <b className="figure-value display">{count(account.credits)}</b>
           <p className="figure-note">
-            Yours to spend in the Playground. Connect a store to bring its try-ons, allowance and
+            Yours to spend in the Playground or Developer API. Connect a store to bring its try-ons, allowance and
             invoices in here too.
           </p>
           <div style={{ display: "flex", gap: 10, marginTop: 22, flexWrap: "wrap" }}>
@@ -75,7 +75,7 @@ export default async function Overview() {
               <div>
                 <dt>Account credits</dt>
                 <dd>{count(account.credits)}</dd>
-                <small>for the Playground</small>
+                <small>Playground and API</small>
               </div>
               <div>
                 <dt>Stores</dt>

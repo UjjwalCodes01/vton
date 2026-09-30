@@ -436,8 +436,69 @@ model Account {
   sessionsRevokedAt DateTime?
 
   stores     AccountStore[]
+  apiKeys    AccountApiKey[]
+  apiRuns    AccountApiRun[]
+  creditGrants AccountCreditGrant[]
+  storeLinkCodes StoreLinkCode[]
 
   @@index([googleSub])
+}
+
+model AccountApiKey {
+  id         String   @id @default(cuid())
+  accountId  String
+  name       String
+  hash       String   @unique
+  prefix     String
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  account    Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  runs       AccountApiRun[]
+
+  @@index([accountId, revokedAt])
+}
+
+model AccountApiRun {
+  id             String   @id @default(cuid())
+  accountId      String
+  apiKeyId       String
+  idempotencyKey String
+  runId          String?
+  state          String   @default("starting")
+  createdAt      DateTime @default(now())
+  account        Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  apiKey         AccountApiKey @relation(fields: [apiKeyId], references: [id])
+
+  @@unique([accountId, idempotencyKey])
+  @@index([accountId, createdAt])
+}
+
+model AccountCreditGrant {
+  id         String   @id @default(cuid())
+  accountId  String
+  reference  String   @unique
+  amount     Int
+  actor      String
+  note       String?
+  createdAt  DateTime @default(now())
+  account    Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, createdAt])
+}
+
+model StoreLinkCode {
+  id        String   @id @default(cuid())
+  accountId String
+  codeHash  String   @unique
+  platform  String
+  storeUrl  String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, createdAt])
 }
 
 /// Links an account to a store it may manage.

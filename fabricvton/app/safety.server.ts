@@ -140,7 +140,7 @@ function publicIpv4(address: string) {
 }
 
 /** Download a signed provider URL or product image without redirects or private-network access. */
-async function downloadPublicImage(value: string, maxBytes: number) {
+export async function downloadPublicImage(value: string, maxBytes: number) {
   let url: URL;
   try { url = new URL(value); } catch { throw new SafetyBlockError("safety_garment_url", "This garment image cannot be checked."); }
   if (url.protocol !== "https:" || url.port || url.username || url.password || value.length > 2048) {

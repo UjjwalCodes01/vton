@@ -86,6 +86,7 @@ export async function startPlaygroundRun(params: {
   title: unknown;
   publicBase: string;
   consent: boolean;
+  requestId?: string;
 }) {
   if (!shareStorageConfigured()) {
     throw new PlaygroundError(503, "The Playground is not available right now.");
@@ -138,6 +139,7 @@ export async function startPlaygroundRun(params: {
     const event = await db.tryOnEvent.create({
       data: {
         shop: playgroundShop(params.accountId),
+        sessionId: params.requestId,
         status: "pending",
         productTitle: title || "Playground",
         providerTaskId: task.id,
@@ -175,11 +177,7 @@ export async function playgroundRunStatus(accountId: string, runId: string) {
     } catch (error) {
       if (error instanceof SafetyUnavailableError) return { status: "pending" as const };
       if (error instanceof SafetyBlockError) {
-        const { count } = await db.tryOnEvent.updateMany({
-          where: { id: event.id, status: "pending" },
-          data: { status: "failed", errorCode: error.code },
-        });
-        if (count > 0) await db.$executeRaw`UPDATE "Account" SET "credits" = "credits" + 1 WHERE "id" = ${accountId}`;
+        await failAndRefund(event.id, accountId, error.code);
         return { status: "failed" as const, message: "That try-on did not pass safety screening. Your credit has been returned." };
       }
       throw error;
@@ -194,16 +192,21 @@ export async function playgroundRunStatus(accountId: string, runId: string) {
   }
 
   if (generation.status === "FAILED") {
-    const { count } = await db.tryOnEvent.updateMany({
-      where: { id: event.id, status: "pending" },
-      data: { status: "failed", errorCode: generation.errorCode ?? null },
-    });
-    // Only the first observer refunds, so a page left polling cannot mint credits.
-    if (count > 0) {
-      await db.$executeRaw`UPDATE "Account" SET "credits" = "credits" + 1 WHERE "id" = ${accountId}`;
-    }
+    await failAndRefund(event.id, accountId, generation.errorCode ?? null);
     return { status: "failed" as const, message: "That try-on did not finish. Your credit has been returned." };
   }
 
   return { status: "pending" as const };
+}
+
+async function failAndRefund(eventId: string, accountId: string, errorCode: string | null) {
+  // Settle the event and refund in one transaction. A process crash or DB error
+  // cannot mark the event failed while silently losing the customer's credit.
+  await db.$transaction(async (tx) => {
+    const { count } = await tx.tryOnEvent.updateMany({
+      where: { id: eventId, status: "pending" },
+      data: { status: "failed", errorCode },
+    });
+    if (count) await tx.$executeRaw`UPDATE "Account" SET "credits" = "credits" + 1 WHERE "id" = ${accountId}`;
+  });
 }

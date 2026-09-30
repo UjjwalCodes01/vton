@@ -96,6 +96,12 @@ export interface Generations {
   }[];
 }
 
+export interface ApiKeyData {
+  credits: number;
+  keys: { id: string; name: string; prefix: string; createdAt: string; lastUsedAt: string | null; revokedAt: string | null }[];
+  runs: { id: string; state: string; runId: string | null; createdAt: string }[];
+}
+
 export const api = {
   /** Swaps the one-time handoff token from Shopify for a portal session. */
   exchange: (token: string) =>
@@ -116,6 +122,11 @@ export const api = {
   generations: (session: string, page = 1, shop?: string) =>
     post<Generations>("/api/portal/generations", { session, page, shop }),
   me: (session: string) => post<PortalData>("/api/portal/me", { session }),
+  keys: (session: string) => post<ApiKeyData>("/api/portal/keys", { session, step: "list" }),
+  createKey: (session: string, name: string) => post<{ key: ApiKeyData["keys"][number]; token: string; freeCreditsGranted: number }>("/api/portal/keys", { session, step: "create", name }),
+  revokeKey: (session: string, id: string) => post<ApiKeyData>("/api/portal/keys", { session, step: "revoke", id }),
+  startStoreLink: (session: string, platform: string, storeUrl: string) =>
+    post<{ code: string; adminUrl: string; expiresMinutes: number }>("/api/portal/store-link", { session, platform, storeUrl }),
   startPayment: (session: string, invoiceId: string) =>
     post<{ orderId: string; keyId: string; amount: number; currency: string; description: string }>(
       "/api/portal/pay",

@@ -23,7 +23,7 @@ class Clothsy_AI_Admin {
 		add_action( 'admin_notices', array( __CLASS__, 'plugins_screen_notice' ) );
 		add_action( 'admin_notices', array( __CLASS__, 'encryption_notice' ) );
 
-		foreach ( array( 'connect', 'reverify', 'disconnect', 'toggle', 'save_settings', 'leads_csv', 'choose_plan', 'cancel_plan' ) as $action ) {
+		foreach ( array( 'connect', 'reverify', 'disconnect', 'toggle', 'save_settings', 'leads_csv', 'choose_plan', 'cancel_plan', 'link_account' ) as $action ) {
 			add_action( 'admin_post_clothsy_ai_' . $action, array( __CLASS__, 'handle_' . $action ) );
 		}
 	}
@@ -87,6 +87,18 @@ class Clothsy_AI_Admin {
 		self::guard( 'connect' );
 		$result = Clothsy_AI_Connection::connect();
 		self::finish( $result, __( 'Your store is connected. The try-on button now appears on your product pages.', 'clothsy-ai' ) );
+	}
+
+	/** Attach this verified store to the account that generated a one-time code. */
+	public static function handle_link_account(): void {
+		self::guard( 'link_account' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- checked in guard().
+		$code = isset( $_POST['connection_code'] ) ? sanitize_text_field( wp_unslash( $_POST['connection_code'] ) ) : '';
+		if ( ! preg_match( '/^[A-Za-z0-9_-]{24}$/', $code ) ) {
+			self::finish( new WP_Error( 'clothsy_bad_code', __( 'Enter the one-time code from your platform account.', 'clothsy-ai' ) ), '' );
+		}
+		$result = Clothsy_AI_Api_Client::post_signed( '/api/woo/store-link', array( 'code' => $code ) );
+		self::finish( is_wp_error( $result ) ? $result : true, __( 'This store is now linked to your platform account.', 'clothsy-ai' ) );
 	}
 
 	/** Retries confirmation, or moves the connection to this site's current URL. */
@@ -291,6 +303,19 @@ class Clothsy_AI_Admin {
 			<?php endif; ?>
 
 			<?php self::render_connection( $connection, $moved, $status ); ?>
+
+			<?php if ( $connection && 'connected' === $connection['status'] ) : ?>
+				<div class="clothsy-ai-card">
+					<h2><?php esc_html_e( 'Connect platform account', 'clothsy-ai' ); ?></h2>
+					<p><?php esc_html_e( 'Enter this store URL in your Clothsy platform account, then paste its one-time code here.', 'clothsy-ai' ); ?></p>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+						<input type="hidden" name="action" value="clothsy_ai_link_account" />
+						<?php wp_nonce_field( 'clothsy_ai_link_account' ); ?>
+						<input type="text" name="connection_code" required maxlength="24" autocomplete="off" aria-label="<?php esc_attr_e( 'One-time connection code', 'clothsy-ai' ); ?>" />
+						<button type="submit" class="button button-primary"><?php esc_html_e( 'Link account', 'clothsy-ai' ); ?></button>
+					</form>
+				</div>
+			<?php endif; ?>
 
 			<?php if ( $remote && ! $moved ) : ?>
 				<?php self::render_usage( $remote ); ?>

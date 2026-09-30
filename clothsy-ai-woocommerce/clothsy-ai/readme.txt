@@ -4,7 +4,7 @@ Tags: virtual try-on, try on, fitting room, fashion, woocommerce
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.2.7
+Stable tag: 0.2.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -24,6 +24,7 @@ Clothsy AI adds a "Try It On" button to your WooCommerce product pages. A shoppe
 * **Consent before any photo is sent.** Shoppers are shown, in plain language, what happens to their photo and agree once before anything leaves their browser.
 * **Privacy tools built in.** Shopper data works with WordPress's Export and Erase Personal Data tools, and the plugin suggests text for your privacy policy.
 * **Safe on staging.** A copy of your site keeps try-on switched off, so it can't use your allowance or disconnect your live store.
+* **Connect your platform account.** Paste a one-time code from the Clothsy AI platform inside WooCommerce admin to link your store.
 * **No account to create.** Click Connect in WordPress and you're done.
 
 = Plans =
@@ -97,6 +98,9 @@ Try-on images are generated with an AI image-processing sub-processor and checke
 The service is provided by Clothsy AI: [Terms of Service](https://www.fabricvton.com/tos), [Privacy Policy](https://www.fabricvton.com/privacy), [Shopper privacy notice](https://www.fabricvton.com/widget-privacy).
 
 == Changelog ==
+
+= 0.2.8 =
+* Link a connected WooCommerce store to a Clothsy AI platform account with a one-time code entered by a store administrator.
 
 = 0.2.7 =
 * Require an adult and photo-permission consent before try-on and explain AI safety screening.

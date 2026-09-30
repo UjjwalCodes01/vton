@@ -40,6 +40,19 @@ export interface ActionState {
   message?: string;
 }
 
+export async function grantAccountCredits(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const session = await getSession();
+  if (!session) return { error: "Your session expired. Sign in again." };
+  try {
+    const result = await api.grantAccountCredits<{ account: { credits: number } }>({
+      accountId: String(form.get("accountId") || ""), amount: Number(form.get("amount")),
+      reference: String(form.get("reference") || ""), note: String(form.get("note") || ""),
+    }, session.email);
+    revalidatePath("/accounts");
+    return { message: `Credits added. New balance: ${result.account.credits}.` };
+  } catch (error) { return { error: error instanceof ApiError ? error.message : "Could not grant credits." }; }
+}
+
 export async function signIn(_prev: ActionState, form: FormData): Promise<ActionState> {
   const email = String(form.get("email") || "");
   const password = String(form.get("password") || "");

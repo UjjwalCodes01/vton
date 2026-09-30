@@ -27,14 +27,14 @@ export default async function GenerationsPage({
     <Shell active="/generations" account={me.account}>
       <PageHead
         title="Generations"
-        subtitle="Every try-on your shoppers have run, newest first."
+        subtitle="Try-ons from your stores, Playground and Developer API, newest first."
         actions={<span className="badge">{count(data.total)} total</span>}
       />
 
       {data.generations.length === 0 ? (
         <div className="card">
           <p className="empty">
-            No try-ons yet. They appear here as soon as a shopper runs one on your store.
+            No try-ons yet. Store, Playground and API runs appear here.
           </p>
         </div>
       ) : (
@@ -48,7 +48,7 @@ export default async function GenerationsPage({
             <div className="stat">
               <span className="stat-label">All time</span>
               <b className="stat-value">{count(data.total)}</b>
-              <span className="stat-hint">across your stores</span>
+              <span className="stat-hint">across your account</span>
             </div>
             <div className="stat">
               <span className="stat-label">Liked</span>

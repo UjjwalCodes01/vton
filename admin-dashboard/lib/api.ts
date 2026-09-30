@@ -92,6 +92,9 @@ function without(payload: Record<string, unknown>, drop: string[]) {
 
 export const api = {
   overview: <T>() => call<T>("/api/admin/overview"),
+  accounts: <T>(page: number, q?: string) => call<T>(`/api/admin/accounts${query({ page, q })}`),
+  grantAccountCredits: <T>(payload: { accountId: string; amount: number; reference: string; note: string }, actor: string) =>
+    call<T>("/api/admin/accounts", { method: "POST", actor, body: { action: "grant_credits", ...payload } }),
   stores: <T>(params: Record<string, string | number | undefined>) => call<T>(`/api/admin/stores${query(params)}`),
   store: <T>(shop: string) => call<T>(`/api/admin/store${query({ shop })}`),
   analytics: <T>(days: number) => call<T>(`/api/admin/analytics${query({ days })}`),
