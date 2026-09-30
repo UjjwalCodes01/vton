@@ -62,6 +62,9 @@ export default function Footer() {
                 <Link href="/research/open-problems">Open problems</Link>
               </li>
               <li>
+                <Link href="/docs">Programme docs</Link>
+              </li>
+              <li>
                 <Link href="/journal">Journal</Link>
               </li>
               <li>

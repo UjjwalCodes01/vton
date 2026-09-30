@@ -3,6 +3,7 @@ import { SITE_URL } from "./(company)/_lib/site";
 
 import { AREAS } from "./(company)/_content/research";
 import { POSTS } from "./(company)/_content/journal/meta";
+import { CHAPTERS } from "./(company)/docs/_data/chapters";
 
 // The company site, plus the legal pages that other products (Shopify app, WooCommerce plugin) link to.
 // The Clothsy landing page (/clothsy) is noindex and stays out. /tgm is a private prospect showcase and stays out.
@@ -11,6 +12,8 @@ const PAGES = [
   "/research",
   ...AREAS.map((a) => `/research/${a.slug}`),
   "/research/open-problems",
+  "/docs",
+  ...CHAPTERS.map((c) => `/docs/${c.slug}`),
   "/journal",
   ...POSTS.map((p) => `/journal/${p.slug}`),
   "/products",
