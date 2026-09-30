@@ -155,7 +155,18 @@ export async function downloadPublicImage(value: string, maxBytes: number) {
   const bytes = await new Promise<Uint8Array>((resolve, reject) => {
     const request = httpsGet(url, {
       timeout: 12_000,
-      lookup: (_host, _opts, callback) => callback(null, pinned, 4),
+      // Node can request either one address or an array (autoSelectFamily).
+      // Returning a string for an `all: true` lookup makes Node read
+      // `addresses[0].address` as undefined and abort every try-on.
+      lookup: (_host, options, callback) => {
+        if (options.all) {
+          (callback as unknown as (error: null, addresses: { address: string; family: 4 }[]) => void)(
+            null, [{ address: pinned, family: 4 }],
+          );
+        } else {
+          callback(null, pinned, 4);
+        }
+      },
       headers: { accept: "image/jpeg,image/png" },
     }, (response) => {
       if (response.statusCode !== 200 || Number(response.headers["content-length"] || 0) > maxBytes) {
@@ -173,6 +184,9 @@ export async function downloadPublicImage(value: string, maxBytes: number) {
     });
     request.on("timeout", () => request.destroy(new SafetyUnavailableError()));
     request.on("error", reject);
+  }).catch((error: unknown) => {
+    if (error instanceof SafetyBlockError || error instanceof SafetyUnavailableError) throw error;
+    throw new SafetyUnavailableError();
   });
   return bytes;
 }
