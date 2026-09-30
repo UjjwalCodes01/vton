@@ -320,7 +320,10 @@ export async function createApiTryOn(request: Request, key: AccountApiKey): Prom
         requestId: reservation.id,
       });
     } catch (error) {
-      await db.accountApiRun.update({ where: { id: reservation.id }, data: { state: "failed" } });
+      // Nothing started and nothing was charged, so the reservation is released:
+      // a retry with the same Idempotency-Key — as the docs advise for 5xx —
+      // must be able to try again, not be told forever that it failed.
+      await db.accountApiRun.delete({ where: { id: reservation.id } }).catch(() => {});
       throw error;
     }
     // If this update fails, polling recovers the event by requestId; the spent
@@ -348,7 +351,15 @@ export async function readApiTryOn(accountId: string, id: string): Promise<Respo
       await db.accountApiRun.update({ where: { id: row.id }, data: { runId, state: "pending" } });
     }
   }
-  if (!runId) return apiJson({ id: row.id, status: publicStatus(row.state), resultUrl: null });
+  if (!runId) {
+    return apiJson({
+      id: row.id,
+      status: publicStatus(row.state),
+      resultUrl: null,
+      // Rows from before start failures released their reservation.
+      ...(row.state === "failed" ? { message: "The try-on could not be started. No credit was used." } : {}),
+    });
+  }
 
   try {
     const result = await playgroundRunStatus(accountId, runId);

@@ -27,7 +27,7 @@ if (PROXY_BASE_URL && (new URL(PROXY_BASE_URL).protocol !== "https:" || !PROXY_C
   throw new Error("CLOTHES_PROXY_BASE must use HTTPS and proxy client credentials must be configured");
 }
 
-// cloth-v4 adds outerwear + "auto" category. Override to cloth-v3 / cloth if needed.
+// cloth-v4 adds the "outer" and "auto" categories.
 const CLOTH_FEATURE = process.env.ENGINE_FEATURE || "cloth-v4";
 
 // If "auto" is rejected by your plan, set this to upper_body.
@@ -355,7 +355,7 @@ export function mapGarmentCategory(productTitle: string | null): string {
   const title = (productTitle ?? "").toLowerCase();
 
   if (/(jacket|coat|blazer|vest|parka|cardigan|overcoat|windbreaker)/.test(title)) {
-    return "outerwear";
+    return "outer";
   }
   if (/(dress|gown|jumpsuit|romper|onesie|overall|robe|kaftan)/.test(title)) {
     return "full_body";
@@ -386,7 +386,10 @@ export async function createTryOn(params: {
   const body: Record<string, unknown> = {
     src_file_id: params.customerFileId,
     ref_file_url: params.garmentImageUrl,
-    garment_category: params.garmentCategory || DEFAULT_GARMENT_CATEGORY,
+    // WooCommerce stores "outerwear" as its product category; cloth-v4 calls it "outer".
+    garment_category: params.garmentCategory === "outerwear"
+      ? "outer"
+      : params.garmentCategory || DEFAULT_GARMENT_CATEGORY,
   };
 
   const res = await apiFetch(`/s2s/v2.0/task/${CLOTH_FEATURE}`, {

@@ -5,7 +5,7 @@ process.env.CLOTHES_PROXY_BASE = "https://proxy.example.test";
 process.env.CLOTHES_PROXY_CLIENT_ID = "clothing-site";
 process.env.CLOTHES_PROXY_TOKEN = "test-client-token";
 
-const calls: Array<{ url: string; method: string; headers: Headers }> = [];
+const calls: Array<{ url: string; method: string; headers: Headers; body?: string }> = [];
 let registration = 0;
 let creation = 0;
 const originalFetch = globalThis.fetch;
@@ -14,7 +14,7 @@ test("proxy retries a complete pinned upload workflow after quota exhaustion", a
   globalThis.fetch = async (input, init) => {
     const url = String(input);
     const headers = new Headers(init?.headers);
-    calls.push({ url, method: init?.method ?? "GET", headers });
+    calls.push({ url, method: init?.method ?? "GET", headers, body: typeof init?.body === "string" ? init.body : undefined });
     if (url.endsWith("/v1/file")) {
       registration++;
       return new Response(JSON.stringify({
@@ -34,11 +34,12 @@ test("proxy retries a complete pinned upload workflow after quota exhaustion", a
   };
 
   try {
-    const { createTryOnWithImage } = await import("../app/engine.server");
+    const { createTryOnWithImage, mapGarmentCategory } = await import("../app/engine.server");
+    assert.equal(mapGarmentCategory("Cropped denim jacket"), "outer");
     const task = await createTryOnWithImage({
       personImage: new Blob([new Uint8Array([1, 2, 3])], { type: "image/jpeg" }),
       garmentImageUrl: "https://images.example.test/garment.jpg",
-      garmentCategory: "full_body",
+      garmentCategory: "outerwear",
     });
     assert.equal(task.id, "task-ok");
     assert.equal(registration, 2);
@@ -49,6 +50,8 @@ test("proxy retries a complete pinned upload workflow after quota exhaustion", a
     assert.equal(calls[5]?.headers.get("x-key-session"), "00000000-0000-0000-0000-000000000002");
     assert.equal(calls[0]?.headers.get("x-client-id"), "clothing-site");
     assert.equal(calls[0]?.headers.get("x-client-token"), "test-client-token");
+    assert.equal(JSON.parse(calls[2]?.body ?? "{}").garment_category, "outer");
+    assert.equal(JSON.parse(calls[5]?.body ?? "{}").garment_category, "outer");
   } finally {
     globalThis.fetch = originalFetch;
   }
