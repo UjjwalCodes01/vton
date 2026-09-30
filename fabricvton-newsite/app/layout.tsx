@@ -4,6 +4,7 @@ import "./globals.css";
 import "./styles/flow.css";
 import "./styles/widget.css";
 import "./styles/sections.css";
+import "./styles/docs.css";
 import SiteNav from "./components/SiteNav";
 import SiteFooter from "./components/SiteFooter";
 import Motion from "./components/motion/Motion";

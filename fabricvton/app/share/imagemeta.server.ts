@@ -166,3 +166,92 @@ function stripWebp(input: Uint8Array) {
   new DataView(header.buffer).setUint32(4, body.length + 4, true);
   return concat([header, body]);
 }
+
+// ─── AI provenance ─────────────────────────────────────────────────────────
+//
+// Every result is an AI-modified photo, and transparency rules (Article 50 of
+// the EU AI Act among them) expect that to be machine-readable. Stripping the
+// generator's metadata above removed any such mark, so our own goes back in: a
+// minimal XMP packet carrying the IPTC digital-source type for "composite with
+// trained algorithmic media" — the standard term for an AI-edited photograph.
+// It names no tool, vendor or person.
+
+const XMP = `<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/">
+ <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <rdf:Description rdf:about=""
+    xmlns:Iptc4xmpExt="http://iptc.org/std/Iptc4xmpExt/2008-02-29/"
+    Iptc4xmpExt:DigitalSourceType="http://cv.iptc.org/newscodes/digitalsourcetype/compositeWithTrainedAlgorithmicMedia"/>
+ </rdf:RDF>
+</x:xmpmeta>
+<?xpacket end="r"?>`;
+
+const encoder = new TextEncoder();
+
+/** Marks an already-cleaned image as AI-generated. Formats it can't mark pass through. */
+export function labelAiGenerated(image: CleanImage): CleanImage {
+  try {
+    if (image.type === "image/jpeg") return { ...image, bytes: labelJpeg(image.bytes) };
+    if (image.type === "image/png") return { ...image, bytes: labelPng(image.bytes) };
+  } catch {
+    // An unlabelled image is better than no image; the caller still has the clean one.
+  }
+  return image;
+}
+
+function labelJpeg(input: Uint8Array) {
+  const header = encoder.encode("http://ns.adobe.com/xap/1.0/\0");
+  const packet = encoder.encode(XMP);
+  const length = 2 + header.length + packet.length;
+  if (length > 0xffff) throw new Error("XMP too large for one segment");
+
+  const segment = new Uint8Array(2 + length);
+  segment[0] = 0xff;
+  segment[1] = 0xe1;
+  segment[2] = length >> 8;
+  segment[3] = length & 0xff;
+  segment.set(header, 4);
+  segment.set(packet, 4 + header.length);
+
+  // After SOI, and after a JFIF APP0 when there is one: JFIF must come first.
+  let at = 2;
+  if (input[2] === 0xff && input[3] === 0xe0) at = 4 + ((input[4] << 8) | input[5]);
+  return concat([input.subarray(0, at), segment, input.subarray(at)]);
+}
+
+const CRC_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    table[n] = c >>> 0;
+  }
+  return table;
+})();
+
+function crc32(bytes: Uint8Array) {
+  let c = 0xffffffff;
+  for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+function labelPng(input: Uint8Array) {
+  // iTXt: keyword \0, compression flag 0, method 0, language "" \0, translated "" \0, text.
+  const data = concat([encoder.encode("XML:com.adobe.xmp"), new Uint8Array([0, 0, 0, 0, 0]), encoder.encode(XMP)]);
+  const typeAndData = concat([encoder.encode("iTXt"), data]);
+  const chunk = new Uint8Array(12 + data.length);
+  const view = new DataView(chunk.buffer);
+  view.setUint32(0, data.length);
+  chunk.set(typeAndData, 4);
+  view.setUint32(8 + data.length, crc32(typeAndData));
+
+  // Before the first IDAT, where readers expect ancillary text chunks.
+  const source = new DataView(input.buffer, input.byteOffset, input.byteLength);
+  let i = 8;
+  while (i + 12 <= input.length) {
+    const length = source.getUint32(i);
+    if (ascii(input, i + 4, 4) === "IDAT") return concat([input.subarray(0, i), chunk, input.subarray(i)]);
+    i += 12 + length;
+  }
+  throw new Error("PNG has no IDAT");
+}

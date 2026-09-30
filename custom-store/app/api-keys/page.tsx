@@ -20,6 +20,14 @@ export default async function KeysPage() {
   -H "Content-Type: application/json" \\
   -d '{"personImageUrl":"https://example.com/person.jpg","garmentImageUrl":"https://example.com/dress.jpg","title":"Cotton dress","consent":true}'`}</pre>
       <p className="sub">Poll the returned <code>pollUrl</code> using the same bearer key. A successful result includes a short-lived <code>resultUrl</code> on Clothsy&apos;s domain.</p>
+      <p className="sub" style={{ marginTop: 12 }}>
+        Full documentation — including a step-by-step guide for custom stores and complete Node.js and Python
+        examples — is at{" "}
+        <a href="https://clothsyai.fabricvton.com/docs/api" target="_blank" rel="noopener noreferrer" style={{ color: "var(--violet)", textDecoration: "underline" }}>
+          clothsyai.fabricvton.com/docs/api
+        </a>
+        .
+      </p>
     </div></div>
   </Shell>;
 }

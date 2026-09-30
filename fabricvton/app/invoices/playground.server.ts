@@ -18,6 +18,8 @@ export class PlaygroundError extends Error {
   constructor(
     public status: number,
     message: string,
+    /** The safety rule that refused the run, when that is why it failed. */
+    public safetyCode?: string,
   ) {
     super(message);
   }
@@ -103,7 +105,7 @@ export async function startPlaygroundRun(params: {
       screenGarmentImage(garment.bytes),
     ]);
   } catch (error) {
-    if (error instanceof SafetyBlockError) throw new PlaygroundError(422, error.message);
+    if (error instanceof SafetyBlockError) throw new PlaygroundError(422, error.message, error.code);
     if (error instanceof SafetyUnavailableError) throw new PlaygroundError(503, error.message);
     throw error;
   }

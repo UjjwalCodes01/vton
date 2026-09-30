@@ -13,13 +13,14 @@
 
 import { createHmac } from "node:crypto";
 
-export type TokenPurpose = "portal" | "oauth" | "image" | "garment";
+export type TokenPurpose = "portal" | "oauth" | "image" | "garment" | "upload";
 
 const ROOTS: Record<TokenPurpose, string> = {
   portal: "PORTAL_SIGNING_SECRET",
   oauth: "PORTAL_SIGNING_SECRET",
   image: "SHARE_SIGNING_SECRET",
   garment: "SHARE_SIGNING_SECRET",
+  upload: "SHARE_SIGNING_SECRET",
 };
 
 const MIN_ROOT_LENGTH = 16;

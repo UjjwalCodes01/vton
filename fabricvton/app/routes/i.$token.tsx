@@ -1,7 +1,7 @@
 import type { LoaderFunctionArgs } from "react-router";
 import db from "../db.server";
 import { cachedResultUrl, rememberResultUrl, verifyImageToken } from "../share/imageproxy.server";
-import { stripImageMetadata } from "../share/imagemeta.server";
+import { labelAiGenerated, stripImageMetadata } from "../share/imagemeta.server";
 import { getGenerationStatus } from "../engine.server";
 import { logInternalError, newRequestId } from "../requestid.server";
 import { fetchScreenedResult } from "../safety.server";
@@ -39,12 +39,14 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
 
     const raw = await fetchScreenedResult(url);
 
-    const clean = stripImageMetadata(raw);
-    if (!clean) {
+    const stripped = stripImageMetadata(raw);
+    if (!stripped) {
       // Never pass through a format we cannot clean.
       logInternalError(requestId, "image proxy", new Error("Unrecognised result image format"));
       return NOT_FOUND();
     }
+    // Clean of the generator's metadata, then marked as AI-modified in our own words.
+    const clean = labelAiGenerated(stripped);
 
     return new Response(new Blob([clean.bytes as Uint8Array<ArrayBuffer>]), {
       status: 200,

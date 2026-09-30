@@ -11,7 +11,7 @@
 
 import { randomBytes } from "node:crypto";
 import { fetchScreenedResult } from "../safety.server";
-import { stripImageMetadata } from "./imagemeta.server";
+import { labelAiGenerated, stripImageMetadata } from "./imagemeta.server";
 import db from "../db.server";
 import { RETENTION } from "../retention.server";
 import { deleteObject, putObject, shareStorageConfigured } from "./storage.server";
@@ -60,8 +60,10 @@ export async function createSharedLook(params: {
 
   // Stored without whatever metadata the generator embedded: this copy is
   // public for as long as the look lives.
-  const clean = stripImageMetadata(raw);
-  if (!clean) throw new Error("That try-on image is not an image we can share.");
+  const stripped = stripImageMetadata(raw);
+  if (!stripped) throw new Error("That try-on image is not an image we can share.");
+  // Marked as AI-modified, like every result we serve.
+  const clean = labelAiGenerated(stripped);
   const contentType = clean.type;
   const extension = ALLOWED_TYPES[contentType];
   if (!extension) throw new Error("That try-on image is not an image we can share.");

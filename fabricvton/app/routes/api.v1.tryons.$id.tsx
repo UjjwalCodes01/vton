@@ -1,33 +1,25 @@
 import type { LoaderFunctionArgs } from "react-router";
-import db from "../db.server";
-import { adminJson } from "../admin/api.server";
 import { accountForApiKey } from "../invoices/api-keys.server";
-import { PlaygroundError, playgroundRunStatus, playgroundShop } from "../invoices/playground.server";
+import { apiError, readApiTryOn } from "../invoices/customer-api.server";
+import { checkRateLimits } from "../ratelimit.server";
 
+/** GET /api/v1/tryons/:id — the state of one try-on, documented at /docs/api. */
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const key = await accountForApiKey(request);
-  if (!key) return adminJson({ error: "Invalid API key." }, 401);
-  const row = await db.accountApiRun.findFirst({ where: { id: params.id, accountId: key.accountId } });
-  if (!row) return adminJson({ error: "Unknown try-on." }, 404);
-  let runId = row.runId;
-  if (!runId && row.state === "processing") {
-    const event = await db.tryOnEvent.findFirst({ where: { shop: playgroundShop(key.accountId), sessionId: row.id }, select: { id: true } });
-    if (event) {
-      runId = event.id;
-      await db.accountApiRun.update({ where: { id: row.id }, data: { runId, state: "pending" } });
-    }
+  if (!key) return apiError(401, "INVALID_API_KEY", "Missing, malformed or revoked API key.");
+
+  // While a run is pending each poll asks the engine for its status, so a tight
+  // loop would spend a shared upstream budget. 60 a minute is one every second,
+  // far more than a 2–3 second poll needs.
+  const limit = await checkRateLimits([
+    { scope: `customer-api-poll:${key.accountId}`, limit: 60, windowMs: 60_000, label: "API polling" },
+  ]);
+  if (!limit.allowed) {
+    return apiError(429, "RATE_LIMITED", "Polling too fast. Poll every 2–3 seconds.", {
+      "Retry-After": String(limit.retryAfterSeconds || 5),
+    });
   }
-  if (!runId) return adminJson({ id: row.id, status: row.state });
-  try {
-    const result = await playgroundRunStatus(key.accountId, runId);
-    if (result.status !== row.state) await db.accountApiRun.update({ where: { id: row.id }, data: { state: result.status } });
-    const base = (process.env.PUBLIC_APP_URL || process.env.SHOPIFY_APP_URL || "").replace(/\/+$/, "");
-    return adminJson({ id: row.id, status: result.status, resultUrl: result.imageToken ? `${base}/i/${result.imageToken}` : null, message: result.status === "failed" ? result.message : undefined });
-  } catch (error) {
-    if (error instanceof PlaygroundError) return adminJson({ error: error.message }, error.status);
-    console.error("[customer API poll] status check failed");
-    return adminJson({ error: "Could not check try-on status." }, 503);
-  }
+  return readApiTryOn(key.accountId, String(params.id || ""));
 };
 
-export const action = () => new Response("Method not allowed", { status: 405 });
+export const action = () => apiError(405, "METHOD_NOT_ALLOWED", "Use GET to read a try-on.");
