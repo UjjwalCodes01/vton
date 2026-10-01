@@ -33,5 +33,6 @@ export const RES_FAILED = `{
 }`;
 
 export const RES_CREDITS = `{
-  "credits": 42
+  "credits": 42,
+  "scope": "account"
 }`;

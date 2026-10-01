@@ -16,7 +16,10 @@ export class ApiError extends Error {
   }
 }
 
-async function call<T>(path: string, options: { method?: string; body?: unknown; actor?: string } = {}): Promise<T> {
+async function call<T>(
+  path: string,
+  options: { method?: string; body?: unknown; actor?: string; revealIssuedKey?: boolean } = {},
+): Promise<T> {
   const token = process.env.ADMIN_API_TOKEN || "";
   if (!token) throw new ApiError(500, "ADMIN_API_TOKEN is not set on the dashboard.");
 
@@ -53,7 +56,12 @@ async function call<T>(path: string, options: { method?: string; body?: unknown;
     const message = typeof data.error === "string" ? redactSecrets(data.error, 200) : "";
     throw new ApiError(response.status, message || `Request failed (${response.status}).`);
   }
-  return stripSecrets(data) as T;
+  const clean = stripSecrets(data) as Record<string, unknown>;
+  // The one response allowed to carry a credential: a key just issued, shown to
+  // the operator once so they can hand it over. Opt-in per call, and renamed so
+  // nothing downstream mistakes it for an ordinary field.
+  if (options.revealIssuedKey && typeof data.token === "string") clean.issuedKey = data.token;
+  return clean as T;
 }
 
 // The backend returns whole rows in places (the store detail spreads the full
@@ -95,6 +103,17 @@ export const api = {
   accounts: <T>(page: number, q?: string) => call<T>(`/api/admin/accounts${query({ page, q })}`),
   grantAccountCredits: <T>(payload: { accountId: string; amount: number; reference: string; note: string }, actor: string) =>
     call<T>("/api/admin/accounts", { method: "POST", actor, body: { action: "grant_credits", ...payload } }),
+  issueKey: <T>(payload: { email: string; name: string; credits: number; note: string }, actor: string) =>
+    call<T>("/api/admin/keys", { method: "POST", actor, body: { action: "create_key", ...payload, actor }, revealIssuedKey: true }),
+  keys: <T>(params: Record<string, string | number | undefined>) => call<T>(`/api/admin/keys${query(params)}`),
+  createStandaloneKey: <T>(payload: { name: string; credits: number; note: string }, actor: string) =>
+    call<T>("/api/admin/keys", { method: "POST", actor, body: { action: "create_standalone", ...payload, actor }, revealIssuedKey: true }),
+  renameKey: <T>(keyId: string, name: string, note: string, actor: string) =>
+    call<T>("/api/admin/keys", { method: "POST", actor, body: { action: "rename_key", keyId, name, note, actor } }),
+  adjustKeyCredits: <T>(keyId: string, amount: number, actor: string) =>
+    call<T>("/api/admin/keys", { method: "POST", actor, body: { action: "add_credits", keyId, amount, actor } }),
+  revokeKey: <T>(keyId: string, actor: string) =>
+    call<T>("/api/admin/keys", { method: "POST", actor, body: { action: "revoke_key", keyId, actor } }),
   stores: <T>(params: Record<string, string | number | undefined>) => call<T>(`/api/admin/stores${query(params)}`),
   store: <T>(shop: string) => call<T>(`/api/admin/store${query({ shop })}`),
   analytics: <T>(days: number) => call<T>(`/api/admin/analytics${query({ days })}`),

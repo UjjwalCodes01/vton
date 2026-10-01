@@ -2,6 +2,7 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import db from "../db.server";
 import { actorFrom, adminError, adminJson, AdminApiError, requireAdminToken } from "../admin/api.server";
 import { readJsonLimited } from "../bodylimit.server";
+import { notHolder } from "../invoices/api-keys.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
@@ -10,10 +11,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const page = Math.min(10000, Math.max(1, Number(params.get("page")) || 1));
     const q = (params.get("q") || "").trim().slice(0, 120);
     const accounts = await db.account.findMany({
-      where: q ? { OR: [{ email: { contains: q, mode: "insensitive" } }, { name: { contains: q, mode: "insensitive" } }, { id: q }] } : undefined,
+      // Standalone keys' hidden holder accounts aren't customers; they're on the API keys page.
+      where: q
+        ? { AND: [notHolder, { OR: [{ email: { contains: q, mode: "insensitive" } }, { name: { contains: q, mode: "insensitive" } }, { id: q }] }] }
+        : notHolder,
       orderBy: { createdAt: "desc" }, skip: (page - 1) * 50, take: 50,
       select: { id: true, email: true, name: true, credits: true, createdAt: true,
-        apiKeys: { select: { id: true, name: true, prefix: true, createdAt: true, lastUsedAt: true, revokedAt: true } },
+        apiKeys: { orderBy: { createdAt: "desc" }, select: { id: true, name: true, prefix: true, createdAt: true, lastUsedAt: true, revokedAt: true, credits: true, issuedBy: true, note: true } },
         creditGrants: { orderBy: { createdAt: "desc" }, take: 3, select: { id: true, reference: true, amount: true, actor: true, createdAt: true } },
         _count: { select: { apiRuns: true } },
       },

@@ -65,7 +65,16 @@ export default function Account() {
             "credits",
             "number",
             <>
-              Credits available right now. Each finished try-on uses one.
+              Try-ons this key can still run. Each finished try-on uses one.
+            </>,
+          ],
+          [
+            "scope",
+            "string",
+            <>
+              <code>&quot;account&quot;</code> — the key draws on your account&apos;s balance, shared with the Playground (keys you
+              create yourself). <code>&quot;key&quot;</code> — the key has its own allowance, issued to you by Clothsy AI, and{" "}
+              <code>credits</code> is what&apos;s left on that key alone.
             </>,
           ],
         ]}

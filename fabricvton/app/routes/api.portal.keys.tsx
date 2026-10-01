@@ -23,7 +23,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       await db.accountApiKey.updateMany({ where: { id, accountId, revokedAt: null }, data: { revokedAt: new Date() } });
     } else if (body.step !== "list") return adminJson({ error: "Unknown step." }, 400);
     const [keys, runs] = await Promise.all([
-      db.accountApiKey.findMany({ where: { accountId }, orderBy: { createdAt: "desc" }, select: { id: true, name: true, prefix: true, createdAt: true, lastUsedAt: true, revokedAt: true } }),
+      db.accountApiKey.findMany({ where: { accountId }, orderBy: { createdAt: "desc" }, select: { id: true, name: true, prefix: true, createdAt: true, lastUsedAt: true, revokedAt: true, credits: true, issuedBy: true } }),
       db.accountApiRun.findMany({ where: { accountId }, orderBy: { createdAt: "desc" }, take: 20, select: { id: true, state: true, runId: true, createdAt: true } }),
     ]);
     return adminJson({ keys, runs, credits: (await db.account.findUnique({ where: { id: accountId }, select: { credits: true } }))?.credits ?? 0 });

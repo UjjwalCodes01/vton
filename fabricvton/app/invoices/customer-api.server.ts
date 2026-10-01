@@ -116,7 +116,11 @@ export function toApiError(error: unknown): Response {
     // The Playground's own wording talks about the Playground; the API gets its own.
     switch (error.status) {
       case 402:
-        return apiError(402, "INSUFFICIENT_CREDITS", "This account has no credits left.");
+        return apiError(
+          402,
+          "INSUFFICIENT_CREDITS",
+          error.safetyCode === "key_credits" ? "This API key has no try-ons left." : "This account has no credits left.",
+        );
       case 403:
         return apiError(403, "CONSENT_REQUIRED", "Send consent: true to confirm the person is an adult who agreed to this.");
       case 404:
@@ -318,6 +322,8 @@ export async function createApiTryOn(request: Request, key: AccountApiKey): Prom
         publicBase: base,
         consent: true,
         requestId: reservation.id,
+        // A key issued with its own allowance pays for its own try-ons.
+        chargeKeyId: key.credits !== null ? key.id : null,
       });
     } catch (error) {
       // Nothing started and nothing was charged, so the reservation is released:

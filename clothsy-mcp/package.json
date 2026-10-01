@@ -6,7 +6,7 @@
   "author": "Clothsy AI",
   "type": "module",
   "bin": {
-    "clothsy-mcp": "./src/index.js"
+    "clothsy-mcp": "src/index.js"
   },
   "main": "./src/index.js",
   "files": [

@@ -13,7 +13,8 @@ export function ApiKeys({ initial }: { initial: ApiKeyData }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
-  const activeKey = data.keys.find((key) => !key.revokedAt);
+  // Only keys the customer created count towards their one key; keys we issue sit alongside it.
+  const activeKey = data.keys.find((key) => !key.revokedAt && key.issuedBy !== "admin");
 
   async function change(action: "create" | "revoke", id?: string) {
     setBusy(true); setError(""); setSecret(""); setNotice("");
@@ -56,7 +57,15 @@ export function ApiKeys({ initial }: { initial: ApiKeyData }) {
       </div>
       <div className="card-body flush">
         {data.keys.length ? data.keys.map((key) => <div className="row-item" key={key.id}>
-          <span><b>{key.name}</b><p className="mono">{key.prefix}… · {key.revokedAt ? "Revoked" : "Active"}</p></span>
+          <span>
+            <b>{key.name}</b>
+            <p className="mono">{key.prefix}… · {key.revokedAt ? "Revoked" : "Active"}</p>
+            {key.issuedBy === "admin" ? (
+              <p className="sub">
+                Issued by Clothsy AI · {typeof key.credits === "number" ? `${key.credits.toLocaleString("en-US")} try-ons left on this key` : "uses account credits"}
+              </p>
+            ) : null}
+          </span>
           {!key.revokedAt ? <button type="button" className="btn sm ghost" disabled={busy} onClick={() => change("revoke", key.id)}>Revoke</button> : null}
         </div>) : <p className="empty">No API keys yet.</p>}
       </div>

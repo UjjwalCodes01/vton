@@ -38,6 +38,84 @@ export async function invoiceAction(_prev: ActionState, form: FormData): Promise
 export interface ActionState {
   error?: string;
   message?: string;
+  /** A key just issued — shown once, never stored by the dashboard. */
+  issuedKey?: string;
+}
+
+// ─── Issued API keys ───────────────────────────────────────────────────────
+
+export async function issueApiKey(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const session = await getSession();
+  if (!session) return { error: "Your session expired. Sign in again." };
+
+  // No email: a standalone key that belongs to nobody, managed only from here.
+  if (!String(form.get("email") || "").trim()) {
+    try {
+      const result = await api.createStandaloneKey<{ key: { credits: number; name: string }; issuedKey?: string }>(
+        { name: String(form.get("name") || ""), credits: Number(form.get("credits")), note: String(form.get("note") || "") },
+        session.email,
+      );
+      revalidatePath("/keys");
+      if (!result.issuedKey) return { error: "The key was created but couldn't be shown. Revoke it and generate another." };
+      return {
+        message: `Standalone key "${result.key.name}" with ${result.key.credits.toLocaleString("en-US")} try-ons.`,
+        issuedKey: result.issuedKey,
+      };
+    } catch (error) {
+      return { error: error instanceof ApiError ? error.message : "Could not generate the key." };
+    }
+  }
+
+  try {
+    const result = await api.issueKey<{ account: { email: string }; key: { prefix: string; credits: number }; issuedKey?: string }>(
+      {
+        email: String(form.get("email") || ""),
+        name: String(form.get("name") || ""),
+        credits: Number(form.get("credits")),
+        note: String(form.get("note") || ""),
+      },
+      session.email,
+    );
+    revalidatePath("/accounts");
+    revalidatePath("/keys");
+    if (!result.issuedKey) return { error: "The key was created but couldn't be shown. Revoke it and issue another." };
+    return {
+      message: `Key for ${result.account.email} with ${result.key.credits.toLocaleString("en-US")} try-ons.`,
+      issuedKey: result.issuedKey,
+    };
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : "Could not issue the key." };
+  }
+}
+
+export async function adjustApiKeyCredits(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const session = await getSession();
+  if (!session) return { error: "Your session expired. Sign in again." };
+  try {
+    const result = await api.adjustKeyCredits<{ key: { credits: number } }>(
+      String(form.get("keyId") || ""),
+      Number(form.get("amount")),
+      session.email,
+    );
+    revalidatePath("/accounts");
+    revalidatePath("/keys");
+    return { message: `Now ${result.key.credits.toLocaleString("en-US")} try-ons left.` };
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : "Could not change the try-ons." };
+  }
+}
+
+export async function revokeApiKey(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const session = await getSession();
+  if (!session) return { error: "Your session expired. Sign in again." };
+  try {
+    await api.revokeKey(String(form.get("keyId") || ""), session.email);
+    revalidatePath("/accounts");
+    revalidatePath("/keys");
+    return { message: "Key revoked." };
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : "Could not revoke the key." };
+  }
 }
 
 export async function grantAccountCredits(_prev: ActionState, form: FormData): Promise<ActionState> {
@@ -124,5 +202,18 @@ export async function storeAction(_prev: ActionState, form: FormData): Promise<A
     return { message: result.message };
   } catch (error) {
     return { error: error instanceof ApiError ? error.message : "That did not work." };
+  }
+}
+
+export async function renameApiKey(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const session = await getSession();
+  if (!session) return { error: "Your session expired. Sign in again." };
+  try {
+    await api.renameKey(String(form.get("keyId") || ""), String(form.get("name") || ""), String(form.get("note") || ""), session.email);
+    revalidatePath("/keys");
+    revalidatePath("/accounts");
+    return { message: "Saved." };
+  } catch (error) {
+    return { error: error instanceof ApiError ? error.message : "Could not save." };
   }
 }

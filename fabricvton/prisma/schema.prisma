@@ -219,6 +219,7 @@ model TryOnEvent {
   modelUsed       String   @default("primary/cloth-v4")
   processingMs    Int?
   providerTaskId  String?  // the engine's task id, for polling — never sent to clients
+  creditKeyId     String?  // the API key whose own allowance paid for this, so a refund goes back to it
   errorCode       String?  // Provider error code, e.g. error_pose
   errorMessage    String?  // Store error details for debugging
   // Every `pending` event holds exactly one reserved credit, plus this many USD
@@ -453,6 +454,13 @@ model AccountApiKey {
   createdAt  DateTime @default(now())
   lastUsedAt DateTime?
   revokedAt  DateTime?
+  /// Try-ons left on this key itself. Null: the key draws on the account's
+  /// balance (self-serve keys). Set: the key has its own allowance, issued
+  /// from the admin dashboard, and never touches the account's credits.
+  credits    Int?
+  /// "self" (created in the portal) or "admin" (issued from the dashboard).
+  issuedBy   String   @default("self")
+  note       String?
   account    Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
   runs       AccountApiRun[]
 

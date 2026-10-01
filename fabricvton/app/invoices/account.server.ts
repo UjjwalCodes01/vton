@@ -125,3 +125,17 @@ export async function storesFor(accountId: string) {
 export async function accountOwnsStore(accountId: string, shop: string) {
   return Boolean(await db.accountStore.findUnique({ where: { accountId_shop: { accountId, shop } } }));
 }
+
+/**
+ * The account for an email address, created if there isn't one yet.
+ *
+ * Used when an admin issues an API key to someone who hasn't signed in. When
+ * they later sign in with Google using the same address, accountForGoogle finds
+ * this account by email, so the key is already theirs.
+ */
+export async function accountForEmail(rawEmail: string) {
+  const email = rawEmail.trim().toLowerCase();
+  const existing = await db.account.findUnique({ where: { email } });
+  if (existing) return existing;
+  return db.account.create({ data: { id: newId(), email } });
+}

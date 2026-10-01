@@ -98,7 +98,7 @@ export interface Generations {
 
 export interface ApiKeyData {
   credits: number;
-  keys: { id: string; name: string; prefix: string; createdAt: string; lastUsedAt: string | null; revokedAt: string | null }[];
+  keys: { id: string; name: string; prefix: string; createdAt: string; lastUsedAt: string | null; revokedAt: string | null; credits?: number | null; issuedBy?: string }[];
   runs: { id: string; state: string; runId: string | null; createdAt: string }[];
 }
 

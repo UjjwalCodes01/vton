@@ -3,12 +3,18 @@ import db from "../db.server";
 import { accountForApiKey } from "../invoices/api-keys.server";
 import { apiError, apiJson } from "../invoices/customer-api.server";
 
-/** GET /api/v1/account — the credit balance behind this key. */
+/**
+ * GET /api/v1/account — the try-ons this key can still run.
+ *
+ * A key issued with its own allowance reports that allowance (scope "key");
+ * every other key reports the account's balance (scope "account").
+ */
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const key = await accountForApiKey(request);
   if (!key) return apiError(401, "INVALID_API_KEY", "Missing, malformed or revoked API key.");
+  if (key.credits !== null) return apiJson({ credits: key.credits, scope: "key" });
   const account = await db.account.findUnique({ where: { id: key.accountId }, select: { credits: true } });
-  return apiJson({ credits: account?.credits ?? 0 });
+  return apiJson({ credits: account?.credits ?? 0, scope: "account" });
 };
 
 export const action = () => apiError(405, "METHOD_NOT_ALLOWED", "Use GET to read the account.");

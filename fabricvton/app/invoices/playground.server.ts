@@ -89,6 +89,8 @@ export async function startPlaygroundRun(params: {
   publicBase: string;
   consent: boolean;
   requestId?: string;
+  /** An API key with its own allowance pays instead of the account. */
+  chargeKeyId?: string | null;
 }) {
   if (!shareStorageConfigured()) {
     throw new PlaygroundError(503, "The Playground is not available right now.");
@@ -112,16 +114,15 @@ export async function startPlaygroundRun(params: {
 
   // Spend the credit first, conditionally, so two tabs cannot both spend the
   // last one. It goes back if the run never starts.
-  const spent = await db.$executeRaw`
-    UPDATE "Account" SET "credits" = "credits" - 1
-    WHERE "id" = ${params.accountId} AND "credits" > 0
-  `;
-  if (spent === 0) {
-    throw new PlaygroundError(402, "You have no Playground credits left. Talk to us about a top-up.");
+  const keyId = params.chargeKeyId ?? null;
+  const spent = await spendCredit(params.accountId, keyId);
+  if (!spent) {
+    throw keyId
+      ? new PlaygroundError(402, "This API key has no try-ons left. Ask Clothsy AI to add more.", "key_credits")
+      : new PlaygroundError(402, "You have no Playground credits left. Talk to us about a top-up.");
   }
 
-  const refund = () =>
-    db.$executeRaw`UPDATE "Account" SET "credits" = "credits" + 1 WHERE "id" = ${params.accountId}`;
+  const refund = () => refundCredit(db, params.accountId, keyId);
 
   try {
     const extension = garment.contentType.split("/")[1].replace("jpeg", "jpg");
@@ -142,6 +143,7 @@ export async function startPlaygroundRun(params: {
       data: {
         shop: playgroundShop(params.accountId),
         sessionId: params.requestId,
+        creditKeyId: keyId,
         status: "pending",
         productTitle: title || "Playground",
         providerTaskId: task.id,
@@ -179,7 +181,7 @@ export async function playgroundRunStatus(accountId: string, runId: string) {
     } catch (error) {
       if (error instanceof SafetyUnavailableError) return { status: "pending" as const };
       if (error instanceof SafetyBlockError) {
-        await failAndRefund(event.id, accountId, error.code);
+        await failAndRefund(event.id, accountId, error.code, event.creditKeyId);
         return { status: "failed" as const, message: "That try-on did not pass safety screening. Your credit has been returned." };
       }
       throw error;
@@ -194,14 +196,14 @@ export async function playgroundRunStatus(accountId: string, runId: string) {
   }
 
   if (generation.status === "FAILED") {
-    await failAndRefund(event.id, accountId, generation.errorCode ?? null);
+    await failAndRefund(event.id, accountId, generation.errorCode ?? null, event.creditKeyId);
     return { status: "failed" as const, message: "That try-on did not finish. Your credit has been returned." };
   }
 
   return { status: "pending" as const };
 }
 
-async function failAndRefund(eventId: string, accountId: string, errorCode: string | null) {
+async function failAndRefund(eventId: string, accountId: string, errorCode: string | null, keyId: string | null) {
   // Settle the event and refund in one transaction. A process crash or DB error
   // cannot mark the event failed while silently losing the customer's credit.
   await db.$transaction(async (tx) => {
@@ -209,6 +211,28 @@ async function failAndRefund(eventId: string, accountId: string, errorCode: stri
       where: { id: eventId, status: "pending" },
       data: { status: "failed", errorCode },
     });
-    if (count) await tx.$executeRaw`UPDATE "Account" SET "credits" = "credits" + 1 WHERE "id" = ${accountId}`;
+    if (count) await refundCredit(tx, accountId, keyId);
   });
+}
+
+/**
+ * Takes one credit, atomically, from the key's own allowance when the run is
+ * charged to a key, otherwise from the account. False when there is none left.
+ */
+export async function spendCredit(accountId: string, keyId: string | null) {
+  const changed = keyId
+    ? await db.$executeRaw`
+        UPDATE "AccountApiKey" SET "credits" = "credits" - 1
+        WHERE "id" = ${keyId} AND "accountId" = ${accountId} AND "credits" > 0 AND "revokedAt" IS NULL`
+    : await db.$executeRaw`
+        UPDATE "Account" SET "credits" = "credits" - 1
+        WHERE "id" = ${accountId} AND "credits" > 0`;
+  return changed > 0;
+}
+
+/** Gives the credit back to wherever it came from. */
+export function refundCredit(client: Pick<typeof db, "$executeRaw">, accountId: string, keyId: string | null) {
+  return keyId
+    ? client.$executeRaw`UPDATE "AccountApiKey" SET "credits" = "credits" + 1 WHERE "id" = ${keyId}`
+    : client.$executeRaw`UPDATE "Account" SET "credits" = "credits" + 1 WHERE "id" = ${accountId}`;
 }
