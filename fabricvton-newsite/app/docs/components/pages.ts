@@ -8,6 +8,7 @@ export const DOC_PAGES: readonly DocPage[] = [
   { group: "Get started", href: "/docs/api/quickstart", label: "Quickstart" },
   { group: "Get started", href: "/docs/api/sdk", label: "TypeScript SDK" },
   { group: "Get started", href: "/docs/api/nextjs", label: "Next.js" },
+  { group: "Get started", href: "/docs/api/mcp", label: "MCP server" },
   { group: "Guides", href: "/docs/api/custom-store", label: "Add try-on to a custom store" },
   { group: "Guides", href: "/docs/api/examples", label: "Full examples" },
   { group: "Guides", href: "/docs/api/images", label: "Uploading images" },

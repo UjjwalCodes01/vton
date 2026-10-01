@@ -19,7 +19,7 @@ const ERRORS: [number, string, string, string][] = [
   [401, "INVALID_API_KEY", "The key is missing, malformed or revoked.", "Check the Authorization header."],
   [402, "INSUFFICIENT_CREDITS", "The account has no credits left.", "Top up; hide the try-on button until then."],
   [403, "CONSENT_REQUIRED", "consent wasn't true.", "Collect the shopper's agreement, then send consent: true."],
-  [404, "NOT_FOUND", "No try-on with that id on this account.", "Check the id."],
+  [404, "NOT_FOUND", "No try-on with that id on this account, or no endpoint at that path.", "Check the id and the URL against the endpoint pages."],
   [405, "METHOD_NOT_ALLOWED", "The endpoint doesn't accept that HTTP method.", "Check the method, e.g. POST to /tryons, GET to /tryons/{id}."],
   [413, "IMAGE_TOO_LARGE", "An image is larger than 4 MB.", "Resize to about 1600 px before uploading."],
   [422, "PERSON_PHOTO_REJECTED", "The photo needs to show exactly one adult, clearly.", "Ask for a clear photo of just the shopper."],

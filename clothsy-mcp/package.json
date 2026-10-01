@@ -1,0 +1,33 @@
+{
+  "name": "clothsy-mcp",
+  "version": "0.1.0",
+  "description": "MCP server that helps AI coding agents add Clothsy AI virtual try-on to a store: stack detection, integration plans, docs, error help and a live key check.",
+  "license": "MIT",
+  "author": "Clothsy AI",
+  "type": "module",
+  "bin": {
+    "clothsy-mcp": "./src/index.js"
+  },
+  "main": "./src/index.js",
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "clothsy",
+    "virtual-try-on",
+    "ecommerce",
+    "ai-agent"
+  ],
+  "homepage": "https://clothsyai.fabricvton.com/docs/api/mcp"
+}
