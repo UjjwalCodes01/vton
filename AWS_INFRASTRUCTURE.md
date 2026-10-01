@@ -67,7 +67,7 @@ The safety Lambda accepts a base64 JPEG or PNG (up to 4 MiB) and exposes only fo
 
 The **backend** makes the allow/block decisions: consent, one clearly visible adult face, multiple-person detection, celebrity detection, moderation labels, and blocked garment names/labels. It screens the person and garment before sending a try-on to RPAPIR and screens generated output before serving it. Missing or unavailable screening fails closed. See [`safety-aws/handler.mjs`](safety-aws/handler.mjs), [`fabricvton/app/safety.server.ts`](fabricvton/app/safety.server.ts), and the storefront/API entry points in [`fabricvton/app/tryon.server.ts`](fabricvton/app/tryon.server.ts) and [`fabricvton/app/invoices/playground.server.ts`](fabricvton/app/invoices/playground.server.ts).
 
-These are **basic checks, not all 11 guardrails** in [`safety-guardrails.md`](safety-guardrails.md). There is no second age model, vetted CSAM hash matching, human-parsing coverage check, C2PA signing, or durable abuse-enforcement workflow in this AWS deployment. RPAPIR does not validate a signed safety verdict; a caller with its valid client credential can invoke the proxy directly. The AWS safety service also cannot prove how the Render deployment is configured without checking that deployment separately.
+These are **basic checks, not all 11 guardrails** in [`safety-guardrails.md`](safety-guardrails.md). At the snapshot there was no second age model (one is being added; see the change section below). There is no vetted CSAM hash matching, human-parsing coverage check, C2PA signing, or durable abuse-enforcement workflow in this AWS deployment. RPAPIR does not validate a signed safety verdict; a caller with its valid client credential can invoke the proxy directly. The AWS safety service also cannot prove how the Render deployment is configured without checking that deployment separately.
 
 ## Security boundary and deployment status
 
@@ -76,6 +76,18 @@ Both APIs use the generated `execute-api` endpoints. The live account has **no A
 The optional Google Sheet sync Lambda/EventBridge rule in [`RPAPIR-main/terraform/sheet_sync.tf`](RPAPIR-main/terraform/sheet_sync.tf) is **not deployed**: no corresponding Lambda, schedule, or service-account secret was found. The optional RPAPIR custom-domain/mTLS resources in Terraform are also absent. The safety stack uses a configured remote S3 Terraform backend. The checked-in RPAPIR Terraform has no backend configuration or state file; do not run `terraform apply` from a fresh checkout without first locating and reconciling the original state.
 
 The live Lambda modification dates above are AWS facts. They do **not** prove that the current Render release, Shopify release, or WooCommerce plugin version is using these services, nor that the newest repository commit is deployed to either Lambda. Live Lambda environment-variable values and Render settings were not inspected; runtime behavior described above comes from repository code and nonsecret resource metadata. This inventory did not run a customer try-on or incur provider units.
+
+## Change after the snapshot: second age estimator (1 October 2026)
+
+The snapshot above predates this change. The backend refused every face whose Rekognition age midpoint was under 25, because policy G1's second estimator did not exist. That refused most adults who look 18 to 24. The fix follows G1 as written:
+
+| Resource | State | Role |
+| --- | --- | --- |
+| ECR `clothsy-age` | Created (immutable tags, scan on push, keeps the newest five images) | MiVOLO v2 Lambda image, `clothsy-age@sha256:8595c0ae…` pushed |
+| IAM role `clothsy-age-lambda-role`, log group `/aws/lambda/clothsy-age` (7 days) | Created | Logs, and `dynamodb:GetItem` on `api-key-pool-clients` only |
+| Lambda `clothsy-age` (container, x86_64, 4 GB, 20 s) + route `POST /v1/age` on `clothsy-safety` | **Planned, not yet applied** (`terraform apply -var age_image_uri=…`, 4 to add, 0 to change) | Second age estimate from the image plus Rekognition's face and person boxes |
+
+The existing `clothsy-safety` Lambda, its route, and RPAPIR (`api-key-pool`, its tables, secrets and Lambda) are unchanged; RPAPIR needs no change. The new Lambda shares the account's Lambda concurrency limit of 10. The backend change (`fabricvton/app/safety.server.ts`) applies the G1 bands and falls back to the old strict rule while `/v1/age` is absent or failing. Details and measurements are in [`safety-aws/README.md`](safety-aws/README.md#second-age-estimator-clothsy-age-1-october-2026).
 
 ## Read-only verification commands
 
