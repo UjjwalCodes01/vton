@@ -56,7 +56,9 @@ cd ../age && ./build_and_push.sh                      # prints <repo>@sha256:<di
 cd ../terraform && terraform apply -var age_image_uri=<that URI>   # Lambda, route, permission
 ```
 
-Status: step 1 was applied on 1 October 2026 (6 added, 0 changed). The image `clothsy-age@sha256:8595c0ae…` is pushed. Step 2 is planned (4 to add, 0 to change) and **not yet applied**. Until it is, the backend falls back to the strict single-estimator rule, so nothing loosens before both estimators are live. `main.tf` now pins the zip's file mode, and `.gitattributes` keeps `handler.mjs` at LF. Otherwise an apply from Windows would redeploy the unchanged safety Lambda.
+Status, 1 October 2026: both steps applied, with the Lambda at 3008 MB, this account's current maximum (4096 was refused). Until the route exists, the backend falls back to the strict single-estimator rule, so nothing loosens before both estimators are live.
+
+**Cold starts.** The first start after a deploy hit Lambda's 10 s init limit twice: the container fetches the 1.4 GB image's layers on first read, and the model was loaded during init. Three changes fix this. The model now loads on the first request (init measured at 0.8 s on 2 vCPUs). An EventBridge rule invokes the function every 5 minutes with `{"warmup": true}`, which only a direct invoke can send. The timeouts are now 28 s for the Lambda and 27 s in the backend, under API Gateway's 29 s. Provisioned concurrency is not possible while the account's Lambda limit is 10. ONNX Runtime uses one thread per usable CPU (`sched_getaffinity`); counting the host's cores made one estimate five times slower. Warm, one estimate takes about 1 s on 2 vCPUs. `main.tf` now pins the zip's file mode, and `.gitattributes` keeps `handler.mjs` at LF. Otherwise an apply from Windows would redeploy the unchanged safety Lambda.
 
 ## Scope of this release
 

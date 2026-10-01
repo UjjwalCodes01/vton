@@ -36,11 +36,26 @@ BASE64 = re.compile(r"^[A-Za-z0-9+/]+={0,2}$")
 BOX_KEYS = ("Left", "Top", "Width", "Height")
 
 _ddb = boto3.client("dynamodb")
-_options = ort.SessionOptions()
-_options.intra_op_num_threads = os.cpu_count() or 2
-_session = ort.InferenceSession(
-    os.path.join(os.path.dirname(__file__), "mivolo_v2.onnx"), _options, providers=["CPUExecutionProvider"]
-)
+_session: ort.InferenceSession | None = None
+
+
+def _model() -> ort.InferenceSession:
+    """Loaded on first use, not at import. Lambda gives the init phase 10 s and
+    restarts it if it runs over; on a cold container that fetches the image's
+    layers on first read, model loading did (measured: init at 10 s, twice).
+    Basic graph optimisation loads in about a third of the time of "all" with
+    the same inference speed (0.7 s against 2.0 s, measured)."""
+    global _session
+    if _session is None:
+        options = ort.SessionOptions()
+        options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_BASIC
+        # One thread per CPU this process may use: os.cpu_count() can report the
+        # host's cores, and oversubscribed threads made one estimate 5x slower.
+        options.intra_op_num_threads = max(1, len(os.sched_getaffinity(0)))
+        _session = ort.InferenceSession(
+            os.path.join(os.path.dirname(__file__), "mivolo_v2.onnx"), options, providers=["CPUExecutionProvider"]
+        )
+    return _session
 
 
 def _reply(status: int, value: dict) -> dict:
@@ -85,7 +100,7 @@ def estimate(image_bgr: np.ndarray, face_box: dict, person_box: dict | None) -> 
     face, body = preprocess.crops(image_bgr, face_box, person_box)
     if face.size == 0:
         raise ValueError("empty face box")
-    age = _session.run(
+    age = _model().run(
         ["age"],
         {"faces": preprocess.prepare(face)[None], "bodies": preprocess.prepare(body)[None]},
     )[0]
@@ -99,6 +114,12 @@ def estimate(image_bgr: np.ndarray, face_box: dict, person_box: dict | None) -> 
 
 def handler(event, context):
     try:
+        # The EventBridge schedule (terraform/age.tf) keeps a container warm.
+        # Only a direct Lambda invoke can send this: API Gateway wraps every
+        # request in its own event, with the client's JSON as a string body.
+        if event.get("warmup") is True and "requestContext" not in event:
+            _model()
+            return {"warm": True}
         if event.get("requestContext", {}).get("http", {}).get("method") != "POST" or event.get("rawPath") != "/v1/age":
             return _reply(404, {"error": "not_found"})
         if not _authenticated(event.get("headers") or {}):

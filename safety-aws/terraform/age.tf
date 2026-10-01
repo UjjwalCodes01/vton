@@ -88,7 +88,8 @@ resource "aws_lambda_function" "age" {
   # CPU scales with memory. 3008 MB (about 1.7 vCPUs) is this account's Lambda
   # maximum until AWS raises the quota; one estimate takes about a second.
   memory_size = 3008
-  timeout     = 20
+  # A cold container loads the model on its first request; API Gateway allows 29 s.
+  timeout = 28
   environment {
     variables = { CLIENT_TABLE_NAME = data.aws_dynamodb_table.clients.name }
   }
@@ -118,6 +119,34 @@ resource "aws_lambda_permission" "age_api" {
   function_name = aws_lambda_function.age[0].function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.safety.execution_arn}/*/POST/v1/age"
+}
+
+# Keeps one container warm. A cold start fetches the 1.4 GB image's layers on
+# first read (measured: over 20 s for the first start after a deploy), and
+# provisioned concurrency is not possible while the account's Lambda limit is
+# 10 (AWS keeps at least 10 unreserved). The event is {"warmup": true}, which
+# only a direct invoke can send, not the public API.
+resource "aws_cloudwatch_event_rule" "age_warmup" {
+  count               = local.age_enabled ? 1 : 0
+  name                = "clothsy-age-warmup"
+  description         = "Keep one clothsy-age container warm"
+  schedule_expression = "rate(5 minutes)"
+}
+
+resource "aws_cloudwatch_event_target" "age_warmup" {
+  count = local.age_enabled ? 1 : 0
+  rule  = aws_cloudwatch_event_rule.age_warmup[0].name
+  arn   = aws_lambda_function.age[0].arn
+  input = jsonencode({ warmup = true })
+}
+
+resource "aws_lambda_permission" "age_warmup" {
+  count         = local.age_enabled ? 1 : 0
+  statement_id  = "AllowEventBridgeWarmup"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.age[0].function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.age_warmup[0].arn
 }
 
 output "age_repository_url" { value = aws_ecr_repository.age.repository_url }

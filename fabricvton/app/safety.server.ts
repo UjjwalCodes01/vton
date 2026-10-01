@@ -83,7 +83,9 @@ async function secondEstimate(bytes: Uint8Array, face: Face, person: Box | undef
       method: "POST",
       headers: api.headers,
       body: JSON.stringify({ image: Buffer.from(bytes).toString("base64"), face: face.BoundingBox, person: person ?? null }),
-      signal: AbortSignal.timeout(20_000),
+      // A cold age container loads its model on the first request (Lambda
+      // timeout 28 s, API Gateway 29 s); a timeout falls back to the strict rule.
+      signal: AbortSignal.timeout(27_000),
     });
     if (!response.ok) return null;
     const data = await response.json() as { age?: unknown; faceSize?: unknown };
