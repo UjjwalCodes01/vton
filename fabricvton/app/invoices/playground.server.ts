@@ -9,10 +9,10 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { macFor, signFor } from "../signing.server";
 import db from "../db.server";
-import { createTryOnWithImage, getGenerationStatus, mapGarmentCategory } from "../engine.server";
+import { createTryOnWithImage, EngineError, getGenerationStatus, mapGarmentCategory } from "../engine.server";
 import { putObject, shareStorageConfigured } from "../share/storage.server";
 import { rememberResultUrl, signImageToken } from "../share/imageproxy.server";
-import { checkGarmentTitle, fetchScreenedResult, SafetyBlockError, SafetyUnavailableError, screenGarmentImage, screenPersonImage } from "../safety.server";
+import { checkGarmentTitle, SafetyBlockError, SafetyUnavailableError, screenGarmentImage, screenPersonImage, screenResultUrl } from "../safety.server";
 
 export class PlaygroundError extends Error {
   constructor(
@@ -173,11 +173,22 @@ export async function playgroundRunStatus(accountId: string, runId: string) {
     return { status: "failed" as const, message: "That try-on did not finish. Your credit has been returned." };
   }
 
-  const generation = await getGenerationStatus(taskId);
+  let generation;
+  try {
+    generation = await getGenerationStatus(taskId);
+  } catch (error) {
+    // A proxy gateway throttle or a temporary upstream outage does not mean the
+    // provider task failed (same rule as the storefront poll). Before, it became
+    // a 500, and the SDK re-POSTed the whole try-on.
+    if (error instanceof EngineError && [429, 502, 503, 504].includes(error.httpStatus)) {
+      return { status: "pending" as const };
+    }
+    throw error;
+  }
 
   if (generation.status === "COMPLETED" && generation.resultImageUrl) {
     try {
-      await fetchScreenedResult(generation.resultImageUrl);
+      await screenResultUrl(generation.resultImageUrl);
     } catch (error) {
       if (error instanceof SafetyUnavailableError) return { status: "pending" as const };
       if (error instanceof SafetyBlockError) {

@@ -1,5 +1,5 @@
 import db from "./db.server";
-import { checkGarmentTitle, fetchScreenedResult, SAFETY_CONSENT_VERSION, SafetyBlockError, SafetyUnavailableError, screenGarmentUrl, screenPersonImage } from "./safety.server";
+import { checkGarmentTitle, SAFETY_CONSENT_VERSION, SafetyBlockError, SafetyUnavailableError, screenGarmentUrl, screenPersonImage, screenResultUrl } from "./safety.server";
 import { rememberResultUrl, signImageToken } from "./share/imageproxy.server";
 import { readBodyLimited } from "./bodylimit.server";
 
@@ -238,7 +238,7 @@ export async function handleTryOnLoader(request: Request, verifiedShop: string) 
       const gen = await getGenerationStatus(taskId);
       if (gen.status === "COMPLETED" && gen.resultImageUrl) {
         try {
-          await fetchScreenedResult(gen.resultImageUrl);
+          await screenResultUrl(gen.resultImageUrl);
         } catch (error) {
           if (error instanceof SafetyUnavailableError) return done("PROCESSING");
           if (error instanceof SafetyBlockError) {

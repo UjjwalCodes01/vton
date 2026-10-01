@@ -150,9 +150,7 @@ function singleFace(faces: Face[]): Face {
 }
 
 /** Blocks unless the face's G1 band is challenge or adult; returns the band. */
-async function checkAge(bytes: Uint8Array, face: Face, person: Box | undefined): Promise<AgeBand> {
-  // A minor reading from Rekognition alone needs no second opinion.
-  const second = ageBand(face.AgeRange, null) === "minor" ? null : await secondEstimate(bytes, face, person);
+function requireAdultBand(face: Face, second: SecondEstimate | null): AgeBand {
   const band = ageBand(face.AgeRange, second);
   if (band === "minor" || (band === "unknown" && !second)) {
     throw new SafetyBlockError("safety_age", "Please use a clear photo of an adult.");
@@ -166,10 +164,193 @@ async function checkAge(bytes: Uint8Array, face: Face, person: Box | undefined):
   return band;
 }
 
-async function moderation(bytes: Uint8Array, output = false, garment = false) {
-  const result = await rekognition<{ ModerationLabels?: Label[] }>("DetectModerationLabels", bytes, { MinConfidence: output ? 30 : 50 });
-  if (unsafe(result.ModerationLabels || [], output, garment)) {
+// ── Observations → decisions ───────────────────────────────────────────────
+// The checks below decide from Rekognition's observations (and MiVOLO's
+// estimate), however they were gathered: one call per Rekognition action
+// ("legacy"), or all of them for one image in one call to the clothsy-guard
+// Lambda ("guard"). The order and messages are the ones this file has always
+// used: moderation first, then the face, people, public figures, then age.
+
+type PersonObservations = {
+  faces: Face[];
+  labels: ObjectLabel[];
+  moderation: Label[];
+  celebrities: { MatchConfidence?: number }[];
+};
+type GarmentObservations = { labels: ObjectLabel[]; moderation: Label[] };
+type OutputObservations = { faces: Face[]; labels: ObjectLabel[]; moderation: Label[] };
+type SecondSource = (face: Face, person: Box | undefined) => Promise<SecondEstimate | null>;
+
+function blockUnsafe(labels: Label[], output = false, garment = false) {
+  if (unsafe(labels, output, garment)) {
     throw new SafetyBlockError("safety_content", "This image cannot be used for a try-on.");
+  }
+}
+
+async function decidePerson(obs: PersonObservations, second: SecondSource): Promise<AgeBand> {
+  blockUnsafe(obs.moderation);
+  const face = singleFace(obs.faces);
+  const people = obs.labels.find((label) => label.Name === "Person")?.Instances || [];
+  if (people.filter((person) => (person.Confidence ?? 0) >= 70).length > 1) {
+    throw new SafetyBlockError("safety_multiple_people", "Please use a photo with only one person.");
+  }
+  if (obs.celebrities.some((celebrity) => (celebrity.MatchConfidence ?? 0) >= 90)) {
+    throw new SafetyBlockError("safety_public_figure", "This photo cannot be used for a try-on.");
+  }
+  // A minor reading from Rekognition alone needs no second opinion.
+  const estimate = ageBand(face.AgeRange, null) === "minor" ? null : await second(face, personBox(obs.labels));
+  return requireAdultBand(face, estimate);
+}
+
+function decideGarment(obs: GarmentObservations) {
+  blockUnsafe(obs.moderation, false, true);
+  if (obs.labels.some((label) => (label.Confidence ?? 0) >= 75 && BLOCKED_GARMENT.test(label.Name || ""))) {
+    throw new SafetyBlockError("safety_garment", "This garment is not available for virtual try-on.");
+  }
+}
+
+async function decideOutput(obs: OutputObservations, second: SecondSource): Promise<AgeBand> {
+  blockUnsafe(obs.moderation, true);
+  const face = singleFace(obs.faces);
+  const estimate = ageBand(face.AgeRange, null) === "minor" ? null : await second(face, personBox(obs.labels));
+  return requireAdultBand(face, estimate);
+}
+
+// ── Legacy: one /v1/screen call per Rekognition action, then /v1/age ───────
+
+async function legacyModeration(bytes: Uint8Array, output: boolean) {
+  const result = await rekognition<{ ModerationLabels?: Label[] }>("DetectModerationLabels", bytes, { MinConfidence: output ? 30 : 50 });
+  return result.ModerationLabels || [];
+}
+
+const legacySecond = (bytes: Uint8Array): SecondSource => (face, person) => secondEstimate(bytes, face, person);
+
+async function legacyPerson(bytes: Uint8Array): Promise<AgeBand> {
+  const [faceResult, celebrityResult, moderationLabels, objectResult] = await Promise.all([
+    rekognition<{ FaceDetails?: Face[] }>("DetectFaces", bytes, { Attributes: ["AGE_RANGE"] }),
+    rekognition<{ CelebrityFaces?: { MatchConfidence?: number }[] }>("RecognizeCelebrities", bytes),
+    legacyModeration(bytes, false),
+    rekognition<{ Labels?: ObjectLabel[] }>("DetectLabels", bytes, { MaxLabels: 40, MinConfidence: 60 }),
+  ]);
+  return decidePerson({
+    faces: faceResult.FaceDetails || [],
+    labels: objectResult.Labels || [],
+    moderation: moderationLabels,
+    celebrities: celebrityResult.CelebrityFaces || [],
+  }, legacySecond(bytes));
+}
+
+async function legacyGarment(bytes: Uint8Array) {
+  const [moderationLabels, objects] = await Promise.all([
+    legacyModeration(bytes, false),
+    rekognition<{ Labels?: ObjectLabel[] }>("DetectLabels", bytes, { MaxLabels: 50, MinConfidence: 65 }),
+  ]);
+  decideGarment({ labels: objects.Labels || [], moderation: moderationLabels });
+}
+
+async function legacyOutput(bytes: Uint8Array): Promise<AgeBand> {
+  const [faces, moderationLabels, objects] = await Promise.all([
+    rekognition<{ FaceDetails?: Face[] }>("DetectFaces", bytes, { Attributes: ["AGE_RANGE"] }),
+    legacyModeration(bytes, true),
+    rekognition<{ Labels?: ObjectLabel[] }>("DetectLabels", bytes, { MaxLabels: 40, MinConfidence: 60 }),
+  ]);
+  return decideOutput({ faces: faces.FaceDetails || [], labels: objects.Labels || [], moderation: moderationLabels }, legacySecond(bytes));
+}
+
+// ── Guard: every observation for one image in one call (POST /v1/guard/*) ──
+// SAFETY_GUARD_MODE: "legacy" (default), "shadow" (legacy decides; the guard
+// runs alongside and only differences are logged, as decision codes), "guard".
+
+type GuardMode = "legacy" | "shadow" | "guard";
+type GuardResponse = {
+  faces?: Face[];
+  labels?: ObjectLabel[];
+  moderation?: Label[];
+  celebrities?: { MatchConfidence?: number }[];
+  age?: SecondEstimate | null;
+  sha256?: string;
+};
+
+export function guardMode(): GuardMode {
+  const mode = process.env.SAFETY_GUARD_MODE;
+  return mode === "guard" || mode === "shadow" ? mode : "legacy";
+}
+
+// Timeouts allow for a cold guard container (it loads MiVOLO on first use)
+// until provisioned concurrency is on; the guard's own budget is about 4 s.
+const GUARD_TIMEOUT_MS = { person: 15_000, garment: 10_000, output: 20_000 } as const;
+
+async function guard(route: keyof typeof GUARD_TIMEOUT_MS, body: Uint8Array | { url: string }): Promise<GuardResponse> {
+  const api = safetyApi();
+  if (!api) throw new SafetyUnavailableError();
+  const raw = body instanceof Uint8Array;
+  const contentType = !raw ? "application/json" : body[0] === 0x89 ? "image/png" : "image/jpeg";
+  try {
+    const response = await fetch(`${api.base}/v1/guard/${route}`, {
+      method: "POST",
+      headers: { ...api.headers, "content-type": contentType },
+      body: raw ? Buffer.from(body) : JSON.stringify(body),
+      signal: AbortSignal.timeout(GUARD_TIMEOUT_MS[route]),
+    });
+    if (!response.ok) throw new SafetyUnavailableError();
+    return await response.json() as GuardResponse;
+  } catch {
+    throw new SafetyUnavailableError();
+  }
+}
+
+/** The guard's MiVOLO estimate. null (no clear single face, or it failed) applies the strict rule, as legacy does. */
+const guardSecond = (result: GuardResponse): SecondSource => async () => {
+  const estimate = result.age;
+  return estimate && typeof estimate.age === "number" && Number.isFinite(estimate.age) && typeof estimate.faceSize === "number"
+    ? { age: estimate.age, faceSize: estimate.faceSize }
+    : null;
+};
+
+async function guardPerson(bytes: Uint8Array): Promise<AgeBand> {
+  const result = await guard("person", bytes);
+  return decidePerson({
+    faces: result.faces || [],
+    labels: result.labels || [],
+    moderation: result.moderation || [],
+    celebrities: result.celebrities || [],
+  }, guardSecond(result));
+}
+
+async function guardGarment(bytes: Uint8Array) {
+  const result = await guard("garment", bytes);
+  decideGarment({ labels: result.labels || [], moderation: result.moderation || [] });
+}
+
+async function guardOutput(body: Uint8Array | { url: string }): Promise<{ band: AgeBand; sha256?: string }> {
+  const result = await guard("output", body);
+  const band = await decideOutput(
+    { faces: result.faces || [], labels: result.labels || [], moderation: result.moderation || [] },
+    guardSecond(result),
+  );
+  return { band, sha256: result.sha256 };
+}
+
+function outcome(error: unknown): string {
+  if (error instanceof SafetyBlockError) return error.code;
+  if (error instanceof SafetyUnavailableError) return "unavailable";
+  return "error";
+}
+
+/** Runs the legacy decision; in shadow mode also the guard's, logging only when the outcomes differ. */
+async function withShadow<T>(surface: string, legacy: () => Promise<T>, viaGuard: () => Promise<unknown>): Promise<T> {
+  const mode = guardMode();
+  if (mode === "guard") return viaGuard() as Promise<T>;
+  if (mode === "legacy") return legacy();
+  const shadow = viaGuard().then(() => "allow", outcome);
+  try {
+    const value = await legacy();
+    void shadow.then((got) => { if (got !== "allow") console.warn(`[guard-shadow] ${surface}: legacy=allow guard=${got}`); });
+    return value;
+  } catch (error) {
+    const expected = outcome(error);
+    void shadow.then((got) => { if (got !== expected) console.warn(`[guard-shadow] ${surface}: legacy=${expected} guard=${got}`); });
+    throw error;
   }
 }
 
@@ -181,32 +362,12 @@ export function checkGarmentTitle(title: string | null, category: string | null)
 
 export async function screenPersonImage(blob: Blob): Promise<AgeBand> {
   const bytes = checkBytes(new Uint8Array(await blob.arrayBuffer()));
-  const [faceResult, celebrityResult, , objectResult] = await Promise.all([
-    rekognition<{ FaceDetails?: Face[] }>("DetectFaces", bytes, { Attributes: ["AGE_RANGE"] }),
-    rekognition<{ CelebrityFaces?: { MatchConfidence?: number }[] }>("RecognizeCelebrities", bytes),
-    moderation(bytes),
-    rekognition<{ Labels?: ObjectLabel[] }>("DetectLabels", bytes, { MaxLabels: 40, MinConfidence: 60 }),
-  ]);
-  const face = singleFace(faceResult.FaceDetails || []);
-  const people = (objectResult.Labels || []).find((label) => label.Name === "Person")?.Instances || [];
-  if (people.filter((person) => (person.Confidence ?? 0) >= 70).length > 1) {
-    throw new SafetyBlockError("safety_multiple_people", "Please use a photo with only one person.");
-  }
-  if ((celebrityResult.CelebrityFaces || []).some((face) => (face.MatchConfidence ?? 0) >= 90)) {
-    throw new SafetyBlockError("safety_public_figure", "This photo cannot be used for a try-on.");
-  }
-  return checkAge(bytes, face, personBox(objectResult.Labels));
+  return withShadow("person", () => legacyPerson(bytes), () => guardPerson(bytes));
 }
 
 export async function screenGarmentImage(bytes: Uint8Array) {
   const checked = checkBytes(bytes);
-  const [, objects] = await Promise.all([
-    moderation(checked, false, true),
-    rekognition<{ Labels?: ObjectLabel[] }>("DetectLabels", checked, { MaxLabels: 50, MinConfidence: 65 }),
-  ]);
-  if ((objects.Labels || []).some((label) => (label.Confidence ?? 0) >= 75 && BLOCKED_GARMENT.test(label.Name || ""))) {
-    throw new SafetyBlockError("safety_garment", "This garment is not available for virtual try-on.");
-  }
+  await withShadow("garment", () => legacyGarment(checked), () => guardGarment(checked));
 }
 
 function publicIpv4(address: string) {
@@ -279,23 +440,48 @@ export async function screenGarmentUrl(value: string) {
   await screenGarmentImage(await downloadPublicImage(value, MAX_CHECK_BYTES));
 }
 
+// Approved outputs, per process, for 30 minutes. In guard mode they are keyed by
+// the SHA-256 of the bytes as downloaded (what the guard reports), so a result
+// approved during a status poll is not screened again when /i/ serves it.
+function rememberApproval(key: string) {
+  if (approvedResults.size >= 500) approvedResults.clear();
+  approvedResults.set(key, Date.now() + 30 * 60_000);
+}
+const approved = (key: string) => (approvedResults.get(key) || 0) > Date.now();
+const approvalKey = (bytes: Uint8Array) => `${SAFETY_POLICY_VERSION}:${createHash("sha256").update(bytes).digest("hex")}`;
+
 export async function screenResultImage(bytes: Uint8Array) {
   const checked = checkBytes(bytes);
-  const digest = `${SAFETY_POLICY_VERSION}:${createHash("sha256").update(checked).digest("hex")}`;
-  if ((approvedResults.get(digest) || 0) > Date.now()) return;
   // G1 step 4: the model can change a face, so the output gets both estimators too.
-  const [faces, , objects] = await Promise.all([
-    rekognition<{ FaceDetails?: Face[] }>("DetectFaces", checked, { Attributes: ["AGE_RANGE"] }),
-    moderation(checked, true),
-    rekognition<{ Labels?: ObjectLabel[] }>("DetectLabels", checked, { MaxLabels: 40, MinConfidence: 60 }),
-  ]);
-  await checkAge(checked, singleFace(faces.FaceDetails || []), personBox(objects.Labels));
-  if (approvedResults.size >= 500) approvedResults.clear();
-  approvedResults.set(digest, Date.now() + 30 * 60_000);
+  if (guardMode() === "guard") {
+    const key = approvalKey(bytes);
+    if (approved(key)) return;
+    await guardOutput(checked);
+    rememberApproval(key);
+    return;
+  }
+  const key = approvalKey(checked);
+  if (approved(key)) return;
+  await withShadow("output", () => legacyOutput(checked), () => guardOutput(checked));
+  rememberApproval(key);
 }
 
 export async function fetchScreenedResult(url: string, maxBytes = MAX_CHECK_BYTES) {
   const bytes = await downloadPublicImage(url, maxBytes);
   await screenResultImage(bytes);
   return bytes;
+}
+
+/**
+ * Screens a provider result without needing its bytes here (status polls). In
+ * guard mode the guard downloads it itself, so the image does not travel to
+ * this server and back, and results over 4 MB are resized instead of stalling.
+ */
+export async function screenResultUrl(url: string) {
+  if (guardMode() !== "guard") {
+    await fetchScreenedResult(url);
+    return;
+  }
+  const { sha256 } = await guardOutput({ url });
+  if (sha256) rememberApproval(`${SAFETY_POLICY_VERSION}:${sha256}`);
 }
