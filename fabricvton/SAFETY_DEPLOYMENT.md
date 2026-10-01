@@ -1,10 +1,12 @@
 # Safety checks for the current Perfect Corp try-on
 
+This is the original coordinated rollout guide. For the live AWS resource snapshot, see [AWS infrastructure](../AWS_INFRASTRUCTURE.md); verify current Render, Shopify, and WooCommerce release versions before repeating any publication step below.
+
 The backend now checks the person and product images **before** creating a provider task. It checks the generated image before marking a run successful, before serving `/i/...`, before saving a shared look, and when serving an existing shared look. An output blocked during status polling fails the run and releases the reserved merchant or Playground credit. A result that changes after approval is withheld when fetched. If Rekognition is unavailable, new runs stop with a temporary error and completed runs remain pending. Checks apply to Shopify, WooCommerce, and the Playground.
 
 ## Configure before deploying
 
-1. In this AWS account, resolve the Rekognition data-use setting before sending customer photos. This account is currently standalone; AWS Organizations AI services opt-out policies cannot be applied until it is part of an organization. Review Rekognition and Perfect Corp data processing terms and the storefront privacy notice.
+1. Verify the Rekognition data-use setting before sending customer photos. An AWS Organizations AI services opt-out policy was effective for this account on 1 October 2026; recheck it if account governance changes. Review Rekognition and Perfect Corp data processing terms and the storefront privacy notice.
 2. Deploy `../safety-aws/terraform` in `us-east-1`. It creates a safety Lambda with only the four Rekognition actions and read access to the existing RPAPIR client table. It does not change RPAPIR or its key rotation. The Lambda runtime includes AWS SDK v3; if the runtime packaging changes, bundle the SDK modules with the function.
 3. In the **Render `fabricvton-api` service secret store**, set `SAFETY_PROXY_BASE` to the Terraform `safety_api_base` output. Keep the existing `CLOTHES_PROXY_CLIENT_ID`, `CLOTHES_PROXY_TOKEN`, and `CLOTHES_PROXY_BASE` values. No AWS access key or secret is needed in Render. Do not put the proxy token in Shopify themes, WooCommerce, the portal, Git, or client code.
 4. Deploy the FabricVTON backend and portal, release the Shopify theme extension containing the new adult/permission consent text, and publish WooCommerce plugin `0.2.7` from `clothsy-ai-woocommerce/clothsy-ai`. The backend requires consent version `2026-09-29.v3`; old widget builds will receive HTTP 403 until updated. The Playground now requires its own checkbox. Deploy these as one coordinated release. Prepare the WordPress SVN trunk and `tags/0.2.7` from that source only when ready to publish.

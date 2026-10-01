@@ -1,5 +1,7 @@
 # Clothsy AWS safety service
 
+For the dated, live AWS resource inventory and the boundary between AWS and Render, see [the root AWS infrastructure document](../AWS_INFRASTRUCTURE.md). The rollout notes below describe the original September 2026 deployment; verify application release status separately.
+
 This is the first deployable AWS safety layer for the current Perfect Corp flow. It is separate from RPAPIR, which continues to rotate provider keys. FabricVTON checks inputs and outputs through this service and fails closed if it cannot reach the service. This service accepts image bytes only from a caller with an active client credential in the existing `api-key-pool-clients` DynamoDB table. It stores no images or results. API access logs contain request ID, route, status, and latency only; the Lambda has no content logging. Transport is HTTPS.
 
 ## Current account and deployment
@@ -29,7 +31,7 @@ terraform apply safety.tfplan
 terraform output -raw safety_api_base
 ```
 
-Set `SAFETY_PROXY_BASE=https://zyfl4u1zef.execute-api.us-east-1.amazonaws.com` in the Render backend. The backend uses the existing `CLOTHES_PROXY_CLIENT_ID` and `CLOTHES_PROXY_TOKEN` server-side credentials. No AWS IAM access key is needed on Render. Deploy the FabricVTON backend, portal, Shopify widget, and WooCommerce plugin together as described in `../fabricvton/SAFETY_DEPLOYMENT.md`. **That application release has not happened yet.**
+Set `SAFETY_PROXY_BASE=https://zyfl4u1zef.execute-api.us-east-1.amazonaws.com` in the Render backend. The backend uses the existing `CLOTHES_PROXY_CLIENT_ID` and `CLOTHES_PROXY_TOKEN` server-side credentials. No AWS IAM access key is needed on Render. The coordinated application rollout is described in `../fabricvton/SAFETY_DEPLOYMENT.md`; this AWS repository does not establish the current Render, Shopify, or WooCommerce release status.
 
 The request body is `{ "action": "DetectFaces|DetectLabels|DetectModerationLabels|RecognizeCelebrities", "image": "<base64 JPEG or PNG>" }`. Other request parameters are ignored; the Lambda fixes the thresholds. The API has a 5 request/second stage limit with a burst of 10. This AWS account currently has only 10 total concurrent Lambda executions, shared with RPAPIR, so no concurrency is reserved for safety. Request a quota increase before scaling traffic. Screened images can be up to 4 MiB each: base64 and API event overhead must fit Lambda's 6 MB synchronous invocation limit. Retries of a failed safety check should occur as a new user action, not automatically on the same photo.
 
