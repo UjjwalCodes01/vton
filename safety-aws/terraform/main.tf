@@ -72,9 +72,13 @@ resource "aws_apigatewayv2_stage" "default" {
   api_id      = aws_apigatewayv2_api.safety.id
   name        = "$default"
   auto_deploy = true
+  # One try-on used to send 7 requests here within a second (4 Rekognition actions
+  # for the person, 2 for the garment, then the age estimate), so two at once
+  # exceeded a burst of 10. The guard routes cut that to 2-3, and the limit is
+  # raised for the transition while both paths exist.
   default_route_settings {
-    throttling_rate_limit  = 5
-    throttling_burst_limit = 10
+    throttling_rate_limit  = 50
+    throttling_burst_limit = 100
   }
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api.arn
