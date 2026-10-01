@@ -85,8 +85,9 @@ resource "aws_lambda_function" "age" {
   image_uri     = var.age_image_uri
   architectures = ["x86_64"]
   role          = aws_iam_role.age.arn
-  # CPU scales with memory; 4 GB (about 2.3 vCPUs) keeps one estimate around a second.
-  memory_size = 4096
+  # CPU scales with memory. 3008 MB (about 1.7 vCPUs) is this account's Lambda
+  # maximum until AWS raises the quota; one estimate takes about a second.
+  memory_size = 3008
   timeout     = 20
   environment {
     variables = { CLIENT_TABLE_NAME = data.aws_dynamodb_table.clients.name }
