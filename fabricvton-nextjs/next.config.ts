@@ -27,6 +27,9 @@ const SECURITY_HEADERS = [
  * them directly) and /tgm (a private prospect page, marked noindex on the page itself).
  */
 const nextConfig: NextConfig = {
+  // A self-contained server for the container image (ECS on AWS); the Dockerfile
+  // sets NEXT_OUTPUT. Render and Vercel builds are unchanged until the move.
+  output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   async headers() {
     return [{ source: "/:path*", headers: SECURITY_HEADERS }];
   },

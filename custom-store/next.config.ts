@@ -23,6 +23,9 @@ const CSP = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  // A self-contained server for the container image (ECS on AWS); the Dockerfile
+  // sets NEXT_OUTPUT. Render and Vercel builds are unchanged until the move.
+  output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   poweredByHeader: false,
   experimental: {
     serverActions: {

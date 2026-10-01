@@ -1,0 +1,42 @@
+name: Deploy to AWS staging
+
+# Every push to main that touches an app builds it and rolls it out to staging.
+on:
+  push:
+    branches: [main]
+    paths:
+      - fabricvton/**
+      - custom-store/**
+      - admin-dashboard/**
+      - fabricvton-newsite/**
+      - fabricvton-nextjs/**
+      - infra/scripts/deploy.sh
+      - .github/workflows/deploy-staging.yml
+  workflow_dispatch:
+
+permissions:
+  id-token: write # OIDC: assume the deploy role without stored keys
+  contents: read
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Off until the staging stack exists: set the repository variable
+    # STAGING_DEPLOY_ENABLED=true (Settings > Secrets and variables > Actions).
+    if: vars.STAGING_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::251929332238:role/clothsy-staging-github-deploy
+          aws-region: us-east-1
+      - name: Backend tests
+        working-directory: fabricvton
+        run: npx -y tsx --test test/*.test.ts
+      - name: Build, push, migrate, deploy
+        run: bash infra/scripts/deploy.sh staging

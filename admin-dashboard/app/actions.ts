@@ -158,11 +158,20 @@ export async function signIn(_prev: ActionState, form: FormData): Promise<Action
  *   then `x-real-ip` are preferred, falling back to the RIGHT-most
  *   X-Forwarded-For entry — the one appended by the nearest proxy. The left-most
  *   entry is whatever the client sent and must never be trusted.
+ * - On AWS (CLIENT_IP_HEADER=cloudfront-viewer-address), CloudFront fronts the
+ *   service, the load balancer accepts only CloudFront, and CloudFront sets
+ *   `cloudfront-viewer-address` ("ip:port") itself; the other headers are
+ *   ignored there because a caller can forge them.
  * If the host is reachable without a proxy that sets these, they can be forged;
  * the per-account and global limits in lib/auth.ts still bound guessing then.
  */
 function clientIp(head: Headers) {
   const pick = (name: string) => (head.get(name) || "").trim();
+  if ((process.env.CLIENT_IP_HEADER || "").toLowerCase() === "cloudfront-viewer-address") {
+    const viewer = pick("cloudfront-viewer-address");
+    const ip = viewer.slice(0, viewer.lastIndexOf(":")).replace(/^\[|\]$/g, "");
+    return (ip || "unknown").slice(0, 64);
+  }
   const forwarded = pick("x-forwarded-for").split(",").map((part) => part.trim()).filter(Boolean);
   const candidates =
     process.env.VERCEL === "1"

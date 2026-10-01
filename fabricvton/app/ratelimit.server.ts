@@ -299,7 +299,21 @@ export function shareRules(params: {
  * throttle unrelated shoppers together, so the left-most entry (the one Shopify
  * reports) is the better, if forgeable, attribution. On that path the limits
  * that actually hold are keyed on the signed shop, which no caller can rotate.
+ *
+ * On AWS (CLIENT_IP_HEADER=cloudfront-viewer-address) CloudFront fronts the
+ * service and the load balancer accepts only CloudFront, which sets
+ * CloudFront-Viewer-Address ("ip:port") from the connection itself. There,
+ * CF-Connecting-IP is just another header a caller can forge, so it is ignored.
  */
+const CLIENT_IP_HEADER = (process.env.CLIENT_IP_HEADER || "cf-connecting-ip").toLowerCase();
+
+function viewerAddressIp(value: string | null): string | null {
+  const raw = value?.trim();
+  if (!raw) return null;
+  const ip = raw.slice(0, raw.lastIndexOf(":")).replace(/^\[|\]$/g, "");
+  return isIP(ip) ? ip : null;
+}
+
 export function clientIpFrom(request: Request): string | null {
   let viaShopify = false;
   try {
@@ -309,8 +323,13 @@ export function clientIpFrom(request: Request): string | null {
   }
 
   if (!viaShopify) {
-    const edge = request.headers.get("CF-Connecting-IP")?.trim();
-    if (edge && isIP(edge)) return edge;
+    if (CLIENT_IP_HEADER === "cloudfront-viewer-address") {
+      const viewer = viewerAddressIp(request.headers.get("CloudFront-Viewer-Address"));
+      if (viewer) return viewer;
+    } else {
+      const edge = request.headers.get("CF-Connecting-IP")?.trim();
+      if (edge && isIP(edge)) return edge;
+    }
   }
 
   const ip = request.headers.get("X-Forwarded-For")?.split(",")[0]?.trim();

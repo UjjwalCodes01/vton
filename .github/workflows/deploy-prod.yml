@@ -1,0 +1,38 @@
+name: Deploy to AWS production
+
+# Manual, and gated by the GitHub "production" environment (required
+# reviewers), which is also the only identity the prod deploy role trusts.
+on:
+  workflow_dispatch:
+    inputs:
+      apps:
+        description: "Apps to deploy (space-separated)"
+        default: "api portal admin newsite www"
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Off until the production stack exists (repository variable PROD_DEPLOY_ENABLED=true).
+    if: vars.PROD_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::251929332238:role/clothsy-prod-github-deploy
+          aws-region: us-east-1
+      - name: Backend tests
+        working-directory: fabricvton
+        run: npx -y tsx --test test/*.test.ts
+      - name: Build, push, migrate, deploy
+        run: bash infra/scripts/deploy.sh prod ${{ inputs.apps }}
