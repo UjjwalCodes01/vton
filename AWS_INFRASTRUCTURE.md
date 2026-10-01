@@ -85,7 +85,7 @@ The snapshot above predates this change. The backend refused every face whose Re
 | --- | --- | --- |
 | ECR `clothsy-age` | Created (immutable tags, scan on push, keeps the newest five images) | MiVOLO v2 Lambda image, `clothsy-age@sha256:8595c0ae…` pushed |
 | IAM role `clothsy-age-lambda-role`, log group `/aws/lambda/clothsy-age` (7 days) | Created | Logs, and `dynamodb:GetItem` on `api-key-pool-clients` only |
-| Lambda `clothsy-age` (container, x86_64, 3008 MB, the account's current maximum, 20 s) + route `POST /v1/age` on `clothsy-safety` | Applied (route live; warm-up every 5 minutes) | Second age estimate from the image plus Rekognition's face and person boxes |
+| Lambda `clothsy-age` (container, x86_64, 3008 MB, the account's current maximum, 28 s) + route `POST /v1/age` on `clothsy-safety` | Applied (route live; warm-up every 5 minutes) | Second age estimate from the image plus Rekognition's face and person boxes |
 
 The existing `clothsy-safety` Lambda, its route, and RPAPIR (`api-key-pool`, its tables, secrets and Lambda) are unchanged; RPAPIR needs no change. The new Lambda shares the account's Lambda concurrency limit of 10. The backend change (`fabricvton/app/safety.server.ts`) applies the G1 bands and falls back to the old strict rule while `/v1/age` is absent or failing. Details and measurements are in [`safety-aws/README.md`](safety-aws/README.md#second-age-estimator-clothsy-age-1-october-2026).
 
