@@ -9,7 +9,7 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { macFor, signFor } from "../signing.server";
 import db from "../db.server";
-import { createTryOnWithImage, EngineError, getGenerationStatus, mapGarmentCategory } from "../engine.server";
+import { createTryOnWithImage, EngineError, getGenerationStatus, mapGarmentCategory, reserveCustomerUpload } from "../engine.server";
 import { putObject, shareStorageConfigured } from "../share/storage.server";
 import { rememberResultUrl, signImageToken } from "../share/imageproxy.server";
 import { checkGarmentTitle, SafetyBlockError, SafetyUnavailableError, screenGarmentImage, screenPersonImage, screenResultUrl } from "../safety.server";
@@ -100,10 +100,15 @@ export async function startPlaygroundRun(params: {
   const garment = decodeDataUrl(params.garmentImage, "product image");
   const title = typeof params.title === "string" ? params.title.trim().slice(0, 120) : "";
   if (!params.consent) throw new PlaygroundError(403, "Confirm that you are an adult and have permission to use this photo.");
+  const personBlob = new Blob([new Uint8Array(person.bytes)], { type: person.contentType });
+  // Register the provider upload slot while the photo is screened: only
+  // metadata is sent, and the photo goes to the provider after the screen passes.
+  const providerSlot = reserveCustomerUpload(personBlob, "playground.jpg");
+  providerSlot.catch(() => {}); // unused if the photo is refused
   try {
     checkGarmentTitle(title, null);
     await Promise.all([
-      screenPersonImage(new Blob([person.bytes], { type: person.contentType })),
+      screenPersonImage(personBlob),
       screenGarmentImage(garment.bytes),
     ]);
   } catch (error) {
@@ -133,10 +138,11 @@ export async function startPlaygroundRun(params: {
     const garmentUrl = `${params.publicBase}/g/${signGarmentToken(key)}`;
 
     const task = await createTryOnWithImage({
-      personImage: new Blob([new Uint8Array(person.bytes)], { type: person.contentType }),
+      personImage: personBlob,
       filename: "playground.jpg",
       garmentImageUrl: garmentUrl,
       garmentCategory: mapGarmentCategory(title || null),
+      reservation: providerSlot,
     });
 
     const event = await db.tryOnEvent.create({

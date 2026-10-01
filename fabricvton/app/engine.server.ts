@@ -258,16 +258,27 @@ function normalizeContentType(type: string): string {
   return UPLOADABLE_CONTENT_TYPES.has(lowered) ? lowered : "image/jpeg";
 }
 
+/** A registered provider upload slot: file id, signed PUT, and the key session. */
+export interface EngineReservation {
+  fileId: string;
+  keySession?: string;
+  uploadUrl: string;
+  uploadHeaders: Record<string, string>;
+  contentType: string;
+  size: number;
+}
+
 /**
- * Reserves an upload slot, PUTs the bytes, and returns the file_id to pass as
- * src_file_id when creating the task.
+ * Registers an upload slot with the provider. Only metadata (type, name, size)
+ * is sent, never the image, so this can run while the photo is still being
+ * safety-screened; the bytes are PUT only after it passes.
  */
-export async function uploadCustomerImage(
+export async function reserveCustomerUpload(
   file: Blob,
   filename = "customer-photo.jpg"
-): Promise<EngineUpload> {
+): Promise<EngineReservation> {
   const contentType = normalizeContentType(file.type);
-  const bytes = Buffer.from(await file.arrayBuffer());
+  const size = file.size;
 
   const reserveRes = await apiFetch("/s2s/v2.0/file", {
     method: "POST",
@@ -277,7 +288,7 @@ export async function uploadCustomerImage(
         {
           content_type: contentType,
           file_name: filename,
-          file_size: bytes.byteLength,
+          file_size: size,
         },
       ],
     }),
@@ -312,16 +323,36 @@ export async function uploadCustomerImage(
   if (new URL(uploadRequest.url).protocol !== "https:") {
     throw new EngineError("Engine upload URL must use HTTPS", "upload_url_insecure", 502);
   }
-
-  // A signed upload can require provider-supplied headers. Node calculates
-  // Content-Length from these exact bytes; preserve every other signed header.
   if (uploadRequest.method && uploadRequest.method.toUpperCase() !== "PUT") {
     throw new EngineError("Engine upload method must be PUT", "upload_method_invalid", 502);
   }
-  const uploadHeaders = new Headers(uploadRequest.headers ?? {});
+
+  const keySession = reserveRes.headers.get("x-key-session") ?? undefined;
+  if (PROXY_BASE_URL && !keySession) {
+    throw new EngineError("Proxy did not return an upload session", "proxy_session_missing", 502);
+  }
+  return {
+    fileId,
+    keySession,
+    uploadUrl: uploadRequest.url,
+    uploadHeaders: uploadRequest.headers ?? {},
+    contentType,
+    size,
+  };
+}
+
+/** PUTs the photo into a reserved slot; returns the file_id to pass as src_file_id. */
+async function putCustomerUpload(reservation: EngineReservation, file: Blob): Promise<EngineUpload> {
+  const bytes = Buffer.from(await file.arrayBuffer());
+  if (bytes.byteLength !== reservation.size) {
+    throw new EngineError("Photo size differs from the reserved upload", "upload_size_mismatch", 500);
+  }
+  // A signed upload can require provider-supplied headers. Node calculates
+  // Content-Length from these exact bytes; preserve every other signed header.
+  const uploadHeaders = new Headers(reservation.uploadHeaders);
   uploadHeaders.delete("Content-Length");
-  if (!uploadHeaders.has("Content-Type")) uploadHeaders.set("Content-Type", contentType);
-  const putRes = await fetch(uploadRequest.url, {
+  if (!uploadHeaders.has("Content-Type")) uploadHeaders.set("Content-Type", reservation.contentType);
+  const putRes = await fetch(reservation.uploadUrl, {
     method: "PUT",
     headers: uploadHeaders,
     body: new Uint8Array(bytes),
@@ -337,12 +368,15 @@ export async function uploadCustomerImage(
       putRes.status
     );
   }
+  return { fileId: reservation.fileId, keySession: reservation.keySession };
+}
 
-  const keySession = reserveRes.headers.get("x-key-session") ?? undefined;
-  if (PROXY_BASE_URL && !keySession) {
-    throw new EngineError("Proxy did not return an upload session", "proxy_session_missing", 502);
-  }
-  return { fileId, keySession };
+/**
+ * Reserves an upload slot, PUTs the bytes, and returns the file_id to pass as
+ * src_file_id when creating the task.
+ */
+export async function uploadCustomerImage(file: Blob, filename = "customer-photo.jpg"): Promise<EngineUpload> {
+  return putCustomerUpload(await reserveCustomerUpload(file, filename), file);
 }
 
 // ─── Garment category ─────────────────────────────────────
@@ -423,9 +457,19 @@ export async function createTryOnWithImage(params: {
   filename?: string;
   garmentImageUrl: string;
   garmentCategory?: string;
+  /**
+   * A slot reserved while the photo was being screened (reserveCustomerUpload),
+   * used for the first attempt; restarts reserve a fresh one.
+   */
+  reservation?: Promise<EngineReservation>;
 }): Promise<EngineTaskStart> {
   for (let attempt = 0; ; attempt++) {
-    const upload = await uploadCustomerImage(params.personImage, params.filename);
+    // An early reservation that failed (say a proxy throttle during screening)
+    // is simply made again now.
+    const reservation = attempt === 0 && params.reservation
+      ? await params.reservation.catch(() => reserveCustomerUpload(params.personImage, params.filename))
+      : await reserveCustomerUpload(params.personImage, params.filename);
+    const upload = await putCustomerUpload(reservation, params.personImage);
     try {
       return await createTryOn({
         customerFileId: upload.fileId,

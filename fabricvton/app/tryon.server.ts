@@ -46,6 +46,7 @@ import {
   createTryOnWithImage,
   getGenerationStatus,
   mapGarmentCategory,
+  reserveCustomerUpload,
   describeEngineError,
   SHOPPER_FIXABLE_ERROR_CODES,
   EngineError,
@@ -646,7 +647,12 @@ export async function runTryOn(input: TryOnRequest): Promise<Response> {
       );
     }
 
-    // Screen before charging the merchant or uploading any customer image.
+    // Screen before charging the merchant or uploading any customer image. The
+    // provider upload slot is registered meanwhile: that sends only metadata
+    // (type, size), and the photo itself goes to the provider only after the
+    // screen passes, so the screen's time is mostly hidden.
+    const providerSlot = reserveCustomerUpload(personImage);
+    providerSlot.catch(() => {}); // unused if the photo is refused
     try {
       checkGarmentTitle(productTitle, product.category);
       await Promise.all([screenPersonImage(personImage), screenGarmentUrl(productImageUrl)]);
@@ -739,6 +745,7 @@ export async function runTryOn(input: TryOnRequest): Promise<Response> {
         personImage,
         garmentImageUrl: productImageUrl,
         garmentCategory,
+        reservation: providerSlot,
       });
       generationId = task.id;
     } catch (err) {

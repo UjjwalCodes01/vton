@@ -56,3 +56,56 @@ test("proxy retries a complete pinned upload workflow after quota exhaustion", a
     globalThis.fetch = originalFetch;
   }
 });
+
+/** A proxy that records the order of calls; the first file registration can be made to fail. */
+function recordingProxy(failFirstRegistration = false) {
+  const order: string[] = [];
+  let files = 0;
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/v1/file")) {
+      files++;
+      order.push(`file-${files}`);
+      if (failFirstRegistration && files === 1) return new Response(JSON.stringify({ error: "throttled" }), { status: 429 });
+      assert.equal(JSON.parse(String(init?.body)).files[0].file_size, 3, "registration sends the size, never the bytes");
+      return new Response(JSON.stringify({
+        data: { files: [{ file_id: `file-${files}`, requests: [{ method: "PUT", url: `https://uploads.example.test/${files}` }] }] },
+      }), { status: 200, headers: { "x-key-session": `00000000-0000-0000-0000-00000000000${files}` } });
+    }
+    if (url.startsWith("https://uploads.example.test/")) { order.push(`put-${url.split("/").pop()}`); return new Response(null, { status: 200 }); }
+    if (url.endsWith("/v1/request")) { order.push("task"); return new Response(JSON.stringify({ data: { task_id: "task-ok" } }), { status: 200 }); }
+    throw new Error(`Unexpected URL ${url}`);
+  };
+  return order;
+}
+
+test("an upload slot reserved during screening is used, with the photo PUT only afterwards", async () => {
+  const order = recordingProxy();
+  try {
+    const { createTryOnWithImage, reserveCustomerUpload } = await import("../app/engine.server");
+    const photo = new Blob([new Uint8Array([1, 2, 3])], { type: "image/jpeg" });
+    const slot = reserveCustomerUpload(photo);
+    await slot; // screening would run here
+    assert.deepEqual(order, ["file-1"], "nothing but the registration before the screen passes");
+    const task = await createTryOnWithImage({ personImage: photo, garmentImageUrl: "https://images.example.test/g.jpg", reservation: slot });
+    assert.equal(task.id, "task-ok");
+    assert.deepEqual(order, ["file-1", "put-1", "task"], "no second registration");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("an early reservation that failed is made again after screening", async () => {
+  const order = recordingProxy(true);
+  try {
+    const { createTryOnWithImage, reserveCustomerUpload } = await import("../app/engine.server");
+    const photo = new Blob([new Uint8Array([1, 2, 3])], { type: "image/jpeg" });
+    const slot = reserveCustomerUpload(photo);
+    slot.catch(() => {});
+    const task = await createTryOnWithImage({ personImage: photo, garmentImageUrl: "https://images.example.test/g.jpg", reservation: slot });
+    assert.equal(task.id, "task-ok");
+    assert.deepEqual(order, ["file-1", "file-2", "put-2", "task"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
