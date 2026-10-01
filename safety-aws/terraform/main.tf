@@ -14,6 +14,10 @@ data "archive_file" "lambda" {
   type        = "zip"
   source_file = "${path.module}/../handler.mjs"
   output_path = "${path.module}/../handler.zip"
+  # Same zip bytes on every OS (Windows would record 0666), so an apply from
+  # another machine does not redeploy unchanged code. handler.mjs must have LF
+  # line endings (.gitattributes keeps it so).
+  output_file_mode = "0664"
 }
 
 resource "aws_iam_role" "lambda" {

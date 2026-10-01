@@ -1,0 +1,2 @@
+# The safety Lambda is zipped by Terraform; CRLF would change its hash and redeploy it.
+safety-aws/handler.mjs text eol=lf
