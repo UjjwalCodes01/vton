@@ -7,7 +7,7 @@ import { stripImageMetadata } from "./share/imagemeta.server";
 
 const MAX_CHECK_BYTES = 4 * 1024 * 1024; // Base64 plus API event must fit Lambda's 6 MB invoke limit.
 export const SAFETY_CONSENT_VERSION = "2026-09-29.v3";
-const SAFETY_POLICY_VERSION = "2026-09-29.1";
+const SAFETY_POLICY_VERSION = "2026-10-01.1";
 const approvedResults = new Map<string, number>();
 const BLOCKED_GARMENT = /\b(?:lingerie|under[ -]?wear|underpants|pant(?:y|ies)|bras?|bikinis?|swim[ -]?wear|swimsuits?|sheer|see[ -]?through|transparent|mesh|bodysuits?|thongs?|corsets?|nighties|negligees?)\b/i;
 
@@ -19,20 +19,51 @@ export class SafetyUnavailableError extends Error {
 }
 
 type Label = { Name?: string; ParentName?: string; Confidence?: number };
-type ObjectLabel = { Name?: string; Confidence?: number; Instances?: { Confidence?: number }[] };
-type Face = { Confidence?: number; AgeRange?: { Low?: number; High?: number } };
+type Box = { Left?: number; Top?: number; Width?: number; Height?: number };
+type ObjectLabel = { Name?: string; Confidence?: number; Instances?: { Confidence?: number; BoundingBox?: Box }[] };
+type Face = { Confidence?: number; AgeRange?: { Low?: number; High?: number }; BoundingBox?: Box };
+type SecondEstimate = { age: number; faceSize: number };
+
+// Policy G1, minor protection (safety-guardrails.md, section 5). Two age
+// estimators: Rekognition DetectFaces (the AgeRange midpoint, with a low value
+// under 16 as a hard trigger) and MiVOLO v2 (POST /v1/age on the safety API).
+//   minor:     either estimate under 18, or Rekognition's low under 16 -> blocked
+//   challenge: both 18 or over, either under 25 -> standard garments only
+//   adult:     both 25 or over
+//   unknown:   face too small, or the estimates more than 8 years apart -> new photo
+// Revealing garments are blocked for everyone (checkGarmentTitle, garment
+// moderation), so challenge needs no garment rule here; keep it blocked for
+// challenge if that ever changes. Without the second estimator (not deployed,
+// or unavailable), one estimate cannot place anyone in the challenge band, so
+// the September stopgap applies: Rekognition's low at least 18 and midpoint at
+// least 25. An outage can therefore only make the check stricter.
+export type AgeBand = "minor" | "challenge" | "adult" | "unknown";
+const ADULT_AGE = 18;
+const CHALLENGE_AGE = 25;
+const HARD_MINOR_LOW = 16;
+const MAX_ESTIMATOR_GAP = 8;
+const MIN_FACE_PX = 80;
 
 // The safety API runs in AWS with an IAM role. Render only holds its existing
 // RPAPIR client credential; no AWS access key is needed in the web process.
-async function rekognition<T>(action: string, bytes: Uint8Array, other: object = {}): Promise<T> {
+function safetyApi() {
   const base = process.env.SAFETY_PROXY_BASE;
   const clientId = process.env.CLOTHES_PROXY_CLIENT_ID;
   const token = process.env.CLOTHES_PROXY_TOKEN;
-  if (!base?.startsWith("https://") || !clientId || !token) throw new SafetyUnavailableError();
+  if (!base?.startsWith("https://") || !clientId || !token) return null;
+  return {
+    base: base.replace(/\/$/, ""),
+    headers: { "content-type": "application/json", "x-client-id": clientId, "x-client-token": token },
+  };
+}
+
+async function rekognition<T>(action: string, bytes: Uint8Array, other: object = {}): Promise<T> {
+  const api = safetyApi();
+  if (!api) throw new SafetyUnavailableError();
   try {
-    const response = await fetch(`${base.replace(/\/$/, "")}/v1/screen`, {
+    const response = await fetch(`${api.base}/v1/screen`, {
       method: "POST",
-      headers: { "content-type": "application/json", "x-client-id": clientId, "x-client-token": token },
+      headers: api.headers,
       body: JSON.stringify({ action, image: Buffer.from(bytes).toString("base64"), ...other }),
       signal: AbortSignal.timeout(20_000),
     });
@@ -41,6 +72,45 @@ async function rekognition<T>(action: string, bytes: Uint8Array, other: object =
   } catch {
     throw new SafetyUnavailableError();
   }
+}
+
+/** MiVOLO v2's age for this face, or null when the age service is absent or failing (the stopgap then applies). */
+async function secondEstimate(bytes: Uint8Array, face: Face, person: Box | undefined): Promise<SecondEstimate | null> {
+  const api = safetyApi();
+  if (!api || !face.BoundingBox) return null;
+  try {
+    const response = await fetch(`${api.base}/v1/age`, {
+      method: "POST",
+      headers: api.headers,
+      body: JSON.stringify({ image: Buffer.from(bytes).toString("base64"), face: face.BoundingBox, person: person ?? null }),
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (!response.ok) return null;
+    const data = await response.json() as { age?: unknown; faceSize?: unknown };
+    if (typeof data.age !== "number" || !Number.isFinite(data.age) || typeof data.faceSize !== "number") return null;
+    return { age: data.age, faceSize: data.faceSize };
+  } catch {
+    return null;
+  }
+}
+
+/** The G1 age band for one face (see the policy note at the top). */
+export function ageBand(range: Face["AgeRange"], second: SecondEstimate | null): AgeBand {
+  const low = range?.Low;
+  const high = range?.High;
+  if (low === undefined || high === undefined) return "unknown";
+  const first = (low + high) / 2; // AWS: the midpoint is the best single estimate
+  if (low < HARD_MINOR_LOW || first < ADULT_AGE) return "minor";
+  if (!second) return low >= ADULT_AGE && first >= CHALLENGE_AGE ? "adult" : "unknown";
+  if (second.faceSize < MIN_FACE_PX) return "unknown";
+  if (second.age < ADULT_AGE) return "minor";
+  if (Math.abs(first - second.age) > MAX_ESTIMATOR_GAP) return "unknown";
+  return Math.min(first, second.age) < CHALLENGE_AGE ? "challenge" : "adult";
+}
+
+function personBox(labels: ObjectLabel[] = []): Box | undefined {
+  const people = labels.find((label) => label.Name === "Person")?.Instances || [];
+  return [...people].sort((a, b) => (b.Confidence ?? 0) - (a.Confidence ?? 0))[0]?.BoundingBox;
 }
 
 function checkBytes(bytes: Uint8Array) {
@@ -70,17 +140,28 @@ function unsafe(labels: Label[], output = false, garment = false) {
   });
 }
 
-function checkFace(faces: Face[]) {
+function singleFace(faces: Face[]): Face {
   if (faces.length !== 1 || (faces[0].Confidence ?? 0) < 90) {
     throw new SafetyBlockError("safety_single_face", "Please use a clear photo of one adult person.");
   }
-  const low = faces[0].AgeRange?.Low;
-  const high = faces[0].AgeRange?.High;
-  // One estimator cannot establish adulthood. Use the document's challenge age
-  // conservatively and require both the lower bound and midpoint to be adult.
-  if (low === undefined || high === undefined || low < 18 || (low + high) / 2 < 25) {
+  return faces[0];
+}
+
+/** Blocks unless the face's G1 band is challenge or adult; returns the band. */
+async function checkAge(bytes: Uint8Array, face: Face, person: Box | undefined): Promise<AgeBand> {
+  // A minor reading from Rekognition alone needs no second opinion.
+  const second = ageBand(face.AgeRange, null) === "minor" ? null : await secondEstimate(bytes, face, person);
+  const band = ageBand(face.AgeRange, second);
+  if (band === "minor" || (band === "unknown" && !second)) {
     throw new SafetyBlockError("safety_age", "Please use a clear photo of an adult.");
   }
+  if (band === "unknown") {
+    throw new SafetyBlockError(
+      "safety_age",
+      "Please use a clear, front-facing photo of one adult person, with the face large enough to see.",
+    );
+  }
+  return band;
 }
 
 async function moderation(bytes: Uint8Array, output = false, garment = false) {
@@ -96,7 +177,7 @@ export function checkGarmentTitle(title: string | null, category: string | null)
   }
 }
 
-export async function screenPersonImage(blob: Blob) {
+export async function screenPersonImage(blob: Blob): Promise<AgeBand> {
   const bytes = checkBytes(new Uint8Array(await blob.arrayBuffer()));
   const [faceResult, celebrityResult, , objectResult] = await Promise.all([
     rekognition<{ FaceDetails?: Face[] }>("DetectFaces", bytes, { Attributes: ["AGE_RANGE"] }),
@@ -104,7 +185,7 @@ export async function screenPersonImage(blob: Blob) {
     moderation(bytes),
     rekognition<{ Labels?: ObjectLabel[] }>("DetectLabels", bytes, { MaxLabels: 40, MinConfidence: 60 }),
   ]);
-  checkFace(faceResult.FaceDetails || []);
+  const face = singleFace(faceResult.FaceDetails || []);
   const people = (objectResult.Labels || []).find((label) => label.Name === "Person")?.Instances || [];
   if (people.filter((person) => (person.Confidence ?? 0) >= 70).length > 1) {
     throw new SafetyBlockError("safety_multiple_people", "Please use a photo with only one person.");
@@ -112,6 +193,7 @@ export async function screenPersonImage(blob: Blob) {
   if ((celebrityResult.CelebrityFaces || []).some((face) => (face.MatchConfidence ?? 0) >= 90)) {
     throw new SafetyBlockError("safety_public_figure", "This photo cannot be used for a try-on.");
   }
+  return checkAge(bytes, face, personBox(objectResult.Labels));
 }
 
 export async function screenGarmentImage(bytes: Uint8Array) {
@@ -199,11 +281,13 @@ export async function screenResultImage(bytes: Uint8Array) {
   const checked = checkBytes(bytes);
   const digest = `${SAFETY_POLICY_VERSION}:${createHash("sha256").update(checked).digest("hex")}`;
   if ((approvedResults.get(digest) || 0) > Date.now()) return;
-  const [faces] = await Promise.all([
+  // G1 step 4: the model can change a face, so the output gets both estimators too.
+  const [faces, , objects] = await Promise.all([
     rekognition<{ FaceDetails?: Face[] }>("DetectFaces", checked, { Attributes: ["AGE_RANGE"] }),
     moderation(checked, true),
+    rekognition<{ Labels?: ObjectLabel[] }>("DetectLabels", checked, { MaxLabels: 40, MinConfidence: 60 }),
   ]);
-  checkFace(faces.FaceDetails || []);
+  await checkAge(checked, singleFace(faces.FaceDetails || []), personBox(objects.Labels));
   if (approvedResults.size >= 500) approvedResults.clear();
   approvedResults.set(digest, Date.now() + 30 * 60_000);
 }
