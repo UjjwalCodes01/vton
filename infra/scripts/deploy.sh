@@ -69,7 +69,7 @@ print(json.dumps(max(configs, key=lambda c: c["createdAt"])))'
 # with the service's own roles, secrets and network. The task definition gets
 # its own family so the service's managed revisions are left alone.
 run_migrations() {
-  local image="$1" config definition taskdef network task exit_code
+  local image="$1" config definition taskdef network run task exit_code
   config="$(active_config api)"
   definition="$(aws ecs describe-task-definition --region "$REGION" \
     --task-definition "$(printf '%s' "$config" | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["taskDefinitionArn"], end="")')" \
@@ -91,10 +91,15 @@ import json, sys
 n = json.load(sys.stdin)["networkConfiguration"]
 print(json.dumps({"awsvpcConfiguration": {"subnets": n["subnets"], "securityGroups": n["securityGroups"], "assignPublicIp": "ENABLED"}}))')"
   echo "[api] running prisma migrate deploy"
-  task="$(aws ecs run-task --region "$REGION" --cluster "$CLUSTER" --launch-type FARGATE --task-definition "$taskdef" \
+  run="$(aws ecs run-task --region "$REGION" --cluster "$CLUSTER" --launch-type FARGATE --task-definition "$taskdef" \
     --network-configuration "$network" \
     --overrides '{"containerOverrides":[{"name":"Main","command":["node_modules/.bin/prisma","migrate","deploy"]}]}' \
-    --query 'tasks[0].taskArn' --output text)"
+    --output json)"
+  task="$(printf '%s' "$run" | "$PY" -c 'import json,sys; t=json.load(sys.stdin).get("tasks") or []; print(t[0]["taskArn"] if t else "", end="")')"
+  if [ -z "$task" ]; then
+    echo "[api] the migration task did not start: $(printf '%s' "$run" | "$PY" -c 'import json,sys; print(json.load(sys.stdin).get("failures"), end="")')" >&2
+    exit 1
+  fi
   aws ecs wait tasks-stopped --region "$REGION" --cluster "$CLUSTER" --tasks "$task"
   exit_code="$(aws ecs describe-tasks --region "$REGION" --cluster "$CLUSTER" --tasks "$task" \
     --query "tasks[0].containers[?name=='Main'].exitCode | [0]" --output text)"
