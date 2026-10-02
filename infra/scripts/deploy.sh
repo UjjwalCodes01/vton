@@ -113,9 +113,26 @@ print(json.dumps({"awsvpcConfiguration": {"subnets": n["subnets"], "securityGrou
   fi
 }
 
+# Waits until the service has no deployment in progress. Starting one while
+# another is mid-canary can leave the load balancer rule split between two
+# target groups, and Express then refuses every later deployment.
+wait_idle() {
+  local app="$1" busy said="" deadline=$((SECONDS + 1800))
+  while :; do
+    busy="$(aws ecs list-service-deployments --region "$REGION" --cluster "$CLUSTER" --service "$(service_name "$app")" \
+      --status PENDING IN_PROGRESS ROLLBACK_REQUESTED ROLLBACK_IN_PROGRESS STOP_REQUESTED \
+      --query 'length(serviceDeployments)' --output text)"
+    [ "$busy" = "0" ] && return 0
+    [ "$SECONDS" -gt "$deadline" ] && { echo "[$app] a deployment is still in progress after 30 minutes" >&2; return 1; }
+    [ -z "$said" ] && { echo "[$app] waiting for the deployment in progress to finish"; said=1; }
+    sleep 20
+  done
+}
+
 # Gives the service the new image; the rest of its container settings stay as they are.
 roll() {
   local app="$1" image="$2" container
+  wait_idle "$app"
   container="$(active_config "$app" | "$PY" -c '
 import json, sys
 container = json.load(sys.stdin)["primaryContainer"]
