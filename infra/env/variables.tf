@@ -14,50 +14,25 @@ variable "region" {
 
 variable "vpc_cidr" { type = string }
 
-variable "nat_per_az" {
-  type        = bool
-  description = "One NAT gateway per availability zone (prod) or a single shared one (staging)."
-}
-
 variable "image_tag" {
   type        = string
-  description = "Image tag deployed by Terraform when a service is created; CI deploys later images."
+  description = "Image tag a service starts with when Terraform creates it; CI deploys later images."
 }
 
 variable "apps" {
-  description = "Sizing per app: cpu units, memory MiB, desired/min/max tasks, Fargate Spot."
+  description = "Sizing per app: cpu units, memory MiB, min/max tasks for autoscaling."
   type = map(object({
-    cpu     = number
-    memory  = number
-    desired = number
-    min     = number
-    max     = number
-    spot    = bool
+    cpu    = number
+    memory = number
+    min    = number
+    max    = number
   }))
 }
 
 variable "public_urls" {
-  description = "Public base URLs per app once custom domains exist (empty: the CloudFront domain is used)."
+  description = "Public base URL per app: the express_urls output after the first apply, or custom domains once attached."
   type        = map(string)
   default     = {}
-}
-
-variable "domain_aliases" {
-  description = "Custom hostnames per app for CloudFront (requires cloudfront_certificate_arn)."
-  type        = map(list(string))
-  default     = {}
-}
-
-variable "cloudfront_certificate_arn" {
-  type        = string
-  default     = ""
-  description = "ACM certificate in us-east-1 covering domain_aliases."
-}
-
-variable "alb_certificate_arn" {
-  type        = string
-  default     = ""
-  description = "ACM certificate for the load balancer's origin hostname; empty = CloudFront reaches it over HTTP."
 }
 
 variable "aurora_min_acu" { type = number }

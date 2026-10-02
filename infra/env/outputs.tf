@@ -1,17 +1,24 @@
 output "public_urls" { value = local.public_url }
-output "cloudfront_domains" { value = { for app, d in aws_cloudfront_distribution.app : app => d.domain_name } }
-output "cluster_name" { value = aws_ecs_cluster.main.name }
-output "services" {
+output "express_urls" {
+  description = "The HTTPS address each Express Mode service actually received."
   value = {
-    api     = { service = module.api.service_name, family = module.api.task_family }
-    portal  = { service = module.portal.service_name, family = module.portal.task_family }
-    admin   = { service = module.admin.service_name, family = module.admin.task_family }
-    newsite = { service = module.newsite.service_name, family = module.newsite.task_family }
-    www     = { service = module.www.service_name, family = module.www.task_family }
+    api     = module.api.url
+    portal  = module.portal.url
+    admin   = module.admin.url
+    newsite = module.newsite.url
+    www     = module.www.url
   }
 }
-output "app_subnet_ids" { value = aws_subnet.app[*].id }
-output "app_security_group_id" { value = aws_security_group.app.id }
+output "cluster_name" { value = aws_ecs_cluster.main.name }
+output "service_arns" {
+  value = {
+    api     = module.api.service_arn
+    portal  = module.portal.service_arn
+    admin   = module.admin.service_arn
+    newsite = module.newsite.service_arn
+    www     = module.www.service_arn
+  }
+}
 output "db_endpoint" { value = aws_rds_cluster.main.endpoint }
 output "secrets" {
   value = {

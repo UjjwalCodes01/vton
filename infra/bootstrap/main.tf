@@ -96,13 +96,22 @@ resource "aws_iam_role_policy" "deploy" {
         Resource = [for r in aws_ecr_repository.app : r.arn]
       },
       {
-        Effect   = "Allow"
-        Action   = ["ecs:DescribeTaskDefinition", "ecs:RegisterTaskDefinition", "ecs:DescribeServices", "ecs:DescribeTasks", "ecs:ListTasks"]
+        Effect = "Allow"
+        Action = ["ecs:DescribeTaskDefinition", "ecs:DescribeServices", "ecs:DescribeTasks", "ecs:ListTasks",
+          "ecs:ListServices", "ecs:DescribeExpressGatewayService", "ecs:ListServiceDeployments",
+        "ecs:DescribeServiceDeployments", "ecs:RegisterTaskDefinition"]
         Resource = "*"
       },
+      # New images roll out through the Express Mode service of this environment.
       {
         Effect   = "Allow"
-        Action   = ["ecs:UpdateService", "ecs:RunTask"]
+        Action   = ["ecs:UpdateExpressGatewayService"]
+        Resource = "arn:aws:ecs:us-east-1:${data.aws_caller_identity.current.account_id}:service/clothsy-${each.key}/*"
+      },
+      # Migrations run as a one-off task of the backend's task definition.
+      {
+        Effect   = "Allow"
+        Action   = ["ecs:RunTask"]
         Resource = "*"
         Condition = {
           ArnLike = { "ecs:cluster" = "arn:aws:ecs:us-east-1:${data.aws_caller_identity.current.account_id}:cluster/clothsy-${each.key}" }
@@ -112,7 +121,7 @@ resource "aws_iam_role_policy" "deploy" {
         Effect    = "Allow"
         Action    = ["iam:PassRole"]
         Resource  = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/clothsy-${each.key}-*"
-        Condition = { StringEquals = { "iam:PassedToService" = "ecs-tasks.amazonaws.com" } }
+        Condition = { StringEquals = { "iam:PassedToService" = ["ecs-tasks.amazonaws.com", "ecs.amazonaws.com"] } }
       },
       { Effect = "Allow", Action = ["logs:GetLogEvents", "logs:FilterLogEvents"], Resource = "arn:aws:logs:us-east-1:${data.aws_caller_identity.current.account_id}:log-group:/ecs/clothsy-${each.key}-*" },
       { Effect = "Allow", Action = ["secretsmanager:GetSecretValue"], Resource = "arn:aws:secretsmanager:us-east-1:${data.aws_caller_identity.current.account_id}:secret:clothsy/${each.key}/build-*" },
