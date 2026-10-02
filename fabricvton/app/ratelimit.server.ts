@@ -300,10 +300,13 @@ export function shareRules(params: {
  * reports) is the better, if forgeable, attribution. On that path the limits
  * that actually hold are keyed on the signed shop, which no caller can rotate.
  *
- * On AWS (CLIENT_IP_HEADER=cloudfront-viewer-address) CloudFront fronts the
- * service and the load balancer accepts only CloudFront, which sets
- * CloudFront-Viewer-Address ("ip:port") from the connection itself. There,
- * CF-Connecting-IP is just another header a caller can forge, so it is ignored.
+ * On AWS, CF-Connecting-IP is just another header a caller can forge, so it is
+ * ignored there and CLIENT_IP_HEADER says where the trustworthy address is:
+ * - "x-forwarded-for-last": behind the ECS load balancer, which appends the
+ *   address that connected to it as the RIGHT-most X-Forwarded-For entry
+ *   (entries to its left are whatever the caller sent);
+ * - "cloudfront-viewer-address": behind CloudFront, which sets
+ *   CloudFront-Viewer-Address ("ip:port") from the connection itself.
  */
 const CLIENT_IP_HEADER = (process.env.CLIENT_IP_HEADER || "cf-connecting-ip").toLowerCase();
 
@@ -312,6 +315,11 @@ function viewerAddressIp(value: string | null): string | null {
   if (!raw) return null;
   const ip = raw.slice(0, raw.lastIndexOf(":")).replace(/^\[|\]$/g, "");
   return isIP(ip) ? ip : null;
+}
+
+function lastForwardedIp(value: string | null): string | null {
+  const ip = value?.split(",").map((part) => part.trim()).filter(Boolean).pop();
+  return ip && isIP(ip) ? ip : null;
 }
 
 export function clientIpFrom(request: Request): string | null {
@@ -323,7 +331,10 @@ export function clientIpFrom(request: Request): string | null {
   }
 
   if (!viaShopify) {
-    if (CLIENT_IP_HEADER === "cloudfront-viewer-address") {
+    if (CLIENT_IP_HEADER === "x-forwarded-for-last") {
+      const connected = lastForwardedIp(request.headers.get("X-Forwarded-For"));
+      if (connected) return connected;
+    } else if (CLIENT_IP_HEADER === "cloudfront-viewer-address") {
       const viewer = viewerAddressIp(request.headers.get("CloudFront-Viewer-Address"));
       if (viewer) return viewer;
     } else {
