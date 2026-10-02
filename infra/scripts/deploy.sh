@@ -2,6 +2,7 @@
 # Build, push and deploy the Clothsy apps to one environment on AWS.
 #
 #   infra/scripts/deploy.sh <staging|prod> [api portal admin newsite www]
+#   infra/scripts/deploy.sh <staging|prod> migrate
 #
 # Used by .github/workflows/deploy-*.yml and runnable by hand with the same
 # AWS permissions. For each app: build the image (build-time values come from
@@ -137,6 +138,15 @@ wait_rolled() {
     sleep 15
   done
 }
+
+# `deploy.sh <env> migrate`: only the backend image and its migrations, nothing
+# rolls (a new environment, or the database cutover before the services start).
+if [ "${APPS[*]}" = migrate ]; then
+  build_and_push api
+  run_migrations "$(image_of api)"
+  echo "Migrated $ENV_NAME with $TAG"
+  exit 0
+fi
 
 for app in "${APPS[@]}"; do build_and_push "$app"; done
 

@@ -5,6 +5,7 @@ Everything that runs on Render and Vercel today, on AWS in `us-east-1`, next to 
 | Piece | AWS |
 |---|---|
 | Backend `fabricvton`, portal `custom-store`, `admin-dashboard`, `fabricvton-newsite` (clothsyai), `fabricvton-nextjs` (www) | One **ECS Express Mode** service each (Fargate, one Dockerfile per app, Node 24): HTTPS address with an AWS-managed certificate, a load balancer shared by the environment's services, CPU autoscaling, canary deploys that roll back by themselves |
+| Protection | AWS WAF on the shared load balancer: IP reputation, known bad inputs, per-IP rate limit (Shopify proxy and webhooks exempt) |
 | Client address | The load balancer appends the caller to `X-Forwarded-For`; the apps take the right-most entry (`CLIENT_IP_HEADER=x-forwarded-for-last`), never a header a caller can set |
 | Database | Aurora PostgreSQL 17 Serverless v2 (staging scales to zero after 10 idle minutes; prod 0.5–8 ACU, writer + reader in 2 AZs, 14-day backups, deletion protection), reachable only from the apps' security group |
 | Storage | S3: `clothsy-looks` (prod), `clothsy-looks-staging-…` (staging); the backend signs with its task role, no stored keys |
@@ -21,7 +22,7 @@ Express Mode replaced a CloudFront + load balancer design because this account c
   - Express Mode picks each service's address (`https://cl-<id>.ecs.us-east-1.on.aws`) when it creates the service. The apps point at each other through `public_urls`, so a new environment takes two applies: the first creates the services, then copy the `express_urls` output into `<env>.tfvars` and apply again (and deploy, since the portal and newsite bake the API address in at build time).
 - `modules/app-service/`: one Express Mode service and its log group. Terraform owns everything but the running image, which deploys change.
 - `scripts/put-app-secret.sh <env> <api|admin> <file.env>`: loads an env file (e.g. the Render export) into the app's secret; values are never printed.
-- `scripts/deploy.sh <env> [apps]`.
+- `scripts/deploy.sh <env> [apps]`; `scripts/deploy.sh <env> migrate` runs only the backend's migrations (new environment, database cutover).
 
 ## Status (2 October 2026)
 

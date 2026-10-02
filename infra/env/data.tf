@@ -52,6 +52,8 @@ resource "aws_secretsmanager_secret" "db" {
   name                    = "clothsy/${var.env}/db"
   recovery_window_in_days = var.env == "prod" ? 30 : 0
 }
+# connect_timeout: a staging cluster paused at 0 ACU takes ~15 s to resume on the
+# first connection, longer than Prisma's 5 s default.
 
 resource "aws_secretsmanager_secret_version" "db" {
   secret_id = aws_secretsmanager_secret.db.id
@@ -61,7 +63,7 @@ resource "aws_secretsmanager_secret_version" "db" {
     host     = aws_rds_cluster.main.endpoint
     port     = 5432
     dbname   = "clothsy"
-    url      = "postgresql://${aws_rds_cluster.main.master_username}:${random_password.db.result}@${aws_rds_cluster.main.endpoint}:5432/clothsy?connection_limit=10&pool_timeout=20&sslmode=require"
+    url      = "postgresql://${aws_rds_cluster.main.master_username}:${random_password.db.result}@${aws_rds_cluster.main.endpoint}:5432/clothsy?connection_limit=10&pool_timeout=20&connect_timeout=30&sslmode=require"
   })
 }
 
