@@ -22,6 +22,7 @@ Express Mode replaced a CloudFront + load balancer design because this account c
   - Express Mode picks each service's address (`https://cl-<id>.ecs.us-east-1.on.aws`) when it creates the service. The apps point at each other through `public_urls`, so a new environment takes two applies: the first creates the services, then copy the `express_urls` output into `<env>.tfvars` and apply again (and deploy, since the portal and newsite bake the API address in at build time). The first apply also reports `Search returned 0 results` for the WAF: ECS creates the load balancer moments after the services, and the second apply attaches the WAF to it.
 - `modules/app-service/`: one Express Mode service and its log group. Terraform owns everything but the running image, which deploys change.
 - `scripts/put-app-secret.sh <env> <api|admin> <file.env>`: loads an env file (e.g. the Render export) into the app's secret; values are never printed.
+- `scripts/copy-db.sh <env> <file.env>`: copies Neon (the file's `DATABASE_URL`) into the env's Aurora from a one-off task inside the VPC, drops the short-lived rows (rate-limit windows, Woo nonces, expired sessions, link codes and shared looks) and prints row counts on both sides. It replaces everything in the target and asks you to type the env name first. Follow it with `deploy.sh <env> migrate`.
 - `scripts/deploy.sh <env> [apps]`; `scripts/deploy.sh <env> migrate` runs only the backend's migrations (new environment, database cutover).
 
 ## Status (2 October 2026)
