@@ -1,14 +1,15 @@
 # AWS WAF in front of every app: the environment's Express Mode services share
 # one load balancer, which ECS creates with the first service and tags with the
-# services' tags.
+# services' tags. The lookup is read at plan time and may come back empty (a new
+# environment's first apply, before ECS has made the load balancer); the next
+# apply attaches the WAF then.
 
-data "aws_lb" "express" {
+data "aws_lbs" "express" {
   tags = {
     AmazonECSManaged = "true"
     project          = "clothsy"
     env              = var.env
   }
-  depends_on = [module.api, module.portal, module.admin, module.newsite, module.www]
 }
 
 resource "aws_wafv2_web_acl" "main" {
@@ -120,6 +121,7 @@ resource "aws_wafv2_web_acl" "main" {
 }
 
 resource "aws_wafv2_web_acl_association" "express" {
-  resource_arn = data.aws_lb.express.arn
+  for_each     = data.aws_lbs.express.arns
+  resource_arn = each.value
   web_acl_arn  = aws_wafv2_web_acl.main.arn
 }

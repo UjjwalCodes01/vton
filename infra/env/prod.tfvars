@@ -3,7 +3,9 @@ vpc_cidr = "10.40.0.0/16"
 
 # At least two tasks across two availability zones for everything shoppers touch.
 apps = {
-  api     = { cpu = 1024, memory = 2048, min = 2, max = 10 }
+  # 1024/2048 once the Fargate quota is raised from 8 vCPU (case 179086292300406):
+  # at 8, a canary deploy of 1-vCPU tasks next to everything else hits the limit.
+  api     = { cpu = 512, memory = 1024, min = 2, max = 6 }
   portal  = { cpu = 512, memory = 1024, min = 2, max = 4 }
   admin   = { cpu = 256, memory = 512, min = 1, max = 2 }
   newsite = { cpu = 256, memory = 512, min = 2, max = 4 }

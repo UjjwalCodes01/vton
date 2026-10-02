@@ -78,8 +78,12 @@ run_migrations() {
 import json, sys
 td = json.load(sys.stdin)
 td["family"] = sys.argv[2]
+# Migrations need little, and every vCPU counts against the Fargate quota of the account.
+td["cpu"], td["memory"] = "256", "512"
 for c in td["containerDefinitions"]:
     c["image"] = sys.argv[1]
+    for key in ("cpu", "memory", "memoryReservation"):
+        c.pop(key, None)
 keep = ["family", "taskRoleArn", "executionRoleArn", "networkMode", "containerDefinitions", "volumes",
         "requiresCompatibilities", "cpu", "memory", "runtimePlatform"]
 print(json.dumps({k: td[k] for k in keep if k in td}))' "$image" "$(service_name api)-migrate")"
