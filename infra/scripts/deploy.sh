@@ -59,7 +59,10 @@ build_and_push() {
     www)     args=(--build-arg "NEXT_PUBLIC_GA_ID=$(build_value NEXT_PUBLIC_GA_ID)") ;;
   esac
   echo "[$app] building $image"
-  docker build --platform linux/amd64 --provenance=false "${args[@]}" -t "$image" "${DIR[$app]}"
+  # --provenance exists only with BuildKit (buildx); the legacy builder makes no
+  # attestations anyway, so it is simply left out there.
+  if docker buildx version >/dev/null 2>&1; then args+=(--provenance=false); fi
+  docker build --platform linux/amd64 "${args[@]}" -t "$image" "${DIR[$app]}"
   docker push "$image" >/dev/null
 }
 
