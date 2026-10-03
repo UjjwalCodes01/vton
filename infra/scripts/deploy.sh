@@ -198,17 +198,18 @@ for app in "${APPS[@]}"; do build_and_push "$app"; done
 ORDERED=()
 for app in "${APPS[@]}"; do [ "$app" = api ] && ORDERED=(api "${ORDERED[@]}") || ORDERED+=("$app"); done
 
-declare -A STARTED=()
+# One app at a time: each canary runs new tasks next to the old ones, and the
+# account's Fargate quota (8 vCPU, shared with staging) has room for about one
+# canary on top of everything already running. Rolling them together hit that
+# limit and rolled the deploy back. A failed app doesn't stop the ones after it.
 failed=0
 for app in "${ORDERED[@]}"; do
   [ "$app" = api ] && run_migrations "$(image_of api)"
   since="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   roll "$app" "$(image_of "$app")"
-  if [ "$app" = api ]; then wait_rolled api "$since" || exit 1; else STARTED[$app]="$since"; fi
-done
-for app in "${ORDERED[@]}"; do
-  [ "$app" = api ] && continue
-  wait_rolled "$app" "${STARTED[$app]}" || failed=1
+  if [ "$app" = api ]; then wait_rolled api "$since" || exit 1
+  else wait_rolled "$app" "$since" || failed=1
+  fi
 done
 [ "$failed" = 0 ] || exit 1
 echo "Deployed $TAG to $ENV_NAME: ${ORDERED[*]}"

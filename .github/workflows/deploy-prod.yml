@@ -27,8 +27,10 @@ permissions:
   id-token: write
   contents: read
 
+# Shared with the other environment's workflow: staging and production run on
+# one Fargate quota, and two deploys at once can exceed it.
 concurrency:
-  group: deploy-prod
+  group: deploy-aws
   cancel-in-progress: false
 
 jobs:
@@ -42,39 +44,44 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # the push's whole range, to see which apps it touched
+          fetch-depth: 0 # full history, to compare against what each app runs now
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::251929332238:role/clothsy-prod-github-deploy
+          aws-region: us-east-1
       - name: Apps to deploy
         id: apps
         env:
           CHOSEN: ${{ inputs.apps }}
-          BEFORE: ${{ github.event.before }}
         run: |
+          # By hand: the apps asked for. On push: every app whose files differ
+          # from the commit its running image was built from (image tags are
+          # prod-<commit>[-dirty-…]). Comparing with what is live, not with the
+          # previous push, means a queued run that GitHub drops can't leave a
+          # change undeployed.
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             apps="$CHOSEN"
-          elif [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
-            apps="api portal admin newsite www"
           else
-            changed="$(git diff --name-only "$BEFORE" "$GITHUB_SHA")"
+            declare -A DIR=([api]=fabricvton [portal]=custom-store [admin]=admin-dashboard [newsite]=fabricvton-newsite [www]=fabricvton-nextjs)
+            account="$(aws sts get-caller-identity --query Account --output text)"
             apps=""
-            # The deploy script or this workflow changing redeploys everything.
-            if printf '%s\n' "$changed" | grep -qE '^(infra/scripts/deploy\.sh|\.github/workflows/deploy-prod\.yml)$'; then
-              apps="api portal admin newsite www"
-            else
-              printf '%s\n' "$changed" | grep -q '^fabricvton/' && apps="$apps api"
-              printf '%s\n' "$changed" | grep -q '^custom-store/' && apps="$apps portal"
-              printf '%s\n' "$changed" | grep -q '^admin-dashboard/' && apps="$apps admin"
-              printf '%s\n' "$changed" | grep -q '^fabricvton-newsite/' && apps="$apps newsite"
-              printf '%s\n' "$changed" | grep -q '^fabricvton-nextjs/' && apps="$apps www"
-            fi
+            for app in api portal admin newsite www; do
+              image="$(aws ecs describe-express-gateway-service --region us-east-1 \
+                --service-arn "arn:aws:ecs:us-east-1:$account:service/clothsy-prod/clothsy-prod-$app" \
+                --query 'max_by(service.activeConfigurations, &createdAt).primaryContainer.image' --output text 2>/dev/null || true)"
+              live="$(printf '%s' "$image" | sed -n 's/.*:prod-\([0-9a-f]\{12\}\).*/\1/p')"
+              if [ -z "$live" ] || ! git cat-file -e "$live^{commit}" 2>/dev/null; then
+                echo "$app: live commit unknown ($image), deploying"; apps="$apps $app"
+              elif [ -n "$(git diff --name-only "$live" HEAD -- "${DIR[$app]}" infra/scripts/deploy.sh)" ]; then
+                echo "$app: changed since $live, deploying"; apps="$apps $app"
+              else
+                echo "$app: live $live is current"
+              fi
+            done
           fi
           apps="$(echo $apps)"
           echo "Deploying: ${apps:-nothing}"
           echo "list=$apps" >> "$GITHUB_OUTPUT"
-      - uses: aws-actions/configure-aws-credentials@v4
-        if: steps.apps.outputs.list != ''
-        with:
-          role-to-assume: arn:aws:iam::251929332238:role/clothsy-prod-github-deploy
-          aws-region: us-east-1
       - name: Backend tests
         if: steps.apps.outputs.list != ''
         working-directory: fabricvton

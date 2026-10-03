@@ -18,8 +18,10 @@ permissions:
   id-token: write # OIDC: assume the deploy role without stored keys
   contents: read
 
+# Shared with the other environment's workflow: staging and production run on
+# one Fargate quota, and two deploys at once can exceed it.
 concurrency:
-  group: deploy-staging
+  group: deploy-aws
   cancel-in-progress: false
 
 jobs:
