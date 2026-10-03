@@ -2,7 +2,7 @@
 
 client_id = "4b0b18e4abb15c4a75683c7fc32d2b44"
 name = "Clothsy AI"
-application_url = "https://fabricvton-api.onrender.com"
+application_url = "https://api.clothsyai.fabricvton.com"
 embedded = true
 
 [build]
@@ -46,13 +46,17 @@ use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
+  # The old Render host stays listed during the move, for installs already in flight.
+  "https://api.clothsyai.fabricvton.com/auth/callback",
+  "https://api.clothsyai.fabricvton.com/auth/shopify/callback",
+  "https://api.clothsyai.fabricvton.com/api/auth/callback",
   "https://fabricvton-api.onrender.com/auth/callback",
   "https://fabricvton-api.onrender.com/auth/shopify/callback",
   "https://fabricvton-api.onrender.com/api/auth/callback"
 ]
 
 [app_proxy]
-url = "https://fabricvton-api.onrender.com/proxy"
+url = "https://api.clothsyai.fabricvton.com/proxy"
 subpath = "fabricvton"
 prefix = "apps"
 
