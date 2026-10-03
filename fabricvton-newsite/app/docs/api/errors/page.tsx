@@ -84,12 +84,12 @@ export default function Errors() {
           </thead>
           <tbody>
             <tr><td>Starting try-ons</td><td>12 a minute per account, shared by <code>POST /tryons</code> and <code>POST /tryons/sync</code></td></tr>
-            <tr><td>Polling</td><td>60 a minute per account — poll every 2–3 seconds</td></tr>
+            <tr><td>Polling</td><td>30 a minute per try-on and 600 a minute per account — poll every 2–3 seconds</td></tr>
             <tr><td>Uploading images</td><td>30 a minute per account</td></tr>
             <tr><td>Image size</td><td>4 MB per image, JPEG or PNG</td></tr>
             <tr><td>Uploaded image lifetime</td><td>24 hours from upload; the id can&apos;t be used after that</td></tr>
             <tr><td>Image URL fetch</td><td>HTTPS, default port, HTTP 200 without redirects, within 12 seconds</td></tr>
-            <tr><td>Sync wait</td><td>About 55 seconds, then <code>/tryons/sync</code> returns 202 and you poll</td></tr>
+            <tr><td>Sync wait</td><td>About 45 seconds, then <code>/tryons/sync</code> returns 202 and you poll</td></tr>
             <tr><td>Result URL lifetime</td><td>24 hours</td></tr>
             <tr><td>API keys</td><td>One active key per account</td></tr>
           </tbody>

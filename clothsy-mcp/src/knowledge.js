@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-export const API_BASE_URL = "https://fabricvton-api.onrender.com/api/v1";
+export const API_BASE_URL = "https://api.clothsyai.fabricvton.com/api/v1";
 export const PLATFORM_URL = "https://app.clothsyai.fabricvton.com";
 export const DOCS_URL = "https://clothsyai.fabricvton.com/docs/api";
 export const SHOPIFY_APP_URL = "https://apps.shopify.com/fabricvton";
@@ -106,7 +106,7 @@ export const ERRORS = [
     code: "INVALID_API_KEY",
     status: 401,
     meaning: "The API key is missing, malformed or revoked.",
-    cause: "No `Authorization: Bearer ...` header, a typo or stray quotes/whitespace in the env var, or the key was replaced (each account has one active key, so creating a new key revokes the old one).",
+    cause: "No `Authorization: Bearer ...` header, a typo or stray quotes/whitespace in the env var, or the key was revoked (each account has one active key; replacing it means revoking it first, then creating a new one).",
     fix: "Set `CLOTHSY_API_KEY` on the server to the current key from https://app.clothsyai.fabricvton.com -> Developer API, without quotes or spaces, and restart/redeploy. Send `Authorization: Bearer <key>`.",
     retry: "no",
     retryNote: "Retrying with the same key will fail again.",
@@ -262,7 +262,7 @@ export const CLIENT_ERRORS = [
     status: 0,
     meaning: "No response from the API: network failure or client timeout (SDK: ConnectionError).",
     cause: "DNS/network problems, a firewall, or a client timeout that's too short (/tryons/sync needs at least 70 s).",
-    fix: "Retry with the same Idempotency-Key. Check outbound HTTPS to fabricvton-api.onrender.com is allowed, and raise timeouts.",
+    fix: "Retry with the same Idempotency-Key. Check outbound HTTPS to api.clothsyai.fabricvton.com is allowed, and raise timeouts.",
     retry: "yes",
     retryNote: "Retry with the same Idempotency-Key.",
     sdkClass: "ConnectionError",

@@ -169,7 +169,7 @@ export default function PrivacyPolicy() {
               <br />
               <strong>Address:</strong> Near Shiv Mandir, Kendua Bazar Hatia Patti, Kenduadih, Dhanbad, Jharkhand 828116, India.
               <br />
-              <strong>Hosting:</strong> Vercel Inc., Covina, CA, USA.
+              <strong>Hosting:</strong> Amazon Web Services, Inc., Seattle, WA, USA (servers in the United States).
             </p>
           </div>
         </div>

@@ -25,6 +25,13 @@ ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
 REGISTRY="$ACCOUNT.dkr.ecr.$REGION.amazonaws.com"
 CLUSTER="clothsy-$ENV_NAME"
 TAG="$ENV_NAME-$(git rev-parse --short=12 HEAD)"
+# Uncommitted changes would otherwise ship under the commit's tag, and a later
+# deploy at the same commit would find that tag in ECR and skip the build. A
+# dirty tree gets its own tag, named after the changes themselves.
+if [ -n "$(git status --porcelain)" ]; then
+  TAG="$TAG-dirty-$( (git diff HEAD; git ls-files --others --exclude-standard | xargs -r sha256sum) | sha256sum | cut -c1-8)"
+  echo "Uncommitted changes: deploying as $TAG"
+fi
 # python3 on CI; on Windows "python3" can be the Microsoft Store stub.
 PY=python3; "$PY" -c '' 2>/dev/null || PY=python
 

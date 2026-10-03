@@ -260,7 +260,7 @@ The final copy at the cutover:
 
 - `.github/workflows/deploy-staging.yml` deploys staging on every push to `main` that touches an app, once the repository variable `STAGING_DEPLOY_ENABLED=true` is set.
 - `.github/workflows/deploy-prod.yml` is started by hand (workflow_dispatch, with a list of apps) and runs in the GitHub environment `production`, which should require a reviewer. It needs `PROD_DEPLOY_ENABLED=true` and that environment to exist.
-- Both run the backend tests first and sign in to AWS through GitHub OIDC (roles `clothsy-staging-github-deploy`, `clothsy-prod-github-deploy`; no stored keys). The production role trusts only the `production` environment. The roles still name the repository's old address (`UjjwalCodes01/vton`); update them first (section 14, item 16).
+- Both run the backend tests first and sign in to AWS through GitHub OIDC (roles `clothsy-staging-github-deploy`, `clothsy-prod-github-deploy`; no stored keys). The production role trusts only the `production` environment. `infra/bootstrap/main.tf` trusts `fabricVTON/vton` (including GitHub's ID-based subject); apply `infra/bootstrap` once if that hasn't been done since (section 14, item 16).
 
 ## 9. Terraform
 
@@ -300,17 +300,19 @@ To add another domain later: add it to `custom_domains` in `prod.tfvars`, apply 
 
 ## 11. The Render forwarder
 
-`fabricvton-api.onrender.com` belongs to Render and is written into released WooCommerce plugins, SDK versions and older links, so it cannot point at AWS. The Render service therefore runs `render-proxy/server.mjs` (no dependencies): it forwards every request to `https://api.clothsyai.fabricvton.com`, streaming bodies and changing only the `Host` header, with a 120-second timeout for the synchronous try-on endpoint.
+`fabricvton-api.onrender.com` belongs to Render and is written into released WooCommerce plugins, SDK versions and older links, so it cannot point at AWS. The Render service therefore runs `render-proxy/server.mjs` (no dependencies): it forwards every request to `https://api.clothsyai.fabricvton.com`, streaming bodies and changing only the `Host` header, with a 120-second timeout for the synchronous try-on endpoint. With `FORWARDER_SECRET` set on Render and in the backend's secret (same value), it also passes each caller's address, so per-IP limits apply to real shoppers rather than to Render's address (see `render-proxy/README.md`).
 
-Render settings for the service: Root Directory `render-proxy/`, Build Command `npm install`, Start Command `node server.mjs`, Health Check Path `/healthz` (forwarded to the backend). Its old environment variables are still set but unused; remove them when convenient (they include production secrets).
+Render settings for the service: Root Directory `render-proxy/`, Build Command `true` (no dependencies), Start Command `node server.mjs`, Health Check Path `/healthz` (forwarded to the backend). Its old environment variables are still set but unused; remove them when convenient (they include production secrets).
 
 Keep it for at least 90 days, and meanwhile release SDK, MCP and WooCommerce plugin versions whose default address is `https://api.clothsyai.fabricvton.com`.
 
-## 12. Shopify: the remaining step
+## 12. Shopify: the app registration
 
-**Who**: the teammate with access to the Shopify Partner (or Dev Dashboard) organization that owns the two Clothsy AI apps.
+**Status**: done on 3 October 2026 (app version `clothsy-ai-25`). Shopify now calls `https://api.clothsyai.fabricvton.com` directly. The steps below stay for reference and for a rollback.
 
-**What it changes**: each app's registration at Shopify. Today both still point at `https://fabricvton-api.onrender.com`; the configs in the repository already point at `https://api.clothsyai.fabricvton.com`:
+**Who**: the teammate with access to the Shopify Partner (or Dev Dashboard) organization that owns the Clothsy AI app.
+
+**What it changes**: the app's registration at Shopify. Before this step it pointed at `https://fabricvton-api.onrender.com`:
 
 | Setting | Old | New |
 |---|---|---|
@@ -384,7 +386,7 @@ Checked on 3 October 2026 after the DNS switch (times UTC):
 
 | # | Item | Owner | When |
 |---|---|---|---|
-| 1 | Deploy both Shopify app configs (section 12) | Teammate with Shopify access | Now |
+| 1 | ~~Deploy the Shopify app config (section 12)~~ Done 3 October 2026, version `clothsy-ai-25` | Teammate with Shopify access | Done |
 | 2 | Submit or follow up the AWS support case: enable Amazon Bedrock and verify the account for CloudFront | Account owner | Now |
 | 3 | Quota cases waiting at AWS: Fargate vCPU 8 → 32 (case 179086292300406), Lambda concurrency 10 → 1000 (179086293100019), GPU instances (179065731100567) | AWS / account owner | Waiting |
 | 4 | When the Fargate quota is raised: production backend back to 1 vCPU / 2 GB, max 10 tasks (`prod.tfvars`) | AWS duty | After 3 |
@@ -395,11 +397,13 @@ Checked on 3 October 2026 after the DNS switch (times UTC):
 | 9 | Deactivate the old S3 access key (`SHARE_S3_KEY_ID`) in IAM; nothing uses it now | AWS duty | After a week |
 | 10 | Close the rollback window (about two weeks): delete `clothsy/prod/source-db`, then retire the Neon database (the other project's tables live there too; check before deleting) | AWS duty | ~17 October 2026 |
 | 11 | Bare `fabricvton.com`: set GoDaddy forwarding to `https://www.fabricvton.com` (301), then delete the four Vercel projects | Domain owner | After a week |
-| 12 | Release SDK, MCP and WooCommerce plugin versions defaulting to `https://api.clothsyai.fabricvton.com`; after 90+ days retire the Render service | Product | Over 90 days |
+| 12 | WooCommerce 0.2.9 (released 3 October 2026) calls `https://api.clothsyai.fabricvton.com`; SDK `clothsy-ai` 0.1.1 and MCP `clothsy-mcp` 0.1.1 default to it once published. After 90+ days retire the Render service | Product | Over 90 days |
 | 13 | Remove the old environment variables from the Render forwarder service (they include production secrets) | Render owner | Any time |
 | 14 | Guardrail phase 5 (Nova Lite garment classifier and the other CPU checks) waits for Bedrock | Engineering | After 2 |
 | 15 | The development copy of the Shopify app (`4b0b18…`) is no longer used and its config is gone from the repository. Archive it in the Partner dashboard so it can't be installed | Shopify owner | Soon |
-| 16 | The repository moved to `fabricVTON/vton`. Update the deploy roles' trust before enabling CI: set `github_repository` to `fabricVTON/vton` in `infra/bootstrap/main.tf` and apply `infra/bootstrap` (GitHub's sign-in tokens carry the new name, so the roles refuse the old one). Point local clones at the new address with `git remote set-url origin https://github.com/fabricVTON/vton.git` | Repo admin | Before item 6 |
+| 16 | The repository moved to `fabricVTON/vton`. `infra/bootstrap/main.tf` already trusts it; apply `infra/bootstrap` before enabling CI if that hasn't been done (GitHub's sign-in tokens carry the new name, so the roles refuse the old one). Point local clones at the new address with `git remote set-url origin https://github.com/fabricVTON/vton.git` | Repo admin | Before item 6 |
+| 17 | Set `FORWARDER_SECRET` (`openssl rand -hex 32`) on the Render forwarder and the same value in `clothsy/prod/api`, then redeploy both, so shoppers on older WooCommerce plugins and SDKs stop sharing one per-IP limit | AWS duty + Render owner | Now |
+| 18 | `terraform apply` for prod: WAF exemptions for the authenticated API routes and a separate limit for images and shared looks, an HTTP→HTTPS redirect on port 80, admin pinned to one task. Afterwards `curl -I http://www.fabricvton.com` should return 301 | AWS duty | Now |
 
 ## 15. Rollback
 

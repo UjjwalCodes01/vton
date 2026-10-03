@@ -35,4 +35,4 @@ done
 echo "$RESULT" | jq .   # resultUrl is valid for 24 h — caption it as AI-generated wherever you show it
 
 # Alternative to steps 2–3 for scripts: POST $API/tryons/sync with the same headers/body and
-# curl --max-time 90; it waits ~55 s and returns 200 (finished) or 202 (keep polling).
+# curl --max-time 90; it waits ~45 s and returns 200 (finished) or 202 (keep polling).

@@ -7,7 +7,9 @@ apps = {
   # at 8, a canary deploy of 1-vCPU tasks next to everything else hits the limit.
   api     = { cpu = 512, memory = 1024, min = 2, max = 6 }
   portal  = { cpu = 512, memory = 1024, min = 2, max = 4 }
-  admin   = { cpu = 256, memory = 512, min = 1, max = 2 }
+  # One task: the sign-in throttle lives in the task's memory, so a second task
+  # would double what an attacker can try.
+  admin   = { cpu = 256, memory = 512, min = 1, max = 1 }
   newsite = { cpu = 256, memory = 512, min = 2, max = 4 }
   www     = { cpu = 256, memory = 512, min = 2, max = 4 }
 }

@@ -14,6 +14,7 @@
 
 import db from "./db.server";
 import { isIP } from "node:net";
+import { createHash, timingSafeEqual } from "node:crypto";
 
 export interface RateLimitRule {
   /** Stable key for this bucket, e.g. `tryon:shop:example.myshopify.com` */
@@ -106,11 +107,15 @@ function windowStartMs(windowMs: number, now = Date.now()) {
 async function consume(rule: RateLimitRule, now = Date.now()): Promise<RateLimitResult> {
   const start = windowStartMs(rule.windowMs, now);
   const id = `rl_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+  // The window length is part of the key: a minute rule and an hour rule on the
+  // same scope start together at :00 every hour, and would otherwise count into
+  // one shared row.
+  const scope = `${rule.scope}@${rule.windowMs}`;
 
   try {
     const rows = await db.$queryRaw<Array<{ count: number }>>`
       INSERT INTO "RateLimitWindow" ("id", "scope", "windowStartMs", "count")
-      VALUES (${id}, ${rule.scope}, ${BigInt(start)}, 1)
+      VALUES (${id}, ${scope}, ${BigInt(start)}, 1)
       ON CONFLICT ("scope", "windowStartMs")
       DO UPDATE SET "count" = "RateLimitWindow"."count" + 1
       RETURNING "count"
@@ -286,29 +291,40 @@ export function shareRules(params: {
 /**
  * Client IP — trustworthy for direct traffic, best effort through Shopify.
  *
- * Render serves onrender.com through Cloudflare (responses carry
- * `server: cloudflare`), and Cloudflare overwrites CF-Connecting-IP with the
- * address that actually connected. A caller can put anything in the header;
- * Cloudflare replaces it. So for requests that come straight from a browser —
- * WooCommerce storefronts, the portal, registration — it is the real shopper.
- *
- * X-Forwarded-For is the opposite: Render keeps whatever the caller sent and
- * only appends, so its left-most entry is forgeable. It is used only for
- * Shopify app-proxy traffic (/proxy/…), where the connecting address is
- * Shopify's own edge, shared by every storefront — bucketing on that would
- * throttle unrelated shoppers together, so the left-most entry (the one Shopify
- * reports) is the better, if forgeable, attribution. On that path the limits
- * that actually hold are keyed on the signed shop, which no caller can rotate.
- *
- * On AWS, CF-Connecting-IP is just another header a caller can forge, so it is
- * ignored there and CLIENT_IP_HEADER says where the trustworthy address is:
- * - "x-forwarded-for-last": behind the ECS load balancer, which appends the
- *   address that connected to it as the RIGHT-most X-Forwarded-For entry
- *   (entries to its left are whatever the caller sent);
+ * CLIENT_IP_HEADER says where the trustworthy address is:
+ * - "x-forwarded-for-last" (the default): behind the ECS load balancer, which
+ *   appends the address that connected to it as the RIGHT-most X-Forwarded-For
+ *   entry (entries to its left are whatever the caller sent);
  * - "cloudfront-viewer-address": behind CloudFront, which sets
- *   CloudFront-Viewer-Address ("ip:port") from the connection itself.
+ *   CloudFront-Viewer-Address ("ip:port") from the connection itself;
+ * - "cf-connecting-ip": behind Cloudflare, which overwrites that header.
+ *
+ * Requests through the Render forwarder (fabricvton-api.onrender.com, still in
+ * released plugins and SDKs) connect from Render's few addresses, which would
+ * put every one of their shoppers in one bucket. The forwarder therefore sends
+ * the caller's address in X-Clothsy-Client-IP together with FORWARDER_SECRET;
+ * that header is believed only when the secret matches.
+ *
+ * Shopify app-proxy traffic (/proxy/…) connects from Shopify's own edge, shared
+ * by every storefront — bucketing on that would throttle unrelated shoppers
+ * together, so the left-most X-Forwarded-For entry (the one Shopify reports) is
+ * the better, if forgeable, attribution. On that path the limits that actually
+ * hold are keyed on the signed shop, which no caller can rotate.
  */
-const CLIENT_IP_HEADER = (process.env.CLIENT_IP_HEADER || "cf-connecting-ip").toLowerCase();
+const CLIENT_IP_HEADER = (process.env.CLIENT_IP_HEADER || "x-forwarded-for-last").toLowerCase();
+
+const sha256 = (value: string) => createHash("sha256").update(value).digest();
+const FORWARDER_SECRET = process.env.FORWARDER_SECRET || "";
+const FORWARDER_DIGEST = FORWARDER_SECRET.length >= 32 ? sha256(FORWARDER_SECRET) : null;
+
+/** The caller's address as reported by the Render forwarder, if the request carries its secret. */
+function forwardedClientIp(request: Request): string | null {
+  if (!FORWARDER_DIGEST) return null;
+  const given = request.headers.get("X-Clothsy-Forwarder");
+  if (!given || !timingSafeEqual(sha256(given), FORWARDER_DIGEST)) return null;
+  const ip = request.headers.get("X-Clothsy-Client-IP")?.trim();
+  return ip && isIP(ip) ? ip : null;
+}
 
 function viewerAddressIp(value: string | null): string | null {
   const raw = value?.trim();
@@ -331,6 +347,8 @@ export function clientIpFrom(request: Request): string | null {
   }
 
   if (!viaShopify) {
+    const forwarded = forwardedClientIp(request);
+    if (forwarded) return forwarded;
     if (CLIENT_IP_HEADER === "x-forwarded-for-last") {
       const connected = lastForwardedIp(request.headers.get("X-Forwarded-For"));
       if (connected) return connected;
@@ -358,8 +376,16 @@ export function clientIpFrom(request: Request): string | null {
 export async function purgeExpiredRateLimitWindows(olderThanMs = 2 * HOUR) {
   try {
     const cutoff = BigInt(Date.now() - olderThanMs);
+    // Housekeeping rows mark when a periodic job last ran, and some jobs run
+    // daily; deleting them after two hours would let those run every hour.
+    // They are few, and are dropped once they are a week old.
     const { count } = await db.rateLimitWindow.deleteMany({
-      where: { windowStartMs: { lt: cutoff } },
+      where: {
+        OR: [
+          { windowStartMs: { lt: cutoff }, NOT: { scope: { startsWith: "housekeeping:" } } },
+          { windowStartMs: { lt: BigInt(Date.now() - 7 * 24 * HOUR) } },
+        ],
+      },
     });
     if (count > 0) {
       console.log(`[RateLimit] Purged ${count} expired counter rows`);

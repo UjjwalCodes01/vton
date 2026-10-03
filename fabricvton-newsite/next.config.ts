@@ -7,7 +7,7 @@ import type { NextConfig } from "next";
 // TRYON_API_ORIGIN is read only here, at build/start time, so it does not need the NEXT_PUBLIC_ prefix (which would
 // inline it into client bundles). The old name is still read as a fallback so existing deployments keep working.
 const BACKEND =
-  process.env.TRYON_API_ORIGIN || process.env.NEXT_PUBLIC_TRYON_API || "https://fabricvton-api.onrender.com";
+  process.env.TRYON_API_ORIGIN || process.env.NEXT_PUBLIC_TRYON_API || "https://api.clothsyai.fabricvton.com";
 
 /**
  * Security headers sent on every route. The CSP is deliberately limited to directives that cannot block scripts,

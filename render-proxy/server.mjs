@@ -5,7 +5,10 @@
 // plugins, SDK versions and older links, so after the move the Render service
 // runs this instead of the backend: requests and responses pass through
 // unchanged (bodies streamed, up to the backend's own limits), only the Host
-// header changes. No dependencies.
+// header changes — plus, when FORWARDER_SECRET is set (the same value as the
+// backend's), the caller's address and that secret, so the backend can tell
+// shoppers apart instead of seeing every request come from Render. No
+// dependencies.
 import http from "node:http";
 import https from "node:https";
 
@@ -16,7 +19,14 @@ const hopByHop = new Set([
   "connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
   "te", "trailer", "transfer-encoding", "upgrade", "host",
 ]);
-const pass = (headers) => Object.fromEntries(Object.entries(headers).filter(([name]) => !hopByHop.has(name)));
+// Our own headers are never taken from the caller.
+const ours = new Set(["x-clothsy-forwarder", "x-clothsy-client-ip"]);
+const pass = (headers) => Object.fromEntries(Object.entries(headers).filter(([name]) => !hopByHop.has(name) && !ours.has(name)));
+const secret = process.env.FORWARDER_SECRET || "";
+// Render's edge (Cloudflare) overwrites CF-Connecting-IP with the address that
+// connected, so it can't be forged by the caller.
+const clientIp = (req) => String(req.headers["cf-connecting-ip"] || req.socket.remoteAddress || "").trim();
+const identify = (req) => (secret ? { "x-clothsy-forwarder": secret, "x-clothsy-client-ip": clientIp(req) } : {});
 
 http.createServer((req, res) => {
   const upstream = https.request(
@@ -25,8 +35,8 @@ http.createServer((req, res) => {
       port: target.port || 443,
       method: req.method,
       path: req.url,
-      headers: { ...pass(req.headers), host: target.host },
-      // /api/v1/tryons/sync holds a request for up to 55 s.
+      headers: { ...pass(req.headers), ...identify(req), host: target.host },
+      // /api/v1/tryons/sync holds a request for up to 45 s.
       timeout: 120_000,
     },
     (reply) => {

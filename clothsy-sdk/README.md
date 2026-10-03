@@ -116,7 +116,7 @@ const { state, start, reset, resultUrl, error } = useTryOn({ endpoint: "/api/try
 ```ts
 new Clothsy({
   apiKey?: string,          // default: CLOTHSY_API_KEY env var
-  baseUrl?: string,         // default: https://fabricvton-api.onrender.com/api/v1
+  baseUrl?: string,         // default: https://api.clothsyai.fabricvton.com/api/v1
   timeoutMs?: number,       // default 60_000 per request
   maxRetries?: number,      // default 2
   fetch?: typeof fetch,

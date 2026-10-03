@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { API_BASE_URL, LEGAL } from "../../../lib/site";
+import { API_BASE_URL } from "../../../lib/site";
 import { CodeTabs } from "../../components/Code";
 import Pager from "../../components/Pager";
 import { IMAGE_ID } from "../../components/samples";
@@ -135,6 +135,10 @@ export default function UploadingImages() {
         <li>30 uploads a minute per account.</li>
         <li>An id works only for the account that uploaded it.</li>
         <li>
+          Ids are opaque and can be up to 600 characters long. Store them as text as received; don&apos;t parse them or
+          put them in a short column.
+        </li>
+        <li>
           An id works for 24 hours, until the <code>expiresAt</code> time in the upload response. After that it&apos;s gone
           for good — using it returns <code>400 INVALID_IMAGE_ID</code>, and you need to upload the file again.
         </li>
@@ -152,8 +156,10 @@ export default function UploadingImages() {
           in the <Link href="/docs/api/custom-store#button">custom store guide</Link> does it for you.
         </li>
         <li>
-          Mention in your privacy policy that shopper photos are sent to a virtual try-on service. Ours is at{" "}
-          <Link href={LEGAL.shopperPrivacy}>shopper privacy</Link> if you&apos;d like to link to it.
+          Say in your own privacy policy that shopper photos are sent to a virtual try-on service, and that photos
+          uploaded through this endpoint are kept for up to 35 days and then deleted automatically. (Our shopper privacy
+          notice covers the Shopify and WooCommerce widgets, which never store photos, so don&apos;t link to it for the
+          API.)
         </li>
       </ul>
 

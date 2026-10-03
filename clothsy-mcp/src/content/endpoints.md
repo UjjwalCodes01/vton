@@ -1,6 +1,6 @@
 # HTTP API endpoints
 
-Base URL: `https://fabricvton-api.onrender.com/api/v1`
+Base URL: `https://api.clothsyai.fabricvton.com/api/v1`
 
 Every request: `Authorization: Bearer <your key>`. Errors are JSON `{ "error": "...", "code": "..." }`; branch on `code`, not on the wording of `error`.
 
@@ -9,7 +9,7 @@ Every request: `Authorization: Bearer <your key>`. Errors are JSON `{ "error": "
 Multipart form with one field, `file` (JPEG or PNG, up to 4 MB). Free. 30 uploads a minute.
 
 ```
-curl -X POST https://fabricvton-api.onrender.com/api/v1/images \
+curl -X POST https://api.clothsyai.fabricvton.com/api/v1/images \
   -H "Authorization: Bearer $CLOTHSY_API_KEY" \
   -F "file=@shopper.jpg;type=image/jpeg"
 ```
@@ -36,7 +36,7 @@ Body:
 | `consent` | `true` | Required. Send only after the person in the photo agreed. |
 
 ```
-curl -X POST https://fabricvton-api.onrender.com/api/v1/tryons \
+curl -X POST https://api.clothsyai.fabricvton.com/api/v1/tryons \
   -H "Authorization: Bearer $CLOTHSY_API_KEY" \
   -H "Idempotency-Key: 3f9c2a7e-order-42" \
   -H "Content-Type: application/json" \
@@ -46,15 +46,17 @@ curl -X POST https://fabricvton-api.onrender.com/api/v1/tryons \
 `202 Accepted`
 
 ```json
-{ "id": "...", "status": "pending", "pollUrl": "https://fabricvton-api.onrender.com/api/v1/tryons/..." }
+{ "id": "...", "status": "pending", "pollUrl": "/api/v1/tryons/..." }
 ```
+
+`pollUrl` is a path: prefix it with `https://api.clothsyai.fabricvton.com`.
 
 - 12 starts a minute per account, shared with `/tryons/sync`.
 - 1 credit per **finished** try-on. Failed try-ons are refunded. Repeating a request with the same `Idempotency-Key` never charges twice; it returns the same try-on.
 
 ## POST /tryons/sync: start and wait
 
-Same headers and body as `POST /tryons`. The API waits up to about 55 seconds.
+Same headers and body as `POST /tryons`. The API waits up to about 45 seconds.
 
 - `200 OK` when finished: `{ "id", "status": "success" | "failed", "resultUrl", "message"? }`
 - `202 Accepted` if still running: poll `GET /tryons/{id}`.
@@ -69,7 +71,7 @@ Set your HTTP client timeout to at least 70 seconds. Good for scripts and back-o
 { "id": "...", "status": "pending" | "success" | "failed", "resultUrl": "https://..." | null, "message": "..." }
 ```
 
-Poll every 2-3 seconds; 60 requests a minute per account. `message` explains a failure. `resultUrl` is a public image on the API domain, valid for 24 hours; download it if you need it longer.
+Poll every 2-3 seconds; 30 requests a minute per try-on, 600 a minute per account. `message` explains a failure. `resultUrl` is a public image on the API domain, valid for 24 hours; download it if you need it longer.
 
 ## GET /account: credits
 

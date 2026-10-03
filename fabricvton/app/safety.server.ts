@@ -1,4 +1,4 @@
-// Conservative safety checks for the current Perfect Corp workflow. No image
+// Conservative safety checks for the current try-on engine workflow. No image
 // bytes, signed URLs, or Rekognition responses are written to logs or the DB.
 import { createHash } from "node:crypto";
 import { lookup } from "node:dns/promises";
@@ -469,6 +469,28 @@ export async function screenResultImage(bytes: Uint8Array) {
 export async function fetchScreenedResult(url: string, maxBytes = MAX_CHECK_BYTES) {
   const bytes = await downloadPublicImage(url, maxBytes);
   await screenResultImage(bytes);
+  return bytes;
+}
+
+/** Largest result /i/ will serve. The guard resizes anything over 4 MB before screening it. */
+const MAX_SERVED_RESULT_BYTES = 20 * 1024 * 1024;
+
+/**
+ * A provider result, screened, for /i/ to serve. In guard mode it is screened by
+ * URL, like a status poll, so a result over 4 MB (which the poll approved and
+ * the store was billed for) is served rather than refused for its size.
+ */
+export async function fetchServedResult(url: string) {
+  if (guardMode() !== "guard") return fetchScreenedResult(url);
+  const bytes = await downloadPublicImage(url, MAX_SERVED_RESULT_BYTES);
+  const key = approvalKey(bytes);
+  if (approved(key)) return bytes;
+  const { sha256 } = await guardOutput({ url });
+  // The guard fetched the URL itself. Approve only the bytes it actually saw.
+  if (sha256 && `${SAFETY_POLICY_VERSION}:${sha256}` !== key) {
+    throw new SafetyUnavailableError();
+  }
+  rememberApproval(key);
   return bytes;
 }
 

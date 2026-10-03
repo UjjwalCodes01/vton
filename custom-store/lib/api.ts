@@ -6,7 +6,7 @@ import "server-only";
 // request body to the backend, and the browser never holds anything that could
 // be replayed against the API directly.
 
-const BASE = (process.env.CLOTHSY_API_BASE || "https://fabricvton-api.onrender.com").replace(/\/+$/, "");
+const BASE = (process.env.CLOTHSY_API_BASE || "https://api.clothsyai.fabricvton.com").replace(/\/+$/, "");
 
 /** Where "Continue with Google" points. The exchange happens server-side there. */
 export const googleSignInUrl = `${BASE}/auth/google/start`;
@@ -17,14 +17,14 @@ export class ApiError extends Error {
   }
 }
 
-async function post<T>(path: string, body: Record<string, unknown>): Promise<T> {
+async function post<T>(path: string, body: Record<string, unknown>, timeoutMs = 20_000): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${BASE}${path}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(timeoutMs),
       cache: "no-store",
     });
   } catch (error) {
@@ -108,12 +108,16 @@ export const api = {
     post<{ shop?: string; email?: string; session: string; bind?: string | null }>("/api/portal/session", { token }),
   /** Ends every session this account holds, not just this browser's cookie. */
   signOut: (session: string) => post<{ ok: boolean }>("/api/portal/signout", { session }),
+  // Starting screens both photos and uploads the garment before it answers, and
+  // spends the credit part-way through; give it longer than other calls so a slow
+  // start isn't reported as a failure after the credit is gone. Stays under the
+  // load balancer's 60-second idle timeout.
   playgroundStart: (session: string, payload: { personImage: string; garmentImage: string; title: string; consent: boolean }) =>
     post<{ taskId: string; creditsLeft: number }>("/api/portal/playground", {
       session,
       step: "start",
       ...payload,
-    }),
+    }, 55_000),
   playgroundStatus: (session: string, taskId: string) =>
     post<{ status: "pending" | "success" | "failed"; imageToken?: string; message?: string }>(
       "/api/portal/playground",

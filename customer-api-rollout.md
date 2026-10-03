@@ -14,7 +14,7 @@ Do not release the portal before the backend migration. No customer keys or cred
 ## Customer flow
 
 1. Sign in to the platform and open **Developer API**. Create a key and copy it immediately to a server-side secret store. Revoke lost keys and create replacements; the old plaintext value cannot be recovered.
-2. Call `POST https://fabricvton-api.onrender.com/api/v1/tryons` with `Authorization: Bearer <key>`, `Idempotency-Key: <unique 8-128 character value>`, and JSON with `personImageUrl`, `garmentImageUrl`, `title`, and `consent: true`. Image URLs must be HTTPS and public or short-lived signed URLs, and the files must be JPEG or PNG under 4 MB.
+2. Call `POST https://api.clothsyai.fabricvton.com/api/v1/tryons` with `Authorization: Bearer <key>`, `Idempotency-Key: <unique 8-128 character value>`, and JSON with `personImageUrl`, `garmentImageUrl`, `title`, and `consent: true`. Image URLs must be HTTPS and public or short-lived signed URLs, and the files must be JPEG or PNG under 4 MB.
 3. Poll the returned `pollUrl` with the same bearer key. `status: success` returns a short-lived `resultUrl`; `failed` attempts refund the reserved account credit. Retrying the same idempotency key returns the existing request.
 4. The key draws from the account balance shared with Playground, not from a connected store's monthly plan.
 

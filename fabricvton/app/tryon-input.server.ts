@@ -108,7 +108,13 @@ export function validateGarmentImageUrl(
     shop.toLowerCase(),
   ];
 
-  if (!allowed.some((suffix) => hostMatches(hostname, suffix))) {
+  // Liquid's image_url filter serves product media from the store's primary
+  // domain under /cdn/shop/ (//your-store.com/cdn/shop/files/…), so a store on
+  // a custom domain sends that host. Its port must be the default, and the
+  // download itself refuses private networks and redirects.
+  const shopifyStorefrontPath = url.pathname.startsWith("/cdn/shop/") && !url.port;
+
+  if (!shopifyStorefrontPath && !allowed.some((suffix) => hostMatches(hostname, suffix))) {
     return { ok: false, reason: `host ${hostname} is not a Shopify image origin` };
   }
 

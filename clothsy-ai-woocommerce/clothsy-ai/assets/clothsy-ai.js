@@ -405,6 +405,7 @@
       // 6. History
       '  <div class="clothsy-ai-step clothsy-ai-history" data-step="history">',
       '    <div data-role="history-list"></div>',
+      '    <button type="button" class="clothsy-ai-btn clothsy-ai-btn-plain" data-action="forget" data-role="forget">Clear my try-ons</button>',
       "  </div>",
 
       // 7. Error
@@ -1163,6 +1164,7 @@
     if (!list.length) {
       els.historyList.innerHTML =
         '<p class="clothsy-ai-empty">No try-ons yet. Your looks will appear here.</p>';
+      els.forget.style.display = "none";
     } else {
       var html = "";
       for (var i = 0; i < list.length; i++) {

@@ -61,6 +61,12 @@ export function createTryOnRoute(options: TryOnRouteOptions): TryOnRouteHandlers
   let client: Clothsy | undefined = options.client;
   const getClient = () =>
     (client ??= new Clothsy({ apiKey: options.apiKey, baseUrl: options.baseUrl, fetch: options.fetch }));
+  // Status checks don't retry here: the browser polls again anyway, and waiting
+  // out a Retry-After inside the route would hold each poll open for up to a minute.
+  // A client passed in is used as given.
+  let pollClient: Clothsy | undefined = options.client;
+  const getPollClient = () =>
+    (pollClient ??= new Clothsy({ apiKey: options.apiKey, baseUrl: options.baseUrl, fetch: options.fetch, maxRetries: 0 }));
 
   async function POST(request: Request): Promise<Response> {
     try {
@@ -117,7 +123,7 @@ export function createTryOnRoute(options: TryOnRouteOptions): TryOnRouteHandlers
     try {
       const id = new URL(request.url).searchParams.get("id");
       if (!id || !TRYON_ID_RE.test(id)) return json({ message: "A try-on id is required." }, 400);
-      const tryOn = await getClient().tryons.retrieve(id);
+      const tryOn = await getPollClient().tryons.retrieve(id);
       const message =
         tryOn.status === "failed"
           ? tryOn.message || friendlyMessage(new ClothsyError("", { code: "TRYON_FAILED" }))

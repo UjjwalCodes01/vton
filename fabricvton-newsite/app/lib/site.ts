@@ -12,7 +12,7 @@ export const WOO_URL = "https://wordpress.org/plugins/clothsy-ai/";
 /** The platform where merchants and developers sign in, create API keys and top up. */
 export const PLATFORM_URL = "https://app.clothsyai.fabricvton.com";
 /** Origin of the public try-on API. Keep in step with the backend's routes. */
-export const API_ORIGIN = "https://fabricvton-api.onrender.com";
+export const API_ORIGIN = "https://api.clothsyai.fabricvton.com";
 export const API_BASE_URL = `${API_ORIGIN}/api/v1`;
 /** Product Hunt listing (the listing itself is titled "Clothys AI"). */
 export const PRODUCT_HUNT_URL = "https://www.producthunt.com/products/clothys-ai";

@@ -7,7 +7,7 @@ import { redactSecrets } from "./format";
 // sees it and never talks to the backend directly. The signed-in operator's
 // address rides along so the product's audit log names a person, not a service.
 
-const BASE = (process.env.CLOTHSY_API_BASE || "https://fabricvton-api.onrender.com").replace(/\/+$/, "");
+const BASE = (process.env.CLOTHSY_API_BASE || "https://api.clothsyai.fabricvton.com").replace(/\/+$/, "");
 const TIMEOUT_MS = 20_000;
 
 export class ApiError extends Error {

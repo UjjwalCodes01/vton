@@ -4,7 +4,7 @@ import { cachedResultUrl, rememberResultUrl, verifyImageToken } from "../share/i
 import { labelAiGenerated, stripImageMetadata } from "../share/imagemeta.server";
 import { getGenerationStatus } from "../engine.server";
 import { logInternalError, newRequestId } from "../requestid.server";
-import { fetchScreenedResult } from "../safety.server";
+import { fetchServedResult } from "../safety.server";
 
 // GET /i/<token> — a try-on result, served from our domain.
 //
@@ -37,7 +37,7 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
       rememberResultUrl(taskId, url);
     }
 
-    const raw = await fetchScreenedResult(url);
+    const raw = await fetchServedResult(url);
 
     const stripped = stripImageMetadata(raw);
     if (!stripped) {

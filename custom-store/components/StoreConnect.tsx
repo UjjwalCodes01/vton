@@ -13,7 +13,7 @@ export function StoreConnect() {
     event.preventDefault(); setBusy(true); setError(""); setResult(null);
     try {
       const response = await fetch("/api/store-link", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ platform, storeUrl: url }) });
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "Could not start connection.");
       setResult(data);
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Could not start connection."); }

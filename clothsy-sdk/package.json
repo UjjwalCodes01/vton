@@ -1,6 +1,6 @@
 {
   "name": "clothsy-ai",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Official TypeScript SDK for the Clothsy AI virtual try-on API, with Next.js route helpers and a React try-on button.",
   "license": "MIT",
   "author": "Clothsy AI",

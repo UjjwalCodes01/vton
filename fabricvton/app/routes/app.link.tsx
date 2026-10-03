@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { Form, useActionData } from "react-router";
 import { authenticate } from "../shopify.server";
-import { finishStoreLink } from "../invoices/store-link.server";
+import { finishStoreLink, StoreLinkError } from "../invoices/store-link.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
@@ -15,7 +15,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     await finishStoreLink(String(form.get("code") || ""), "shopify", `https://${session.shop}`, session.shop);
     return { ok: true, message: "Store linked to your Clothsy platform account." };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "Could not link store." };
+    if (error instanceof StoreLinkError) return { ok: false, message: error.message };
+    console.error("[store link]", error);
+    return { ok: false, message: "Could not link store. Try again in a minute." };
   }
 };
 

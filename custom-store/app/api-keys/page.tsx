@@ -14,7 +14,7 @@ export default async function KeysPage() {
     <ApiKeys initial={keys} />
     <div className="card" style={{ marginTop: 16 }}><div className="card-head"><h2>Quickstart</h2></div><div className="card-body">
       <p className="sub">Send the key only from your server. Both image URLs must be public HTTPS URLs or short-lived signed HTTPS URLs. Confirm adult consent and permission for the photos before calling.</p>
-      <pre className="mono" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{`curl -X POST https://fabricvton-api.onrender.com/api/v1/tryons \\
+      <pre className="mono" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{`curl -X POST https://api.clothsyai.fabricvton.com/api/v1/tryons \\
   -H "Authorization: Bearer $CLOTHSY_API_KEY" \\
   -H "Idempotency-Key: unique-order-or-request-id" \\
   -H "Content-Type: application/json" \\

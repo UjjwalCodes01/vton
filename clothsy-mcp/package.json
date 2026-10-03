@@ -1,6 +1,6 @@
 {
   "name": "clothsy-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server that helps AI coding agents add Clothsy AI virtual try-on to a store: stack detection, integration plans, docs, error help and a live key check.",
   "license": "MIT",
   "author": "Clothsy AI",

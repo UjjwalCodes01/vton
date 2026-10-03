@@ -48,7 +48,7 @@ def clothsy(method, path, *, retries=2, **kwargs):
             body = res.json()
         except ValueError:
             body = {}
-        if res.status_code in (429, 500, 502, 503) and attempt < retries:
+        if res.status_code in (429, 500, 502, 503, 504) and attempt < retries:
             time.sleep(min(float(res.headers.get("Retry-After", 2 ** attempt)), 10))
             continue
         return res.status_code, body

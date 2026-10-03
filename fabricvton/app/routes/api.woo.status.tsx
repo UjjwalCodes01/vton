@@ -33,8 +33,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     });
 
     const reportedUrl = typeof data.siteUrl === "string" ? data.siteUrl : null;
+    let reportedOrigin: string | null = null;
+    try {
+      reportedOrigin = reportedUrl ? new URL(reportedUrl).origin : null;
+    } catch {
+      // A URL that doesn't parse is treated as a mismatch below.
+    }
     const connectionStatus =
-      store.connectionStatus === "connected" && reportedUrl && !originMatchesStore(new URL(reportedUrl).origin, store.siteUrl)
+      store.connectionStatus === "connected" && reportedUrl && !originMatchesStore(reportedOrigin, store.siteUrl)
         ? "url_mismatch"
         : store.connectionStatus;
 

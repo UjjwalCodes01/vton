@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs } from "react-router";
 import { adminJson } from "../admin/api.server";
-import { finishStoreLink } from "../invoices/store-link.server";
+import { finishStoreLink, StoreLinkError } from "../invoices/store-link.server";
 import { parseJsonBody, verifySignedRequest, WooAuthError } from "../woo/auth.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -12,7 +12,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return adminJson({ connected: true });
   } catch (error) {
     if (error instanceof WooAuthError) return adminJson({ error: error.message }, error.status);
-    if (error instanceof Error && /connection code|Invalid connection/.test(error.message)) return adminJson({ error: error.message }, 400);
+    if (error instanceof StoreLinkError) return adminJson({ error: error.message }, 400);
     console.error("[woo store link]", error);
     return adminJson({ error: "Could not link store." }, 500);
   }

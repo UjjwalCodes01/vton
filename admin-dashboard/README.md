@@ -36,9 +36,10 @@ invoice, a bank transfer — which is what the "what they pay" note is for.
 
 ## Setting it up
 
-### 1. Backend (the existing Render service)
+### 1. Backend (the `api` service on AWS)
 
-Add one variable to **fabricvton-api**:
+Add one key to the backend's secret (`clothsy/<env>/api`, with
+`infra/scripts/put-app-secret.sh`):
 
 ```
 ADMIN_API_TOKEN = <a long random string>       # openssl rand -base64 32
@@ -53,7 +54,7 @@ cannot reach anything.
 ADMIN_API_TOKEN       same value as above
 ADMIN_SESSION_SECRET  openssl rand -base64 32   # signs session cookies
 ADMIN_USERS           see below
-CLOTHSY_API_BASE      https://fabricvton-api.onrender.com   (default)
+CLOTHSY_API_BASE      https://api.clothsyai.fabricvton.com   (default)
 ```
 
 Make an account:
@@ -69,9 +70,10 @@ their next request.
 
 ### 3. Deploy
 
-Any Node 20+ host. On Render: a Web Service, build `npm ci && npm run build`,
-start `npm start`, then point `admin.clothsyai.fabricvton.com` at it. On Vercel
-it deploys as-is.
+Production runs on AWS as the `admin` ECS service, built from this folder's
+`Dockerfile` by `infra/scripts/deploy.sh` (see `AWS_MIGRATION.md` at the repository
+root). Secrets come from `clothsy/<env>/admin` in Secrets Manager. Locally, any
+Node 20+ machine: `npm ci && npm run build && npm start`.
 
 ## Security notes
 

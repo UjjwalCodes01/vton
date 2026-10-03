@@ -15,7 +15,7 @@
       type="button"
       data-fabricvton-button
       data-shop="{{ shop.permanent_domain }}"
-      data-backend-url="{{ routes.root_url | append: 'apps/fabricvton' }}"
+      data-backend-url="{{ routes.root_url | append: '/apps/fabricvton' | replace: '//', '/' }}"
       data-product-id="{{ product.id }}"
       data-product-title="{{ product.title | escape }}"
       data-product-image="{{ product.featured_image | image_url: width: 1024 }}"

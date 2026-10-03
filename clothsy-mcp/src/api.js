@@ -43,7 +43,7 @@ export async function apiRequest(req) {
   const headers = {
     Authorization: `Bearer ${req.key}`,
     Accept: "application/json",
-    "User-Agent": "clothsy-mcp/0.1.0",
+    "User-Agent": "clothsy-mcp/0.1.1",
     ...req.headers,
   };
   /** @type {RequestInit} */

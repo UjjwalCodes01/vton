@@ -10,7 +10,8 @@ embedded = true
 # of `shopify app deploy`, so the old include_config_on_deploy flag is deprecated and
 # the CLI strips it. Config changes below only reach Shopify on deploy — a git push
 # alone updates the server, not the app registration.
-automatically_update_urls_on_dev = true
+# Never let `shopify app dev` repoint the live app at a tunnel.
+automatically_update_urls_on_dev = false
 
 [webhooks]
 api_version = "2026-04"

@@ -57,9 +57,16 @@ resource "aws_wafv2_web_acl" "main" {
     }
   }
 
-  # Per-IP rate limit (requests per 5 minutes). Shopify's app proxy and webhooks
-  # are excluded: every storefront's shoppers arrive from a few Shopify
-  # addresses, and the app's own limits are keyed on the signed shop there.
+  # Per-IP rate limit (requests per 5 minutes). Excluded:
+  # - Shopify's app proxy and webhooks: every storefront's shoppers arrive from a
+  #   few Shopify addresses, and the app's own limits are keyed on the signed shop.
+  # - The portal and admin APIs: they are called by those apps' own servers, so
+  #   every merchant shares a couple of task addresses; each call is authenticated
+  #   and limited per account by the app.
+  # - The customer API and WooCommerce routes: limited by the app per key, per
+  #   store and per shopper.
+  # - Result images and shared looks, which get their own higher limit below
+  #   (the portal fetches 20 thumbnails per page from one address).
   rule {
     name     = "rate-per-ip"
     priority = 3
@@ -100,6 +107,84 @@ resource "aws_wafv2_web_acl" "main" {
                     }
                   }
                 }
+                statement {
+                  byte_match_statement {
+                    search_string         = "/api/portal/"
+                    positional_constraint = "STARTS_WITH"
+                    field_to_match {
+                      uri_path {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "NONE"
+                    }
+                  }
+                }
+                statement {
+                  byte_match_statement {
+                    search_string         = "/api/admin/"
+                    positional_constraint = "STARTS_WITH"
+                    field_to_match {
+                      uri_path {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "NONE"
+                    }
+                  }
+                }
+                statement {
+                  byte_match_statement {
+                    search_string         = "/api/v1/"
+                    positional_constraint = "STARTS_WITH"
+                    field_to_match {
+                      uri_path {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "NONE"
+                    }
+                  }
+                }
+                statement {
+                  byte_match_statement {
+                    search_string         = "/api/woo/"
+                    positional_constraint = "STARTS_WITH"
+                    field_to_match {
+                      uri_path {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "NONE"
+                    }
+                  }
+                }
+                statement {
+                  byte_match_statement {
+                    search_string         = "/i/"
+                    positional_constraint = "STARTS_WITH"
+                    field_to_match {
+                      uri_path {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "NONE"
+                    }
+                  }
+                }
+                statement {
+                  byte_match_statement {
+                    search_string         = "/look/"
+                    positional_constraint = "STARTS_WITH"
+                    field_to_match {
+                      uri_path {}
+                    }
+                    text_transformation {
+                      priority = 0
+                      type     = "NONE"
+                    }
+                  }
+                }
               }
             }
           }
@@ -109,6 +194,57 @@ resource "aws_wafv2_web_acl" "main" {
     visibility_config {
       cloudwatch_metrics_enabled = true
       metric_name                = "${local.name}-rate-per-ip"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  # Result images and shared looks: a ceiling against scraping, high enough for
+  # the portal's and the marketing site's servers, which fetch them for everyone.
+  rule {
+    name     = "rate-per-ip-media"
+    priority = 4
+    action {
+      block {}
+    }
+    statement {
+      rate_based_statement {
+        limit              = 30000
+        aggregate_key_type = "IP"
+        scope_down_statement {
+          or_statement {
+            statement {
+              byte_match_statement {
+                search_string         = "/i/"
+                positional_constraint = "STARTS_WITH"
+                field_to_match {
+                  uri_path {}
+                }
+                text_transformation {
+                  priority = 0
+                  type     = "NONE"
+                }
+              }
+            }
+            statement {
+              byte_match_statement {
+                search_string         = "/look/"
+                positional_constraint = "STARTS_WITH"
+                field_to_match {
+                  uri_path {}
+                }
+                text_transformation {
+                  priority = 0
+                  type     = "NONE"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.name}-rate-per-ip-media"
       sampled_requests_enabled   = true
     }
   }

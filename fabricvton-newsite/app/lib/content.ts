@@ -163,7 +163,7 @@ export const SHOPPER_FAQ: Faq[] = [
 export const STORE_FAQ: Faq[] = [
   {
     q: "Which platforms does Clothsy work with?",
-    a: "Shopify, as an app with a Try it on block for your product pages, and WooCommerce, as a plugin. Other platforms aren't supported today.",
+    a: "Shopify, as an app with a Try it on block for your product pages, and WooCommerce, as a plugin. Any other store, including a custom-built one, can use the developer API.",
   },
   {
     q: "How do I add the button?",
@@ -191,7 +191,7 @@ export const STORE_FAQ: Faq[] = [
   },
   {
     q: "Is there a developer API?",
-    a: "Not today. If you need something custom, get in touch.",
+    a: "Yes. A REST API, a TypeScript SDK and a Next.js guide are in the developer docs at clothsyai.fabricvton.com/docs/api. Your first API key comes with 20 free try-ons.",
   },
 ];
 

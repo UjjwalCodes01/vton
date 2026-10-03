@@ -2,7 +2,9 @@ import { API_ORIGIN } from "../../lib/site";
 
 /** Example values shared by every page, so the samples agree with each other. */
 export const TRYON_ID = "7f3c2a9e-1d4b-4c1e-9a55-2b8f0c6d4e10";
-export const IMAGE_ID = "img_5Hq2mV8xKc3TnR7w";
+/** Real ids are opaque, signed and longer (up to 600 characters): store them as text, never a short column. */
+export const IMAGE_ID =
+  "img_eyJhIjoiYWNjXzlYcjJrVjRuIiwiayI6Imxvb2tzL2FwaS9hY2NfOVhyMmtWNG4vN2YzYzJhOWUuanBnIiwiZSI6MTc5MTAwMDAwMH0.Qm9H3xkV2tTnR7wLp0sY8cJd4fA6uZ1eNqWb5gXyKhM";
 export const RESULT_URL = `${API_ORIGIN}/i/eyJ...`;
 export const PERSON_URL = "https://your-bucket.example.com/shopper.jpg";
 export const GARMENT_URL = "https://your-cdn.example.com/denim-jacket.jpg";

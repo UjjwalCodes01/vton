@@ -4,7 +4,7 @@ Tags: virtual try-on, try on, fitting room, fashion, woocommerce
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.2.9
+Stable tag: 0.2.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -98,6 +98,10 @@ Try-on images are generated with an AI image-processing sub-processor and checke
 The service is provided by Clothsy AI: [Terms of Service](https://www.fabricvton.com/tos), [Privacy Policy](https://www.fabricvton.com/privacy), [Shopper privacy notice](https://www.fabricvton.com/widget-privacy).
 
 == Changelog ==
+
+= 0.2.10 =
+* Fix opening past try-ons from the history button, which did nothing.
+* Add the "Clear my try-ons" button the consent card describes, so shoppers can remove their looks and withdraw consent on this device.
 
 = 0.2.9 =
 * Connect to the Clothsy AI service at its new address, api.clothsyai.fabricvton.com. Fixes choosing a paid plan, which reported an unexpected response. Connected stores keep working without reconnecting.

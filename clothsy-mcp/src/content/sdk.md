@@ -4,7 +4,7 @@
 npm install clothsy-ai
 ```
 
-- Version 0.1.0, zero dependencies.
+- Version 0.1.1, zero dependencies.
 - Runs on Node.js 18+, Deno, Bun, Vercel Edge and Cloudflare Workers (anything with a standard `fetch`).
 - **Server-only**: it needs your API key. The `clothsy-ai/react` entry is the only browser-safe part, and it talks to your own route, not to the API.
 

@@ -3,12 +3,12 @@
 | What | Limit |
 | --- | --- |
 | Starting try-ons | 12 a minute per account, shared by `POST /tryons` and `POST /tryons/sync` |
-| Polling `GET /tryons/{id}` | 60 a minute per account; poll every 2-3 seconds |
+| Polling `GET /tryons/{id}` | 30 a minute per try-on, 600 a minute per account; poll every 2-3 seconds |
 | Uploading `POST /images` | 30 a minute per account |
 | Image size and type | JPEG or PNG, up to 4 MB |
 | Uploaded image id | Usable for 24 hours, by the uploading account only |
 | Image URL fetch | HTTPS, default port, HTTP 200 without redirects, within 12 seconds |
-| `/tryons/sync` wait | About 55 seconds, then `202` and you poll; client timeout at least 70 s |
+| `/tryons/sync` wait | About 45 seconds, then `202` and you poll; client timeout at least 70 s |
 | `resultUrl` lifetime | 24 hours |
 | Title | Up to 120 characters |
 | `Idempotency-Key` | 8-128 characters of `A-Za-z0-9_-` |

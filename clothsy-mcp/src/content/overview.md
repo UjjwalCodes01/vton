@@ -23,7 +23,7 @@ The API and SDK are for custom storefronts, headless commerce and apps. Shopify 
 
 ## Key facts
 
-- API base: `https://fabricvton-api.onrender.com/api/v1`, auth header `Authorization: Bearer clothsy_live_...`.
+- API base: `https://api.clothsyai.fabricvton.com/api/v1`, auth header `Authorization: Bearer clothsy_live_...`.
 - Keys: sign in at https://app.clothsyai.fabricvton.com, open **Developer API**. One active key per account. The first key adds 20 free credits, once.
 - Keys are **server-side only**. Never put one in browser code, a mobile app bundle, or a `NEXT_PUBLIC_` variable.
 - 1 credit per finished try-on; failed try-ons are refunded; the same `Idempotency-Key` never charges twice.

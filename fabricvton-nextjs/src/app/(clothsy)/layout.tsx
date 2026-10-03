@@ -15,7 +15,6 @@ const geistMono = Geist_Mono({
 
 import Footer from "./components/Footer";
 import SmoothScroll from "./components/SmoothScroll";
-import PwaManager from "./components/pwa/PwaManager";
 import MobileBottomNav from "./components/pwa/MobileBottomNav";
 import { Toaster } from "sonner";
 import { SHOPIFY_APP_STORE_URL, SITE_NAME, SITE_URL } from "./lib/site";
@@ -37,7 +36,6 @@ export const metadata: Metadata = {
   title: { default: TITLE, template: `%s | ${SITE_NAME}` },
   description: DESCRIPTION,
   applicationName: "Clothsy AI",
-  manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -93,7 +91,6 @@ export default function RootLayout({
           </div>
         </SmoothScroll>
         <MobileBottomNav />
-        <PwaManager />
         <Toaster position="bottom-right" richColors />
         <CookieConsent gaId={gaId} aboveBottomNav />
       </body>

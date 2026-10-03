@@ -17,7 +17,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   if (email) {
     await eraseCustomerData(shop, email);
-    console.log(`[GDPR] Redacted data for shop: ${shop}, customer: ${email}`);
+    console.log(`[GDPR] Redacted customer data for shop: ${shop}`);
   }
 
   return new Response("ok", { status: 200 });

@@ -11,5 +11,9 @@ Render settings for the existing service (Settings → Build & Deploy):
 - Node runtime: Root Directory `render-proxy`, Build Command `true`, Start Command `node server.mjs`.
 - Clear any Pre-Deploy Command (the old one ran database migrations). The health check path can stay `/healthz`: it is forwarded to the backend.
 
-The backend sees Render's address as the client for forwarded requests, so per-IP
-limits apply to all of them together; per-key and per-store limits are unaffected.
+Set `FORWARDER_SECRET` on the Render service and the same value in the backend's secret
+(`clothsy/prod/api`, via `infra/scripts/put-app-secret.sh`); generate it with
+`openssl rand -hex 32`. The forwarder then sends each caller's address with that secret,
+and the backend applies its per-IP limits to the real shopper. Without it the backend
+sees Render's address for every forwarded request, so per-IP limits (30 try-ons an hour
+by default) apply to all of them together.

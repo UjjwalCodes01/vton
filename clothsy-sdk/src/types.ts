@@ -3,7 +3,7 @@ export type FetchLike = (input: string | URL | Request, init?: RequestInit) => P
 export interface ClothsyOptions {
   /** Secret API key (`clothsy_live_...`). Defaults to the `CLOTHSY_API_KEY` environment variable. */
   apiKey?: string;
-  /** Defaults to `https://fabricvton-api.onrender.com/api/v1`. */
+  /** Defaults to `https://api.clothsyai.fabricvton.com/api/v1`. */
   baseUrl?: string;
   /** Per-request timeout in milliseconds. Default 60 000. `tryons.run` always allows at least 90 000. */
   timeoutMs?: number;
@@ -49,7 +49,7 @@ export interface CreateTryOnParams {
 
 export interface CreatedTryOn {
   id: string;
-  status: "pending";
+  status: TryOnStatus;
   pollUrl: string;
 }
 

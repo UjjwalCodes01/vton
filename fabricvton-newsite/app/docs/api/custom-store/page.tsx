@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { API_BASE_URL, CONTACT_EMAIL, LEGAL } from "../../../lib/site";
+import { API_BASE_URL, CONTACT_EMAIL } from "../../../lib/site";
 import { Code, CodeTabs } from "../../components/Code";
 import Pager from "../../components/Pager";
 
@@ -326,8 +326,8 @@ export default function CustomStoreGuide() {
         <li>The API key is only in server environment variables — not in your frontend bundle or repository.</li>
         <li>The consent checkbox is required before anything is uploaded.</li>
         <li>
-          Your privacy policy says shopper photos are processed by a virtual try-on service to create the image. Ours is
-          at <Link href={LEGAL.shopperPrivacy}>shopper privacy</Link>, if you want to link to it.
+          Your privacy policy says shopper photos are processed by a virtual try-on service to create the image, and
+          that uploaded photos are kept for up to 35 days, then deleted automatically.
         </li>
         <li>You look products up on your server instead of trusting image URLs from the browser.</li>
         <li>Try-on results are captioned as AI-generated.</li>

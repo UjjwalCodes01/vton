@@ -47,7 +47,7 @@ export default function CreateTryOnSync() {
       <h1 className="display">Create try-on (sync)</h1>
       <p className="lede">
         The same as <Link href="/docs/api/endpoints/create-try-on">Create try-on</Link>, except the server holds the
-        request open until the image is ready — up to about 55 seconds — so most of the time one call is all you need.
+        request open until the image is ready — up to about 45 seconds — so most of the time one call is all you need.
       </p>
       <EndpointLine method="POST" path="/tryons/sync" />
 

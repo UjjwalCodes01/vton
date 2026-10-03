@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-const API_BASE = (process.env.CLOTHSY_API_BASE || "https://fabricvton-api.onrender.com").replace(/\/+$/, "");
+const API_BASE = (process.env.CLOTHSY_API_BASE || "https://api.clothsyai.fabricvton.com").replace(/\/+$/, "");
 
 // What the portal is allowed to load. Everything is same-origin except Razorpay
 // Checkout (script, its payment frames and its own API calls) and Google

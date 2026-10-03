@@ -10,16 +10,17 @@ import { screenResultImage } from "../safety.server";
 // image disappears the moment the look expires, whatever the bucket's own
 // lifecycle rules happen to be doing.
 
-const NOT_FOUND = new Response("Not found", { status: 404, headers: { "Cache-Control": "no-store" } });
+// A fresh Response each time: a body can only be read once.
+const NOT_FOUND = () => new Response("Not found", { status: 404, headers: { "Cache-Control": "no-store" } });
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   const requestId = newRequestId();
   try {
     const look = await getSharedLook(params.id || "");
-    if (!look) return NOT_FOUND;
+    if (!look) return NOT_FOUND();
 
     const object = await getObject(look.imageKey);
-    if (!object || !object.body) return NOT_FOUND;
+    if (!object || !object.body) return NOT_FOUND();
 
     const raw = new Uint8Array(await object.arrayBuffer());
     await screenResultImage(raw);
@@ -34,6 +35,6 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
     });
   } catch (error) {
     logInternalError(requestId, "look image", error);
-    return NOT_FOUND;
+    return NOT_FOUND();
   }
 };

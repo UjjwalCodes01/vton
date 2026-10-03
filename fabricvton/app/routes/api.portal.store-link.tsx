@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs } from "react-router";
 import { adminJson } from "../admin/api.server";
 import { subjectFromSession } from "../invoices/subject.server";
-import { startStoreLink } from "../invoices/store-link.server";
+import { StoreLinkError, startStoreLink } from "../invoices/store-link.server";
 import { readJsonLimited } from "../bodylimit.server";
 import { checkRateLimits } from "../ratelimit.server";
 
@@ -14,7 +14,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     if (!limit.allowed) return adminJson({ error: "Too many connection attempts. Try later." }, 429);
     return adminJson(await startStoreLink(subject.account.id, String(body.platform || ""), String(body.storeUrl || "")));
   } catch (error) {
-    if (error instanceof Error && error.message.startsWith("Enter")) return adminJson({ error: error.message }, 400);
+    if (error instanceof StoreLinkError) return adminJson({ error: error.message }, 400);
     console.error("[store link]", error);
     return adminJson({ error: "Could not start store connection." }, 500);
   }

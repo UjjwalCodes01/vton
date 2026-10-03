@@ -2,8 +2,13 @@ import type { ActionFunctionArgs } from "react-router";
 import { accountForApiKey } from "../invoices/api-keys.server";
 import { apiError, apiJson, createApiTryOn, readApiTryOn } from "../invoices/customer-api.server";
 
-/** How long the request is held open. Cloudflare in front of the API cuts connections at 100 s. */
-const WAIT_MS = 55_000;
+/**
+ * How long the request is held open, counted from when it arrived (starting the
+ * try-on downloads and screens both images first). The AWS load balancer in
+ * front of the API cuts idle connections at 60 s, so the answer has to be on its
+ * way well before that.
+ */
+const WAIT_MS = 45_000;
 const STEP_MS = 2_000;
 
 /**
@@ -14,6 +19,7 @@ const STEP_MS = 2_000;
  * don't count against the caller's polling limit.
  */
 export const action = async ({ request }: ActionFunctionArgs) => {
+  const deadline = Date.now() + WAIT_MS;
   const key = await accountForApiKey(request);
   if (!key) return apiError(401, "INVALID_API_KEY", "Missing, malformed or revoked API key.");
 
@@ -21,7 +27,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (started.status !== 202) return started;
   const first = (await started.clone().json()) as { id: string; status: string; pollUrl: string };
 
-  const deadline = Date.now() + WAIT_MS;
   let latest: Record<string, unknown> = { ...first, resultUrl: null };
   while (Date.now() < deadline) {
     const current = await readApiTryOn(key.accountId, first.id);

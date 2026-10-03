@@ -80,7 +80,7 @@ res = requests.post(
         "title": "${TITLE}",
         "consent": True,
     },
-    timeout=75,  # the server may hold the request for up to ~55 s
+    timeout=75,  # the server may hold the request for up to ~45 s
 )
 tryon = res.json()
 if not res.ok:
@@ -197,7 +197,7 @@ export default function Quickstart() {
 
       <h2 id="poll">5. If it isn&apos;t done yet, poll</h2>
       <p>
-        The sync endpoint waits about 55 seconds at most. If the image isn&apos;t ready by then you get <b>202</b> with the
+        The sync endpoint waits about 45 seconds at most. If the image isn&apos;t ready by then you get <b>202</b> with the
         try-on&apos;s id instead, and you carry on by polling every 2–3 seconds.
       </p>
       <Code title="202 Accepted" code={RES_PENDING} />

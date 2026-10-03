@@ -3,19 +3,22 @@ import db from "../db.server";
 
 const hash = (code: string) => createHash("sha256").update(code).digest("hex");
 
+/** A store URL the merchant can correct, as opposed to a server fault. */
+export class StoreLinkError extends Error {}
+
 export function normalizeStoreUrl(platform: string, value: string) {
   let url: URL;
-  try { url = new URL(value); } catch { throw new Error("Enter the full HTTPS store URL."); }
+  try { url = new URL(value); } catch { throw new StoreLinkError("Enter the full HTTPS store URL."); }
   if (url.protocol !== "https:" || url.username || url.password || url.port || url.search || url.hash || value.length > 500) {
-    throw new Error("Enter the full HTTPS store URL without a query or port.");
+    throw new StoreLinkError("Enter the full HTTPS store URL without a query or port.");
   }
   if (platform === "shopify") {
     if (!/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(url.hostname) || url.pathname !== "/") {
-      throw new Error("For Shopify, enter the store's .myshopify.com URL.");
+      throw new StoreLinkError("For Shopify, enter the store's .myshopify.com URL.");
     }
     return `https://${url.hostname}`;
   }
-  if (platform !== "woocommerce" || url.hostname === "localhost" || !url.hostname.includes(".")) throw new Error("Enter a public WooCommerce store URL.");
+  if (platform !== "woocommerce" || url.hostname === "localhost" || !url.hostname.includes(".")) throw new StoreLinkError("Enter a public WooCommerce store URL.");
   return `${url.origin}${url.pathname.replace(/\/+$/, "")}`;
 }
 
@@ -30,14 +33,14 @@ export async function startStoreLink(accountId: string, platform: string, input:
 }
 
 export async function finishStoreLink(code: string, platform: string, storeUrl: string, shop: string) {
-  if (!/^[A-Za-z0-9_-]{24}$/.test(code)) throw new Error("Invalid connection code.");
+  if (!/^[A-Za-z0-9_-]{24}$/.test(code)) throw new StoreLinkError("Invalid connection code.");
   const row = await db.storeLinkCode.findUnique({ where: { codeHash: hash(code) } });
   if (!row || row.usedAt || row.expiresAt < new Date() || row.platform !== platform || row.storeUrl !== normalizeStoreUrl(platform, storeUrl)) {
-    throw new Error("This connection code expired or belongs to another store.");
+    throw new StoreLinkError("This connection code expired or belongs to another store.");
   }
   await db.$transaction(async (tx) => {
     const changed = await tx.storeLinkCode.updateMany({ where: { id: row.id, usedAt: null, expiresAt: { gt: new Date() } }, data: { usedAt: new Date() } });
-    if (!changed.count) throw new Error("Connection code already used.");
+    if (!changed.count) throw new StoreLinkError("Connection code already used.");
     await tx.accountStore.upsert({ where: { accountId_shop: { accountId: row.accountId, shop } }, update: {}, create: { accountId: row.accountId, shop, via: "manual" } });
   });
 }

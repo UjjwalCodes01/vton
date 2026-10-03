@@ -20,7 +20,7 @@ export function ApiKeys({ initial }: { initial: ApiKeyData }) {
     setBusy(true); setError(""); setSecret(""); setNotice("");
     try {
       const response = await fetch("/api/keys", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, id, name }) });
-      const result = await response.json();
+      const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "Request failed.");
       if (action === "create") {
         setSecret(result.token);

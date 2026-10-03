@@ -7,7 +7,7 @@
 3. Copy it straight away and store it as a server secret named `CLOTHSY_API_KEY`.
 
 - Keys look like `clothsy_live_` followed by 43 URL-safe characters (letters, digits, `_`, `-`).
-- Each account has **one active key**. Creating a new key replaces the old one, so update every server that uses it.
+- Each account has **one active key**. To replace it, revoke it first, then create a new one, and update every server that uses it.
 - The **first** key you create adds **20 free credits** to the account, once.
 
 ## Using a key
@@ -29,4 +29,4 @@ The key spends your credits. Treat it like a payment secret:
 - Keep it out of git: put it in `.env.local` / `.env` (and make sure those files are git-ignored) or in your host's secret settings (Vercel, Netlify, Render, Fly, Cloudflare, etc.).
 - The browser talks to **your** route; your route talks to Clothsy.
 
-If a key leaks, create a new one in the platform (this revokes the old one) and update your servers.
+If a key leaks, revoke it in the platform, create a new one, and update your servers.

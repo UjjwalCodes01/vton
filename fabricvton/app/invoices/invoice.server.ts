@@ -16,6 +16,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import type { CreditInvoice } from "@prisma/client";
 import db from "../db.server";
+import { isBillingCycleDue } from "../billing.server";
 
 export class InvoiceError extends Error {
   constructor(
@@ -150,11 +151,25 @@ export async function orderForInvoice(invoice: CreditInvoice) {
   if (invoice.status !== "sent") throw new InvoiceError(409, "This invoice is not payable.");
 
   if (invoice.razorpayOrderId) {
+    // If Razorpay can't be asked, stop: a fresh order would replace this one on
+    // the invoice, and a payment already made against it could then never be
+    // matched back and credited.
     const existing = await razorpay<{ id: string; status: string }>(
       "GET",
       `/orders/${encodeURIComponent(invoice.razorpayOrderId)}`,
     ).catch(() => null);
-    if (existing && existing.status !== "paid") return { orderId: existing.id };
+    if (!existing) throw new InvoiceError(503, "Payments are not available right now. Try again in a minute.");
+    if (existing.status !== "paid") return { orderId: existing.id };
+
+    // Paid, but the confirmation hasn't reached us yet (the webhook is late, or
+    // the tab closed). Grant it now rather than taking a second payment.
+    const payments = await razorpay<{ items?: Array<{ id: string; status: string }> }>(
+      "GET",
+      `/orders/${encodeURIComponent(existing.id)}/payments`,
+    ).catch(() => null);
+    const captured = payments?.items?.find((payment) => payment.status === "captured");
+    if (captured) await applyPaidInvoice(invoice.id, captured.id);
+    throw new InvoiceError(409, "This invoice is already paid.");
   }
 
   const order = await razorpay<{ id: string }>("POST", "/orders", {
@@ -188,29 +203,42 @@ export function checkoutSignatureValid(orderId: string, paymentId: string, signa
  * which one arrives first, never whether it was really paid.
  */
 export async function applyPaidInvoice(invoiceId: string, paymentId: string) {
-  const { count } = await db.creditInvoice.updateMany({
-    where: { id: invoiceId, status: { in: ["sent", "paid"] }, creditsAppliedAt: null },
-    data: {
-      status: "paid",
-      paidAt: new Date(),
-      creditsAppliedAt: new Date(),
-      razorpayPaymentId: paymentId.slice(0, 80),
-    },
-  });
+  // One transaction: marking the invoice applied without adding the credits
+  // (a database blip between the two) would leave it looking granted forever.
+  const result = await db.$transaction(async (tx) => {
+    const { count } = await tx.creditInvoice.updateMany({
+      where: { id: invoiceId, status: { in: ["sent", "paid"] }, creditsAppliedAt: null },
+      data: {
+        status: "paid",
+        paidAt: new Date(),
+        creditsAppliedAt: new Date(),
+        razorpayPaymentId: paymentId.slice(0, 80),
+      },
+    });
 
-  const invoice = await db.creditInvoice.findUniqueOrThrow({ where: { id: invoiceId } });
-  if (count === 0) return { invoice, granted: false };
+    const invoice = await tx.creditInvoice.findUniqueOrThrow({ where: { id: invoiceId } });
+    if (count === 0) return { invoice, granted: false };
 
-  await db.shopConfig.update({
-    where: { shop: invoice.shop },
-    data: { cycleTopUpCredits: { increment: invoice.credits } },
+    // A store whose cycle has already ended would otherwise have these credits
+    // cleared by its next try-on, which rolls the cycle. Roll it here instead,
+    // so the purchase lands in the new cycle.
+    const config = await tx.shopConfig.findUniqueOrThrow({ where: { shop: invoice.shop }, select: { billingCycleStart: true } });
+    await tx.shopConfig.update({
+      where: { shop: invoice.shop },
+      data: isBillingCycleDue(config.billingCycleStart)
+        ? { creditsUsed: 0, overageReserved: 0, cycleTopUpCredits: invoice.credits, billingCycleStart: new Date() }
+        : { cycleTopUpCredits: { increment: invoice.credits } },
+    });
+    return { invoice, granted: true };
   });
+  if (!result.granted) return result;
+  const { invoice } = result;
 
   console.log(
     `[Invoice] ${invoice.shop} paid ${invoice.id} (${formatMoney(invoice.amount, invoice.currency)}) ` +
       `→ +${invoice.credits} credits this cycle`,
   );
-  return { invoice, granted: true };
+  return result;
 }
 
 /**
@@ -219,10 +247,13 @@ export async function applyPaidInvoice(invoiceId: string, paymentId: string) {
  * Used by the webhook, where the event body is only a prompt to go and look.
  */
 export async function confirmAndApply(orderId: string, paymentId: string) {
-  const invoice = await db.creditInvoice.findFirst({ where: { razorpayOrderId: orderId } });
+  const order = await razorpay<{ status: string; receipt?: string | null }>("GET", `/orders/${encodeURIComponent(orderId)}`);
+  // Every invoice order carries the invoice id as its receipt, which still finds
+  // the invoice if a later order replaced this one on it.
+  const invoice =
+    (await db.creditInvoice.findFirst({ where: { razorpayOrderId: orderId } })) ??
+    (order.receipt ? await db.creditInvoice.findUnique({ where: { id: order.receipt } }) : null);
   if (!invoice) return null;
-
-  const order = await razorpay<{ status: string }>("GET", `/orders/${encodeURIComponent(orderId)}`);
   if (order.status !== "paid") return { invoice, granted: false };
 
   return applyPaidInvoice(invoice.id, paymentId);

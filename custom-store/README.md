@@ -37,7 +37,7 @@ resets — the portal says so above the invoice.
 ## Configuration
 
 ```
-CLOTHSY_API_BASE   https://fabricvton-api.onrender.com   (default)
+CLOTHSY_API_BASE   https://api.clothsyai.fabricvton.com   (default)
 ```
 
 That is all this app needs: it holds no database credentials, no Razorpay

@@ -39,3 +39,40 @@ resource "aws_lb_listener_certificate" "custom" {
   listener_arn    = data.aws_lb_listener.https[0].arn
   certificate_arn = aws_acm_certificate_validation.custom[0].certificate_arn
 }
+
+# Plain-HTTP links (old backlinks, printed or emailed addresses) used to be
+# redirected by Vercel and Render. Express Mode opens only 443, so a port-80
+# listener answers every http:// request with a permanent redirect to https://.
+# The load balancer's security group belongs to Express Mode; this adds one
+# extra rule to it and touches nothing else. After the first apply, check that
+# `curl -I http://www.fabricvton.com` returns 301.
+data "aws_lb" "express" {
+  count = length(data.aws_lbs.express.arns) > 0 ? 1 : 0
+  arn   = one(data.aws_lbs.express.arns)
+}
+
+resource "aws_vpc_security_group_ingress_rule" "http" {
+  for_each          = length(data.aws_lb.express) > 0 ? toset(data.aws_lb.express[0].security_groups) : toset([])
+  security_group_id = each.value
+  description       = "HTTP, redirected to HTTPS"
+  ip_protocol       = "tcp"
+  from_port         = 80
+  to_port           = 80
+  cidr_ipv4         = "0.0.0.0/0"
+}
+
+resource "aws_lb_listener" "http_redirect" {
+  count             = length(data.aws_lb.express)
+  load_balancer_arn = data.aws_lb.express[0].arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type = "redirect"
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+}

@@ -20,9 +20,11 @@ import type {
   WaitOptions,
 } from "./types.js";
 
-export const DEFAULT_BASE_URL = "https://fabricvton-api.onrender.com/api/v1";
+export const DEFAULT_BASE_URL = "https://api.clothsyai.fabricvton.com/api/v1";
 export const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
-const RETRYABLE_STATUS = new Set([429, 500, 502, 503]);
+// 504: a load balancer gave up waiting. Retrying with the same Idempotency-Key
+// returns the try-on already started, never a second one.
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 const MAX_RETRY_AFTER_SECONDS = 30;
 const SYNC_TIMEOUT_MS = 90_000;
 const IDEMPOTENCY_KEY_RE = /^[A-Za-z0-9_-]{8,128}$/;
@@ -199,7 +201,10 @@ class TryOns {
     this.#client = client;
   }
 
-  /** Start a try-on. Resolves as soon as it is queued (status `pending`). */
+  /**
+   * Start a try-on. Resolves as soon as it is queued (status `pending`); a retry
+   * with an Idempotency-Key already used returns that try-on's current status.
+   */
   async create(params: CreateTryOnParams, opts: { signal?: AbortSignal } = {}): Promise<CreatedTryOn> {
     const { body, idempotencyKey } = buildTryOnBody(params);
     const { data } = await this.#client._request({
@@ -209,7 +214,7 @@ class TryOns {
       headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
       signal: opts.signal,
     });
-    return { id: String(data.id), status: "pending", pollUrl: String(data.pollUrl ?? `/api/v1/tryons/${data.id}`) };
+    return { id: String(data.id), status: toTryOn(data).status, pollUrl: String(data.pollUrl ?? `/api/v1/tryons/${data.id}`) };
   }
 
   /** Fetch the current state of a try-on. */
@@ -258,7 +263,7 @@ class TryOns {
 
   /**
    * Start a try-on and wait for the result in one call. Uses the server-side
-   * wait endpoint first (up to ~55 s), then falls back to polling.
+   * wait endpoint first (up to ~45 s), then falls back to polling.
    */
   async run(params: CreateTryOnParams, waitOpts: WaitOptions = {}): Promise<CompletedTryOn> {
     const { body, idempotencyKey } = buildTryOnBody(params);

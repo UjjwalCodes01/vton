@@ -17,7 +17,7 @@ import { integrationPlan } from "./plans.js";
 import { errorResult, textResult } from "./protocol.js";
 
 export const SERVER_NAME = "clothsy-mcp";
-export const SERVER_VERSION = "0.1.0";
+export const SERVER_VERSION = "0.1.1";
 
 export const INSTRUCTIONS = `This server helps you add Clothsy AI virtual try-on (shoppers see garments on a photo of themselves) to a store or app.
 
@@ -263,7 +263,7 @@ export const TOOLS = [
       if (key.state === "malformed") {
         const shown = key.raw.startsWith(KEY_PREFIX) ? maskKey(key.raw) : "(doesn't start with clothsy_live_)";
         return errorResult(
-          `CLOTHSY_API_KEY is set but doesn't look like a Clothsy key: ${shown}, ${key.raw.length} characters.\n\nExpected format: clothsy_live_ followed by 43 letters, digits, "_" or "-" (56 characters in total). Common causes: a placeholder such as "clothsy_live_..." left in the config, a truncated copy, extra spaces or line breaks, or a different secret pasted by mistake. Copy the key again from ${PLATFORM_URL} -> Developer API (if you no longer have it, create a new key; this replaces the old one).\n\nNo request was sent.\n\n${HOW_TO_SET_KEY}`,
+          `CLOTHSY_API_KEY is set but doesn't look like a Clothsy key: ${shown}, ${key.raw.length} characters.\n\nExpected format: clothsy_live_ followed by 43 letters, digits, "_" or "-" (56 characters in total). Common causes: a placeholder such as "clothsy_live_..." left in the config, a truncated copy, extra spaces or line breaks, or a different secret pasted by mistake. Copy the key again from ${PLATFORM_URL} -> Developer API (if you no longer have it, revoke the old key there, then create a new one).\n\nNo request was sent.\n\n${HOW_TO_SET_KEY}`,
         );
       }
 
@@ -272,7 +272,7 @@ export const TOOLS = [
       if (!res.ok) {
         const extra =
           res.code === "INVALID_API_KEY"
-            ? `\n\nThe key ${maskKey(key.key)} was refused. Each account has one active key, so it may have been replaced. Create or copy the current key at ${PLATFORM_URL} -> Developer API and update the MCP config (and the store's server env).`
+            ? `\n\nThe key ${maskKey(key.key)} was refused. Each account has one active key, so it may have been revoked and replaced. Copy the current key (or revoke and create a new one) at ${PLATFORM_URL} -> Developer API and update the MCP config (and the store's server env).`
             : "";
         return errorResult(`Key format OK (${maskKey(key.key)}), but GET /account failed.\n\n${describeApiFailure(res)}${extra}`);
       }
@@ -367,7 +367,7 @@ export const TOOLS = [
           timeoutMs: 90_000,
           signal: ctx.signal,
         });
-        const transient = !res.ok && (res.code === "TIMEOUT" || res.code === "CONNECTION_ERROR" || [429, 500, 502, 503].includes(res.status));
+        const transient = !res.ok && (res.code === "TIMEOUT" || res.code === "CONNECTION_ERROR" || [429, 500, 502, 503, 504].includes(res.status));
         if (!transient || attempt === 2 || ctx.signal.aborted) break;
         const wait = !res.ok && res.retryAfter !== undefined ? Math.min(res.retryAfter, 30) * 1000 : 2000 * 2 ** attempt;
         try {

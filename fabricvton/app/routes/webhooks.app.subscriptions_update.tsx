@@ -52,6 +52,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return new Response("ok", { status: 200 });
   }
 
+  // On a plan change Shopify cancels the old subscription and activates the new
+  // one, in no guaranteed order. An event about a subscription that is no longer
+  // the shop's current one must not freeze or downgrade it.
+  const subscriptionId = String(subscription.admin_graphql_api_id ?? "");
+  if (config.billingId && subscriptionId && subscriptionId !== config.billingId) {
+    console.log(`[Billing] ${shop}: ignoring ${status} for subscription ${subscriptionId}, which is not the current one.`);
+    return new Response("ok", { status: 200 });
+  }
+
   if (status === "FROZEN") {
     // Shopify freezes a subscription when it cannot collect. Stop serving
     // try-ons immediately — every one costs us a provider credit.

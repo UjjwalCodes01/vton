@@ -150,7 +150,7 @@ describe("protocol", () => {
     assert.equal(res.jsonrpc, "2.0");
     assert.equal(res.result.protocolVersion, "2025-03-26");
     assert.deepEqual(res.result.capabilities, { tools: {}, resources: {}, prompts: {} });
-    assert.deepEqual(res.result.serverInfo, { name: "clothsy-mcp", version: "0.1.0" });
+    assert.deepEqual(res.result.serverInfo, { name: "clothsy-mcp", version: "0.1.1" });
     assert.match(res.result.instructions, /clothsy_detect_stack/);
   });
 
@@ -316,7 +316,7 @@ describe("tools (offline)", () => {
       const text = textOf(await s.callTool("clothsy_integration_plan", { stack }));
       assert.doesNotMatch(text, /\{\{[A-Z_]+\}\}/, stack);
       assert.match(text, /## Verification checklist/, stack);
-      assert.match(text, /fabricvton-api\.onrender\.com\/api\/v1|clothsy-ai/, stack);
+      assert.match(text, /api\.clothsyai\.fabricvton\.com\/api\/v1|clothsy-ai/, stack);
     }
     const node = textOf(await s.callTool("clothsy_integration_plan", { stack: "node" }));
     assert.match(node, /multer/);
@@ -560,6 +560,6 @@ describe("lifecycle", () => {
     child.stdout.on("data", (d) => (out += d));
     const code = await new Promise((resolve) => child.on("exit", resolve));
     assert.equal(code, 0);
-    assert.equal(out.trim(), "0.1.0");
+    assert.equal(out.trim(), "0.1.1");
   });
 });

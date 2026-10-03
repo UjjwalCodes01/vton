@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { LEGAL, PLATFORM_URL } from "../../../lib/site";
+import { PLATFORM_URL } from "../../../lib/site";
 import { Code } from "../../components/Code";
 import Pager from "../../components/Pager";
 
@@ -199,8 +199,7 @@ export default function NextJsGuide() {
       </ul>
       <p>
         That&apos;s the whole integration. Link your privacy policy near the button and say that shopper photos are
-        processed by a virtual try-on service; ours is at <Link href={LEGAL.shopperPrivacy}>shopper privacy</Link> if
-        you&apos;d like to point to it.
+        processed by a virtual try-on service, which keeps uploaded photos for up to 35 days and then deletes them.
       </p>
 
       <h2 id="styling">Customising the look</h2>
