@@ -32,10 +32,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const body = (await readJsonLimited(request)) as Record<string, unknown>;
     if (body.action !== "grant_credits") throw new AdminApiError(400, "Unknown action.");
     const accountId = String(body.accountId || "");
-    const reference = String(body.reference || "").trim();
+    // Whatever identifies the payment: a gateway id, a UPI/bank reference, an
+    // invoice number, "cash 3 Oct". It is the idempotency key for the grant, so
+    // the same reference can never be credited twice.
+    const reference = String(body.reference || "").trim().replace(/\s+/g, " ");
     const amount = Number(body.amount);
-    if (!accountId || !/^[A-Za-z0-9:_-]{8,120}$/.test(reference) || !Number.isSafeInteger(amount) || amount < 1 || amount > 100000) {
-      throw new AdminApiError(400, "Valid accountId, payment reference and positive credit amount are required.");
+    if (!accountId) throw new AdminApiError(400, "No account was selected.");
+    if (!Number.isSafeInteger(amount) || amount < 1 || amount > 100000) {
+      throw new AdminApiError(400, "Credits must be a whole number from 1 to 100,000.");
+    }
+    if (reference.length < 3 || reference.length > 120 || /\p{Cc}/u.test(reference)) {
+      throw new AdminApiError(400, "Enter a payment reference of 3 to 120 characters (for example the payment id, UPI or bank reference, or invoice number).");
     }
     const actor = actorFrom(request, body);
     try {
