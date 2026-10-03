@@ -61,7 +61,7 @@ locals {
   # environment, which needs a reviewer's approval.
   deploy_subjects = {
     staging = ["repo:${var.github_repository}:ref:refs/heads/main"]
-    prod    = ["repo:${var.github_repository}:environment:production"]
+    prod    = ["repo:${var.github_repository}:environment:production","repo:${var.github_repository}:environment:Production"]
   }
 }
 
