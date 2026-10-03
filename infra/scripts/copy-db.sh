@@ -13,8 +13,10 @@
 #   2. dumps the data of the app's tables from Neon (the direct endpoint, not the
 #      pooler); tables of anything else sharing that database are left behind,
 #   3. empties those tables on Aurora and loads the data in one transaction,
-#   4. deletes rate-limit windows, Woo request nonces, expired Shopify sessions,
-#      used or expired store link codes and expired shared looks,
+#   4. deletes rate-limit windows, Woo request nonces, used or expired store
+#      link codes and expired shared looks. Shopify sessions all stay: with
+#      expiring offline tokens a store's session has a short "expires" but a
+#      long-lived refresh token, so a past "expires" does not mean unused,
 #   5. prints the row count of every copied table, Neon's and Aurora's.
 # Run it again at the cutover (with Render in maintenance) for the final copy.
 # Delete clothsy/<env>/source-db once the cutover is done.
@@ -114,7 +116,6 @@ pg_restore --data-only --no-owner --no-acl --exit-on-error --single-transaction 
 psql -q -v ON_ERROR_STOP=1 <<'SQL'
 DELETE FROM "RateLimitWindow";
 DELETE FROM "WooRequestNonce";
-DELETE FROM "Session" WHERE expires IS NOT NULL AND expires < now();
 DELETE FROM "StoreLinkCode" WHERE "expiresAt" < now() OR "usedAt" IS NOT NULL;
 DELETE FROM "SharedLook" WHERE "expiresAt" < now();
 ANALYZE;
