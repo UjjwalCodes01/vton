@@ -66,3 +66,9 @@ variable "ga_measurement_id" {
   default     = ""
   description = "Google Analytics ID baked into www.fabricvton.com at build."
 }
+
+variable "custom_domains" {
+  description = "Custom domain per app. One ACM certificate covers them all; DNS validation records go to the registrar (GoDaddy for fabricvton.com)."
+  type        = map(string)
+  default     = {}
+}

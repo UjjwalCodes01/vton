@@ -29,3 +29,13 @@ output "secrets" {
   }
 }
 output "looks_bucket" { value = var.looks_bucket_name }
+output "certificate_dns_records" {
+  description = "CNAME records to add at the registrar so ACM can issue the custom-domain certificate."
+  value = length(aws_acm_certificate.custom) == 0 ? [] : [
+    for o in aws_acm_certificate.custom[0].domain_validation_options :
+    { domain = o.domain_name, type = o.resource_record_type, name = o.resource_record_name, value = o.resource_record_value }
+  ]
+}
+output "certificate_status" {
+  value = length(aws_acm_certificate.custom) == 0 ? null : aws_acm_certificate.custom[0].status
+}

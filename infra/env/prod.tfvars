@@ -34,3 +34,12 @@ public_urls = {
   newsite = "https://cl-ce04b594803e4b5b840b331ecfbfff92.ecs.us-east-1.on.aws"
   www     = "https://cl-6dd5a8428a7d495e885078f7e844642b.ecs.us-east-1.on.aws"
 }
+
+# The live domains, attached to the services at the cutover (domains.tf).
+custom_domains = {
+  api     = "api.clothsyai.fabricvton.com"
+  portal  = "app.clothsyai.fabricvton.com"
+  admin   = "admin.clothsyai.fabricvton.com"
+  newsite = "clothsyai.fabricvton.com"
+  www     = "www.fabricvton.com"
+}
