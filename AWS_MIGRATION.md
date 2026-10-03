@@ -260,7 +260,7 @@ The final copy at the cutover:
 
 - `.github/workflows/deploy-staging.yml` deploys staging on every push to `main` that touches an app, once the repository variable `STAGING_DEPLOY_ENABLED=true` is set.
 - `.github/workflows/deploy-prod.yml` is started by hand (workflow_dispatch, with a list of apps) and runs in the GitHub environment `production`, which should require a reviewer. It needs `PROD_DEPLOY_ENABLED=true` and that environment to exist.
-- Both run the backend tests first and sign in to AWS through GitHub OIDC (roles `clothsy-staging-github-deploy`, `clothsy-prod-github-deploy`; no stored keys). The production role trusts only the `production` environment.
+- Both run the backend tests first and sign in to AWS through GitHub OIDC (roles `clothsy-staging-github-deploy`, `clothsy-prod-github-deploy`; no stored keys). The production role trusts only the `production` environment. The roles still name the repository's old address (`UjjwalCodes01/vton`); update them first (section 14, item 16).
 
 ## 9. Terraform
 
@@ -330,7 +330,7 @@ The two apps (client IDs are public identifiers):
 **Before you start**
 
 1. Node.js 22 or newer (`node -v`).
-2. The repository, up to date: `git clone https://github.com/UjjwalCodes01/vton.git` or `git pull` on `main` (the change is commit `bf8e2b9` or later).
+2. The repository, up to date: `git clone https://github.com/fabricVTON/vton.git` or `git pull` on `main` (the change is commit `bf8e2b9` or later). The repository moved there from `UjjwalCodes01/vton`; GitHub redirects the old address.
 3. A browser where you can sign in to the Shopify Partner organization that owns both apps.
 
 **Steps** (from the repository root):
@@ -398,6 +398,7 @@ Checked on 3 October 2026 after the DNS switch (times UTC):
 | 12 | Release SDK, MCP and WooCommerce plugin versions defaulting to `https://api.clothsyai.fabricvton.com`; after 90+ days retire the Render service | Product | Over 90 days |
 | 13 | Remove the old environment variables from the Render forwarder service (they include production secrets) | Render owner | Any time |
 | 14 | Guardrail phase 5 (Nova Lite garment classifier and the other CPU checks) waits for Bedrock | Engineering | After 2 |
+| 16 | The repository moved to `fabricVTON/vton`. Update the deploy roles' trust before enabling CI: set `github_repository` to `fabricVTON/vton` in `infra/bootstrap/main.tf` and apply `infra/bootstrap` (GitHub's sign-in tokens carry the new name, so the roles refuse the old one). Point local clones at the new address with `git remote set-url origin https://github.com/fabricVTON/vton.git` | Repo admin | Before item 6 |
 | 15 | The backend holds credentials for one Shopify app (`2cca9a…`); the second app (`4b0b18…`) points at the same backend, as it did on Render. Confirm which app stores use and whether the second needs its own credentials | Shopify owner | Soon |
 
 ## 15. Rollback
