@@ -41,24 +41,14 @@ resource "aws_lb_listener_certificate" "custom" {
 }
 
 # Plain-HTTP links (old backlinks, printed or emailed addresses) used to be
-# redirected by Vercel and Render. Express Mode opens only 443, so a port-80
-# listener answers every http:// request with a permanent redirect to https://.
-# The load balancer's security group belongs to Express Mode; this adds one
-# extra rule to it and touches nothing else. After the first apply, check that
-# `curl -I http://www.fabricvton.com` returns 301.
+# redirected by Vercel and Render. Express Mode listens only on 443, so a
+# port-80 listener answers every http:// request with a permanent redirect to
+# https://. No security group rule is needed: Express Mode's own group for the
+# load balancer already allows port 80 (IPv4 and IPv6), and adding one fails as
+# a duplicate. Check with `curl -I http://www.fabricvton.com` (expect 301).
 data "aws_lb" "express" {
   count = length(data.aws_lbs.express.arns) > 0 ? 1 : 0
   arn   = one(data.aws_lbs.express.arns)
-}
-
-resource "aws_vpc_security_group_ingress_rule" "http" {
-  for_each          = length(data.aws_lb.express) > 0 ? toset(data.aws_lb.express[0].security_groups) : toset([])
-  security_group_id = each.value
-  description       = "HTTP, redirected to HTTPS"
-  ip_protocol       = "tcp"
-  from_port         = 80
-  to_port           = 80
-  cidr_ipv4         = "0.0.0.0/0"
 }
 
 resource "aws_lb_listener" "http_redirect" {
