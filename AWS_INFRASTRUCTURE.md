@@ -1,5 +1,7 @@
 # Clothsy AI on AWS
 
+> Since 3 October 2026 the backend, portal, admin and both sites also run on AWS; see [`AWS_MIGRATION.md`](AWS_MIGRATION.md). This file is the inventory from before that move.
+
 **Verified snapshot:** 1 October 2026, 17:29 IST. Account `251929332238`, region `us-east-1`. This document combines a read-only AWS CLI inventory with the code in this repository. Counts and health states can change after this snapshot. No secret values, customer images, or customer records were read for this inventory.
 
 ## What runs where

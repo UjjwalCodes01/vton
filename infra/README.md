@@ -26,9 +26,6 @@ Express Mode replaced a CloudFront + load balancer design because this account c
 - `scripts/attach-domains.sh <env> [--check]`: adds each of `custom_domains` (in `<env>.tfvars`) to the listener rule Express Mode made for that service, next to its `cl-<id>` host, so canary deploys cover both names. The certificate for them is in `env/domains.tf`: request it, add the `certificate_dns_records` at the registrar, apply again to attach it, then run this. `--check` only reports.
 - `scripts/deploy.sh <env> [apps]`; `scripts/deploy.sh <env> migrate` runs only the backend's migrations (new environment, database cutover).
 
-## Status (2 October 2026)
+## Status (3 October 2026)
 
-- Staging is up: Aurora, secrets, cluster and the five services; addresses in `env/staging.tfvars`. The app secrets hold generated placeholders, so Shopify, Google sign-in and try-ons need the real values (`put-app-secret.sh`) before they work end to end.
-- To deploy from GitHub: apply `bootstrap/` (the deploy roles gained `RegisterTaskDefinition` and the service-deployment reads that `deploy.sh` uses), then set the repository variable `STAGING_DEPLOY_ENABLED=true`.
-- Pending quota cases: Lambda concurrency 10 → 1000, Fargate vCPU 8 → 32 (prod plus a rolling deploy needs more than 8).
-- Production (step 4 of the plan): `terraform apply -var-file=prod.tfvars` twice as above, cleaned data copy from Render, custom domains on the services, DNS cutover, Render kept as a pass-through proxy for the old `fabricvton-api.onrender.com` host. At cutover, copy `WOO_SECRET_ENCRYPTION_KEY`, `SHARE_SIGNING_SECRET` and `SHOPIFY_API_SECRET` exactly from Render: the copied data is encrypted and signed with them (Render has no `PORTAL_SIGNING_SECRET`, so portal and OAuth tokens are signed with `SHOPIFY_API_SECRET`; do not add one). The data lives on Neon, not Render Postgres, so the copy is Neon → Aurora, run as a one-off task inside the VPC because Aurora is not reachable from the internet.
+Production is live on AWS: the cutover happened on 3 October 2026 and the live domains point at the production load balancer. The full record (addresses, DNS, secrets, runbook, what is left, rollback, and the Shopify step) is in [`../AWS_MIGRATION.md`](../AWS_MIGRATION.md).
