@@ -8,14 +8,16 @@
 # is used. It is stored as the secret clothsy/<env>/source-db (never printed,
 # never in a task definition) and read from there by a one-off task inside the
 # VPC, since Aurora is not reachable from the internet. The task:
-#   1. dumps Neon's public schema (the direct endpoint, not the pooler),
-#   2. empties Aurora's public schema and restores the dump into it,
-#   3. deletes rate-limit windows, Woo request nonces, expired Shopify sessions,
+#   1. checks that Neon and Aurora have applied the same Prisma migrations
+#      (run `deploy.sh <env> migrate` first, so Aurora has the app's schema),
+#   2. dumps the data of the app's tables from Neon (the direct endpoint, not the
+#      pooler); tables of anything else sharing that database are left behind,
+#   3. empties those tables on Aurora and loads the data in one transaction,
+#   4. deletes rate-limit windows, Woo request nonces, expired Shopify sessions,
 #      used or expired store link codes and expired shared looks,
-#   4. prints the row count of every table, Neon's and Aurora's.
+#   5. prints the row count of every copied table, Neon's and Aurora's.
 # Run it again at the cutover (with Render in maintenance) for the final copy.
-# Afterwards: `deploy.sh <env> migrate` applies migrations newer than the copied
-# data. Delete clothsy/<env>/source-db once the cutover is done.
+# Delete clothsy/<env>/source-db once the cutover is done.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 # Git Bash would rewrite arguments like /ecs/... into Windows paths.
@@ -77,17 +79,38 @@ echo "[copy] source stored in $SOURCE_SECRET"
 # The script the task runs. Row counts only; no data reaches the logs.
 read -r -d '' TASK_SCRIPT <<'EOF' || true
 set -eu
-counts() {
-  psql "$@" -At -v ON_ERROR_STOP=1 -c "SELECT format('%s=%s', table_name, (xpath('/row/c/text()', query_to_xml(format('SELECT count(*) AS c FROM public.%I', table_name), false, true, '')))[1]::text) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name"
-}
-echo "versions: neon $(psql "$SOURCE_URL" -Atc 'SHOW server_version') -> aurora $(psql -Atc 'SHOW server_version')"
-counts "$SOURCE_URL" | sed 's/^/neon /'
-pg_dump "$SOURCE_URL" --format=custom --no-owner --no-acl --schema=public --file=/tmp/db.dump
-echo "dump: $(du -h /tmp/db.dump | cut -f1)"
-psql -q -v ON_ERROR_STOP=1 -c 'DROP SCHEMA public CASCADE' -c 'CREATE SCHEMA public'
-# The public schema itself already exists on the target.
-pg_restore -l /tmp/db.dump | grep -vE ' SCHEMA - public | COMMENT - SCHEMA public ' > /tmp/toc
-pg_restore --no-owner --no-acl --exit-on-error --use-list=/tmp/toc --dbname="$PGDATABASE" /tmp/db.dump
+q() { psql "$@" -At -v ON_ERROR_STOP=1; }
+echo "versions: neon $(q "$SOURCE_URL" -c 'SHOW server_version') -> aurora $(q -c 'SHOW server_version')"
+
+# The app's tables are the ones its migrations created on Aurora. Anything else
+# in Neon (another app keeps its tables in the same database) stays behind.
+LIST_TABLES="SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' AND table_name <> '_prisma_migrations' ORDER BY 1"
+TABLES="$(q -c "$LIST_TABLES")"
+[ -n "$TABLES" ] || { echo "Aurora has no tables yet: run deploy.sh <env> migrate first."; exit 1; }
+echo "left in neon (not the app's): $(q "$SOURCE_URL" -c "$LIST_TABLES" | grep -vxF "$TABLES" | tr '\n' ' ')"
+
+# The same migrations on both sides mean the same columns, so the data alone is
+# copied into the schema Aurora already has (and Neon's newer PostgreSQL major
+# version does not matter).
+APPLIED="SELECT migration_name FROM _prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL ORDER BY 1"
+q "$SOURCE_URL" -c "$APPLIED" > /tmp/neon-migrations
+q -c "$APPLIED" > /tmp/aurora-migrations
+if ! cmp -s /tmp/neon-migrations /tmp/aurora-migrations; then
+  echo "migrations differ (< neon, > aurora):"; diff /tmp/neon-migrations /tmp/aurora-migrations || true
+  echo "Not copying: bring both databases to the same migrations first."; exit 1
+fi
+echo "migrations: $(wc -l < /tmp/aurora-migrations) applied on both"
+
+count_sql() { for t in $TABLES; do printf "SELECT '%s=' || count(*) FROM public.\"%s\";\n" "$t" "$t"; done; }
+count_sql | q "$SOURCE_URL" | sed 's/^/neon /'
+
+set --
+for t in $TABLES; do set -- "$@" "--table=public.\"$t\""; done
+pg_dump "$SOURCE_URL" --data-only --format=custom --no-owner --no-acl "$@" --file=/tmp/data.dump
+echo "dump: $(du -h /tmp/data.dump | cut -f1)"
+LIST="$(for t in $TABLES; do printf '"%s",' "$t"; done)"
+q -c "TRUNCATE ${LIST%,} CASCADE" > /dev/null
+pg_restore --data-only --no-owner --no-acl --exit-on-error --single-transaction --dbname="$PGDATABASE" /tmp/data.dump
 psql -q -v ON_ERROR_STOP=1 <<'SQL'
 DELETE FROM "RateLimitWindow";
 DELETE FROM "WooRequestNonce";
@@ -96,7 +119,7 @@ DELETE FROM "StoreLinkCode" WHERE "expiresAt" < now() OR "usedAt" IS NOT NULL;
 DELETE FROM "SharedLook" WHERE "expiresAt" < now();
 ANALYZE;
 SQL
-counts | sed 's/^/aurora /'
+count_sql | q | sed 's/^/aurora /'
 echo "copy complete"
 EOF
 
@@ -123,7 +146,8 @@ print(json.dumps({
     "ephemeralStorage": {"sizeInGiB": 50},
     "containerDefinitions": [{
         "name": "copy",
-        "image": "public.ecr.aws/docker/library/postgres:17-alpine",
+        # Client tools at least as new as Neon's server (pg_dump refuses older).
+        "image": "public.ecr.aws/docker/library/postgres:18-alpine",
         "essential": True,
         "entryPoint": ["sh", "-c"],
         "command": [script],
@@ -156,7 +180,7 @@ EXIT_CODE="$(aws ecs describe-tasks --region "$REGION" --cluster "$CLUSTER" --ta
 aws logs get-log-events --region "$REGION" --log-group-name "$LOG_GROUP" \
   --log-stream-name "db-copy/copy/${TASK##*/}" --start-from-head --query 'events[].message' --output text | tr '\t' '\n'
 if [ "$EXIT_CODE" != "0" ]; then
-  echo "[copy] failed (exit $EXIT_CODE); Aurora may be partly restored, so run it again before using $ENV_NAME" >&2
+  echo "[copy] failed (exit $EXIT_CODE); see the lines above. If it got as far as loading, the app's tables on Aurora may be empty: run it again." >&2
   exit 1
 fi
-echo "[copy] done. Next: infra/scripts/deploy.sh $ENV_NAME migrate"
+echo "[copy] done: compare the neon and aurora counts above (the cleaned tables are expected to be lower)."
