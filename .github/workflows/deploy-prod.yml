@@ -1,8 +1,21 @@
 name: Deploy to AWS production
 
-# Manual, and gated by the GitHub "production" environment (required
-# reviewers), which is also the only identity the prod deploy role trusts.
+# Every push to main deploys the apps whose files changed, like staging does.
+# Can also be started by hand (Actions > Deploy to AWS production > Run
+# workflow) with a list of apps. Runs in the GitHub "production" environment,
+# which is also the only identity the prod deploy role trusts; give that
+# environment required reviewers to approve each deploy with one click.
 on:
+  push:
+    branches: [main]
+    paths:
+      - fabricvton/**
+      - custom-store/**
+      - admin-dashboard/**
+      - fabricvton-newsite/**
+      - fabricvton-nextjs/**
+      - infra/scripts/deploy.sh
+      - .github/workflows/deploy-prod.yml
   workflow_dispatch:
     inputs:
       apps:
@@ -20,19 +33,52 @@ concurrency:
 
 jobs:
   deploy:
-    # Off until the production stack exists (repository variable PROD_DEPLOY_ENABLED=true).
+    # Off until the repository variable PROD_DEPLOY_ENABLED=true
+    # (Settings > Secrets and variables > Actions > Variables).
     if: vars.PROD_DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the push's whole range, to see which apps it touched
+      - name: Apps to deploy
+        id: apps
+        env:
+          CHOSEN: ${{ inputs.apps }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            apps="$CHOSEN"
+          elif [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            apps="api portal admin newsite www"
+          else
+            changed="$(git diff --name-only "$BEFORE" "$GITHUB_SHA")"
+            apps=""
+            # The deploy script or this workflow changing redeploys everything.
+            if printf '%s\n' "$changed" | grep -qE '^(infra/scripts/deploy\.sh|\.github/workflows/deploy-prod\.yml)$'; then
+              apps="api portal admin newsite www"
+            else
+              printf '%s\n' "$changed" | grep -q '^fabricvton/' && apps="$apps api"
+              printf '%s\n' "$changed" | grep -q '^custom-store/' && apps="$apps portal"
+              printf '%s\n' "$changed" | grep -q '^admin-dashboard/' && apps="$apps admin"
+              printf '%s\n' "$changed" | grep -q '^fabricvton-newsite/' && apps="$apps newsite"
+              printf '%s\n' "$changed" | grep -q '^fabricvton-nextjs/' && apps="$apps www"
+            fi
+          fi
+          apps="$(echo $apps)"
+          echo "Deploying: ${apps:-nothing}"
+          echo "list=$apps" >> "$GITHUB_OUTPUT"
       - uses: aws-actions/configure-aws-credentials@v4
+        if: steps.apps.outputs.list != ''
         with:
           role-to-assume: arn:aws:iam::251929332238:role/clothsy-prod-github-deploy
           aws-region: us-east-1
       - name: Backend tests
+        if: steps.apps.outputs.list != ''
         working-directory: fabricvton
         run: npx -y tsx --test test/*.test.ts
       - name: Build, push, migrate, deploy
-        run: bash infra/scripts/deploy.sh prod ${{ inputs.apps }}
+        if: steps.apps.outputs.list != ''
+        run: bash infra/scripts/deploy.sh prod ${{ steps.apps.outputs.list }}
