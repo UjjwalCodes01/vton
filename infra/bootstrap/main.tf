@@ -21,7 +21,7 @@ provider "aws" { region = "us-east-1" }
 
 variable "github_repository" {
   type    = string
-  default = "UjjwalCodes01/vton"
+  default = "fabricVTON/vton"
 }
 
 locals {
