@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { notFound } from "next/navigation";
+import { api, ApiError } from "@/lib/api";
 import { requireSession } from "@/lib/guard";
 import { dateOnly, dateTime, number, percent, timeAgo } from "@/lib/format";
 import { Shell } from "@/components/Shell";
@@ -47,7 +48,11 @@ export default async function StorePage({ params }: { params: Promise<{ shop: st
   const [data, invoiceData] = await Promise.all([
     api.store<StoreDetail>(shop),
     api.invoices<{ invoices: Invoice[]; paymentsEnabled: boolean }>(shop),
-  ]);
+  ]).catch((error) => {
+    // A mistyped or deleted store is a 404, not a broken page.
+    if (error instanceof ApiError && error.status === 404) notFound();
+    throw error;
+  });
   const s = data.store;
   const isWoo = s.platform === "woocommerce";
   const used = percent(s.creditsUsed, s.monthlyCredits);

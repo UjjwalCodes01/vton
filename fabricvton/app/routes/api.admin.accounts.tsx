@@ -47,7 +47,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return adminJson(result, 201);
     } catch (error) {
       if ((error as { code?: string }).code === "P2002") throw new AdminApiError(409, "Payment reference already credited.");
-      if ((error as { code?: string }).code === "P2025") throw new AdminApiError(404, "Account not found.");
+      // P2003: the grant row's account doesn't exist (it is written first). P2025: the update found no account.
+      if (["P2003", "P2025"].includes((error as { code?: string }).code || "")) throw new AdminApiError(404, "Account not found.");
       throw error;
     }
   } catch (error) { return adminError(error); }
