@@ -398,8 +398,8 @@ Checked on 3 October 2026 after the DNS switch (times UTC):
 | 12 | Release SDK, MCP and WooCommerce plugin versions defaulting to `https://api.clothsyai.fabricvton.com`; after 90+ days retire the Render service | Product | Over 90 days |
 | 13 | Remove the old environment variables from the Render forwarder service (they include production secrets) | Render owner | Any time |
 | 14 | Guardrail phase 5 (Nova Lite garment classifier and the other CPU checks) waits for Bedrock | Engineering | After 2 |
-| 16 | The repository moved to `fabricVTON/vton`. Update the deploy roles' trust before enabling CI: set `github_repository` to `fabricVTON/vton` in `infra/bootstrap/main.tf` and apply `infra/bootstrap` (GitHub's sign-in tokens carry the new name, so the roles refuse the old one). Point local clones at the new address with `git remote set-url origin https://github.com/fabricVTON/vton.git` | Repo admin | Before item 6 |
 | 15 | The backend holds credentials for one Shopify app (`2cca9a…`); the second app (`4b0b18…`) points at the same backend, as it did on Render. Confirm which app stores use and whether the second needs its own credentials | Shopify owner | Soon |
+| 16 | The repository moved to `fabricVTON/vton`. Update the deploy roles' trust before enabling CI: set `github_repository` to `fabricVTON/vton` in `infra/bootstrap/main.tf` and apply `infra/bootstrap` (GitHub's sign-in tokens carry the new name, so the roles refuse the old one). Point local clones at the new address with `git remote set-url origin https://github.com/fabricVTON/vton.git` | Repo admin | Before item 6 |
 
 ## 15. Rollback
 
