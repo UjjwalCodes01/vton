@@ -9,7 +9,7 @@ Deploy `fabricvton/` (migrations run on deploy; `20260915093953_woo_billing_and_
 | `WOO_SECRET_ENCRYPTION_KEY` | `openssl rand -base64 32` — set once, never change (it decrypts every store's secret) |
 | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | Razorpay → Account & Settings → API keys (test keys first) |
 | `RAZORPAY_WEBHOOK_SECRET` | The secret you type when creating the webhook below |
-| `PUBLIC_APP_URL` | Optional. Defaults to `SHOPIFY_APP_URL`; must equal the plugin's `CLOTHSY_AI_API_BASE` (`https://fabricvton-api.onrender.com`) |
+| `PUBLIC_APP_URL` | Optional. Defaults to `SHOPIFY_APP_URL`; must equal the plugin's `CLOTHSY_AI_API_BASE` (`https://api.clothsyai.fabricvton.com`) |
 | `WOO_BILLING_CURRENCY` | Optional, default `USD` |
 | `SHARE_S3_ENDPOINT` | R2: `https://<account>.r2.cloudflarestorage.com` (no bucket). AWS S3: `https://<bucket>.s3.<region>.amazonaws.com` |
 | `SHARE_S3_BUCKET` | Bucket holding shared looks |
@@ -47,7 +47,7 @@ Without the three Razorpay variables the plugin still works; its Plan section sa
 1. Complete KYC and enable **Subscriptions**.
 2. Enable **International payments → cards** (plans are in USD; USD subscriptions are card-only). Razorpay requires these pages on the website: Terms, Privacy, **Refund & Cancellation**, Shipping (a "no physical goods" page is fine). The refund page must match how the plugin behaves: cancelling runs to the end of the paid month; upgrades start at once and the unused part of the old plan isn't refunded; downgrades start at the end of the period.
 3. Enable **Flash Checkout** (Account & Settings → Checkout features).
-4. Webhook: URL `https://fabricvton-api.onrender.com/webhooks/razorpay`, your secret, events: every `subscription.*` event.
+4. Webhook: URL `https://api.clothsyai.fabricvton.com/webhooks/razorpay`, your secret, events: every `subscription.*` event.
 5. Test in test mode (card `5104 0155 5555 5558`, any CVV, future expiry), then switch the three variables to live keys and a live webhook.
 
 Plans are created in Razorpay automatically on first checkout, from the prices in `fabricvton/app/billing.server.ts`. Changing a price there creates a new Razorpay plan for new subscribers; existing subscribers keep theirs.

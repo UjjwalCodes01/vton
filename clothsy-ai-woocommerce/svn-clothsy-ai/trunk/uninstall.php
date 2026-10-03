@@ -16,7 +16,7 @@ if ( ! defined( 'CLOTHSY_AI_VERSION' ) ) {
 	define( 'CLOTHSY_AI_VERSION', 'uninstall' );
 }
 if ( ! defined( 'CLOTHSY_AI_API_BASE' ) ) {
-	define( 'CLOTHSY_AI_API_BASE', 'https://fabricvton-api.onrender.com' );
+	define( 'CLOTHSY_AI_API_BASE', 'https://api.clothsyai.fabricvton.com' );
 }
 
 require_once __DIR__ . '/includes/class-clothsy-ai-settings.php';

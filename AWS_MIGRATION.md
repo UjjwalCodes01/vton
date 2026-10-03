@@ -320,28 +320,28 @@ Keep it for at least 90 days, and meanwhile release SDK, MCP and WooCommerce plu
 | Webhooks | relative paths (`/webhooks/...`) | unchanged; they follow the App URL |
 | Scopes, embedded, extensions | | unchanged |
 
-The two apps (client IDs are public identifiers):
+The app (client IDs are public identifiers):
 
 | File | Client ID |
 |---|---|
 | `fabricvton/shopify.app.fabricvton.toml` | `2cca9a797b9920722956b7f8e87b6a09` (the backend's `SHOPIFY_API_KEY` belongs to this one) |
-| `fabricvton/shopify.app.toml` | `4b0b18e4abb15c4a75683c7fc32d2b44` |
+
+A second registration, `4b0b18e4abb15c4a75683c7fc32d2b44` (`shopify.app.toml`), was a development copy with no credentials on the backend. Its config was removed on 3 October 2026; it is not deployed.
 
 **Before you start**
 
 1. Node.js 22 or newer (`node -v`).
 2. The repository, up to date: `git clone https://github.com/fabricVTON/vton.git` or `git pull` on `main` (the change is commit `bf8e2b9` or later). The repository moved there from `UjjwalCodes01/vton`; GitHub redirects the old address.
-3. A browser where you can sign in to the Shopify Partner organization that owns both apps.
+3. A browser where you can sign in to the Shopify Partner organization that owns the app.
 
 **Steps** (from the repository root):
 
 ```bash
 cd fabricvton
 npx @shopify/cli@latest app deploy --config shopify.app.fabricvton.toml
-npx @shopify/cli@latest app deploy --config shopify.app.toml
 ```
 
-For each command:
+Then:
 
 1. The CLI may open a browser to sign in, and may ask which organization; pick the one that owns the app.
 2. It shows what will change: the App URL, the redirect URLs and the app proxy URL, as in the table above. Check that the new address is `https://api.clothsyai.fabricvton.com`.
@@ -398,7 +398,7 @@ Checked on 3 October 2026 after the DNS switch (times UTC):
 | 12 | Release SDK, MCP and WooCommerce plugin versions defaulting to `https://api.clothsyai.fabricvton.com`; after 90+ days retire the Render service | Product | Over 90 days |
 | 13 | Remove the old environment variables from the Render forwarder service (they include production secrets) | Render owner | Any time |
 | 14 | Guardrail phase 5 (Nova Lite garment classifier and the other CPU checks) waits for Bedrock | Engineering | After 2 |
-| 15 | The backend holds credentials for one Shopify app (`2cca9a…`); the second app (`4b0b18…`) points at the same backend, as it did on Render. Confirm which app stores use and whether the second needs its own credentials | Shopify owner | Soon |
+| 15 | The development copy of the Shopify app (`4b0b18…`) is no longer used and its config is gone from the repository. Archive it in the Partner dashboard so it can't be installed | Shopify owner | Soon |
 | 16 | The repository moved to `fabricVTON/vton`. Update the deploy roles' trust before enabling CI: set `github_repository` to `fabricVTON/vton` in `infra/bootstrap/main.tf` and apply `infra/bootstrap` (GitHub's sign-in tokens carry the new name, so the roles refuse the old one). Point local clones at the new address with `git remote set-url origin https://github.com/fabricVTON/vton.git` | Repo admin | Before item 6 |
 
 ## 15. Rollback

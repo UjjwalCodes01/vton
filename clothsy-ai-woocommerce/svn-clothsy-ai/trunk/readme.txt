@@ -4,7 +4,7 @@ Tags: virtual try-on, try on, fitting room, fashion, woocommerce
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.2.8
+Stable tag: 0.2.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -84,7 +84,7 @@ A copy of your site keeps try-on switched off, so it can't use your allowance. I
 
 == External services ==
 
-This plugin relies on the Clothsy AI service (hosted at fabricvton-api.onrender.com) to generate try-on images, store your leads and usage statistics, and manage your plan. Nothing is sent until you click Connect store. After that, data is sent in these cases:
+This plugin relies on the Clothsy AI service (hosted at api.clothsyai.fabricvton.com) to generate try-on images, store your leads and usage statistics, and manage your plan. Nothing is sent until you click Connect store. After that, data is sent in these cases:
 
 * **When you click Connect store:** your site URL, site name, the site admin email address, and the plugin version. The service then requests one URL on your site to confirm the connection.
 * **When an admin opens the Clothsy AI screen, changes the on/off setting, downloads leads, or disconnects:** your store ID and the request details. Requests are signed with a secret that never leaves your server.
@@ -98,6 +98,9 @@ Try-on images are generated with an AI image-processing sub-processor and checke
 The service is provided by Clothsy AI: [Terms of Service](https://www.fabricvton.com/tos), [Privacy Policy](https://www.fabricvton.com/privacy), [Shopper privacy notice](https://www.fabricvton.com/widget-privacy).
 
 == Changelog ==
+
+= 0.2.9 =
+* Connect to the Clothsy AI service at its new address, api.clothsyai.fabricvton.com. Fixes choosing a paid plan, which reported an unexpected response. Connected stores keep working without reconnecting.
 
 = 0.2.8 =
 * Link a connected WooCommerce store to a Clothsy AI platform account with a one-time code entered by a store administrator.
