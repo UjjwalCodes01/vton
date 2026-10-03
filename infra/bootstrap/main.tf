@@ -57,11 +57,15 @@ data "aws_iam_openid_connect_provider" "github" {
 }
 
 locals {
-  # Staging deploys from main; production only from the GitHub "production"
+  # GitHub's OIDC subject for this repository carries the owner and repository
+  # IDs (repo:fabricVTON@332883854/vton@1212415287:...), which also survive
+  # renames and transfers; the plain name form is kept for older tokens.
+  # Staging deploys from main; production only from the GitHub "Production"
   # environment, which needs a reviewer's approval.
+  github_subject_prefixes = ["repo:${var.github_repository}", "repo:fabricVTON@332883854/vton@1212415287"]
   deploy_subjects = {
-    staging = ["repo:${var.github_repository}:ref:refs/heads/main"]
-    prod    = ["repo:${var.github_repository}:environment:production","repo:${var.github_repository}:environment:Production"]
+    staging = [for p in local.github_subject_prefixes : "${p}:ref:refs/heads/main"]
+    prod    = flatten([for p in local.github_subject_prefixes : ["${p}:environment:production", "${p}:environment:Production"]])
   }
 }
 
