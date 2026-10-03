@@ -25,14 +25,14 @@ looks_bucket_name   = "clothsy-looks"
 
 image_tag = "prod-initial"
 
-# The addresses Express Mode assigned to the services (terraform output express_urls);
-# at cutover, the custom domains (api = "https://api.clothsyai.fabricvton.com", ...).
+# The public address of each app (the services also answer on their
+# cl-<id>.ecs.us-east-1.on.aws addresses, which are in the express_urls output).
 public_urls = {
-  api     = "https://cl-47e6c76a745d43f8bb595198f5ab9517.ecs.us-east-1.on.aws"
-  portal  = "https://cl-e20e6f452ed04fcc85e025adaf14eb1d.ecs.us-east-1.on.aws"
-  admin   = "https://cl-a37a560e7ae542e88964956787bc3f7a.ecs.us-east-1.on.aws"
-  newsite = "https://cl-ce04b594803e4b5b840b331ecfbfff92.ecs.us-east-1.on.aws"
-  www     = "https://cl-6dd5a8428a7d495e885078f7e844642b.ecs.us-east-1.on.aws"
+  api     = "https://api.clothsyai.fabricvton.com"
+  portal  = "https://app.clothsyai.fabricvton.com"
+  admin   = "https://admin.clothsyai.fabricvton.com"
+  newsite = "https://clothsyai.fabricvton.com"
+  www     = "https://www.fabricvton.com"
 }
 
 # The live domains, attached to the services at the cutover (domains.tf).
