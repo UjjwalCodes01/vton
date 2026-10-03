@@ -93,6 +93,8 @@ export interface Generations {
     seconds: number | null;
     rating: string | null;
     imageUrl: string | null;
+    /** Finished, but older than the 24 hours its image can be fetched for. */
+    imageExpired?: boolean;
   }[];
 }
 
@@ -125,6 +127,8 @@ export const api = {
     ),
   generations: (session: string, page = 1, shop?: string) =>
     post<Generations>("/api/portal/generations", { session, page, shop }),
+  deleteGeneration: (session: string, id: string) =>
+    post<{ deleted: boolean }>("/api/portal/generations", { session, step: "delete", id }),
   me: (session: string) => post<PortalData>("/api/portal/me", { session }),
   keys: (session: string) => post<ApiKeyData>("/api/portal/keys", { session, step: "list" }),
   createKey: (session: string, name: string) => post<{ key: ApiKeyData["keys"][number]; token: string; freeCreditsGranted: number }>("/api/portal/keys", { session, step: "create", name }),

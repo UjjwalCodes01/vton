@@ -4,6 +4,7 @@ import { api, ApiError } from "@/lib/api";
 import { requirePortalSession } from "@/lib/session";
 import { count, timeAgo } from "@/lib/format";
 import { PageHead, Shell } from "@/components/Shell";
+import { GenerationCard } from "@/components/GenerationCard";
 
 export default async function GenerationsPage({
   searchParams,
@@ -59,24 +60,7 @@ export default async function GenerationsPage({
 
           <div className="gen-grid">
             {data.generations.map((gen) => (
-              <article className="gen" key={gen.id}>
-                {gen.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img className="gen-img" src={gen.imageUrl} alt={gen.productTitle || "Try-on result"} loading="lazy" />
-                ) : (
-                  <div className="gen-fallback">
-                    {gen.status === "failed" ? "Did not finish" : "No image"}
-                  </div>
-                )}
-                <div className="gen-meta">
-                  <b>{gen.productTitle || "Untitled product"}</b>
-                  <span>
-                    {timeAgo(gen.createdAt)}
-                    {gen.seconds ? ` · ${gen.seconds}s` : ""}
-                    {gen.rating === "up" ? " · 👍" : gen.rating === "down" ? " · 👎" : ""}
-                  </span>
-                </div>
-              </article>
+              <GenerationCard key={gen.id} gen={gen} when={timeAgo(gen.createdAt)} />
             ))}
           </div>
 
