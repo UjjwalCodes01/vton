@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { redirectTo } from "@/lib/redirect";
 import { SESSION_COOKIE, sessionCookieOptions } from "@/lib/session";
 
 /**
@@ -9,8 +9,8 @@ import { SESSION_COOKIE, sessionCookieOptions } from "@/lib/session";
  * rotated session bounced between the two forever. Pages cannot write
  * cookies while rendering, so this is a Route Handler.
  */
-export async function GET(request: NextRequest) {
-  const response = NextResponse.redirect(new URL("/login?expired=1", request.nextUrl.origin));
+export async function GET() {
+  const response = redirectTo("/login?expired=1");
   response.cookies.set(SESSION_COOKIE, "", { ...sessionCookieOptions, maxAge: 0 });
   return response;
 }

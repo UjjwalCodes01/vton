@@ -1,7 +1,8 @@
 import { timingSafeEqual } from "node:crypto";
-import { NextResponse, type NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import { api, ApiError } from "@/lib/api";
 import { bindingFor, peekHandoff } from "@/lib/handoff";
+import { redirectTo } from "@/lib/redirect";
 import { BIND_COOKIE, bindCookieOptions, SESSION_COOKIE, sessionCookieOptions } from "@/lib/session";
 
 /**
@@ -25,19 +26,14 @@ import { BIND_COOKIE, bindCookieOptions, SESSION_COOKIE, sessionCookieOptions } 
  */
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get("token");
-  const origin = request.nextUrl.origin;
-  if (!token) return NextResponse.redirect(new URL("/login", origin));
+  if (!token) return redirectTo("/login");
 
   if (peekHandoff(token).bound) return exchange(request, token);
 
-  const confirm = new URL("/connect/confirm", origin);
-  confirm.searchParams.set("token", token);
-  return NextResponse.redirect(confirm);
+  return redirectTo(`/connect/confirm?${new URLSearchParams({ token })}`);
 }
 
 export async function POST(request: NextRequest) {
-  const origin = request.nextUrl.origin;
-
   // Same-origin form posts only. Browsers always send Origin on a POST, and
   // Sec-Fetch-Site where supported; either one disagreeing means another site
   // submitted this.
@@ -52,19 +48,18 @@ export async function POST(request: NextRequest) {
   }
   const hosts = [request.headers.get("x-forwarded-host"), request.headers.get("host")].filter(Boolean);
   if (!sentHost || !hosts.includes(sentHost) || (fetchSite && fetchSite !== "same-origin")) {
-    return NextResponse.redirect(new URL("/login?error=expired", origin), 303);
+    return redirectTo("/login?error=expired", 303);
   }
 
   const form = await request.formData().catch(() => null);
   const token = String(form?.get("token") || "");
-  if (!token) return NextResponse.redirect(new URL("/login", origin), 303);
+  if (!token) return redirectTo("/login", 303);
   return exchange(request, token, 303);
 }
 
 async function exchange(request: NextRequest, token: string, status = 307) {
-  const origin = request.nextUrl.origin;
   const fail = (reason: string) => {
-    const response = NextResponse.redirect(new URL(`/login?error=${reason}`, origin), status);
+    const response = redirectTo(`/login?error=${reason}`, status);
     response.cookies.set(BIND_COOKIE, "", { ...bindCookieOptions, maxAge: 0 });
     return response;
   };
@@ -90,7 +85,7 @@ async function exchange(request: NextRequest, token: string, status = 307) {
     }
   }
 
-  const response = NextResponse.redirect(new URL("/", origin), status);
+  const response = redirectTo("/", status);
   response.cookies.set(SESSION_COOKIE, result.session, sessionCookieOptions);
   response.cookies.set(BIND_COOKIE, "", { ...bindCookieOptions, maxAge: 0 });
   return response;
