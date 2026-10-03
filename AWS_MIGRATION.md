@@ -402,7 +402,7 @@ Checked on 3 October 2026 after the DNS switch (times UTC):
 | 14 | Guardrail phase 5 (Nova Lite garment classifier and the other CPU checks) waits for Bedrock | Engineering | After 2 |
 | 15 | The development copy of the Shopify app (`4b0b18…`) is no longer used and its config is gone from the repository. Archive it in the Partner dashboard so it can't be installed | Shopify owner | Soon |
 | 16 | The repository moved to `fabricVTON/vton`. `infra/bootstrap/main.tf` already trusts it; apply `infra/bootstrap` before enabling CI if that hasn't been done (GitHub's sign-in tokens carry the new name, so the roles refuse the old one). Point local clones at the new address with `git remote set-url origin https://github.com/fabricVTON/vton.git` | Repo admin | Before item 6 |
-| 17 | Set `FORWARDER_SECRET` (`openssl rand -hex 32`) on the Render forwarder and the same value in `clothsy/prod/api`, then redeploy both, so shoppers on older WooCommerce plugins and SDKs stop sharing one per-IP limit | AWS duty + Render owner | Now |
+| 17 | Set `FORWARDER_SECRET` (`openssl rand -hex 32`) on the Render forwarder and the same value in `clothsy/prod/api`, then redeploy both, so shoppers on older WooCommerce plugins and SDKs stop sharing one per-IP limit. Optional: that traffic fades as stores update to 0.2.10, and the forwarder retires after 90 days | AWS duty + Render owner | Optional |
 | 18 | `terraform apply` for prod: WAF exemptions for the authenticated API routes and a separate limit for images and shared looks, an HTTP→HTTPS redirect on port 80, admin pinned to one task. Afterwards `curl -I http://www.fabricvton.com` should return 301 | AWS duty | Now |
 
 ## 15. Rollback

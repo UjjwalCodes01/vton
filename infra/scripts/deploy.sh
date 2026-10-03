@@ -81,8 +81,16 @@ print(json.dumps(max(configs, key=lambda c: c["createdAt"])))'
 run_migrations() {
   local image="$1" config definition taskdef network run task exit_code
   config="$(active_config api)"
+  # Older CLI versions report the configuration's task definition directly;
+  # newer ones only its service revision, which names it.
+  taskdef="$(printf '%s' "$config" | "$PY" -c 'import json,sys; print(json.load(sys.stdin).get("taskDefinitionArn", ""), end="")')"
+  if [ -z "$taskdef" ]; then
+    taskdef="$(aws ecs describe-service-revisions --region "$REGION" \
+      --service-revision-arns "$(printf '%s' "$config" | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["serviceRevisionArn"], end="")')" \
+      --query 'serviceRevisions[0].taskDefinition' --output text)"
+  fi
   definition="$(aws ecs describe-task-definition --region "$REGION" \
-    --task-definition "$(printf '%s' "$config" | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["taskDefinitionArn"], end="")')" \
+    --task-definition "$taskdef" \
     --query taskDefinition --output json \
   | "$PY" -c '
 import json, sys
